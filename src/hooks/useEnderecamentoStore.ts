@@ -39,7 +39,6 @@ export function useEnderecamentoStore() {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [storageMode, setStorageMode] = useState<StorageMode>(getStorageMode())
-  const [migratedFromLocal, setMigratedFromLocal] = useState(false)
   const skipSave = useRef(true)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ignoreRemoteUntil = useRef(0)
@@ -101,7 +100,6 @@ export function useEnderecamentoStore() {
 
         if (!cancelled) {
           setState({ ...data, ...ui })
-          setMigratedFromLocal(migrated)
           setError(null)
         }
         return
@@ -115,7 +113,6 @@ export function useEnderecamentoStore() {
             const ui = repo.loadUiPrefs()
             if (!cancelled) {
               setState({ ...data, ...ui })
-              setMigratedFromLocal(false)
               setError('Nuvem indisponível — usando dados deste navegador.')
             }
             return
