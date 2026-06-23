@@ -5,6 +5,7 @@ import { IntroSplash } from './components/IntroSplash'
 import { LayoutPanel } from './components/LayoutPanel'
 import { OcupadoAlert } from './components/OcupadoAlert'
 import { useEnderecamentoStore } from './hooks/useEnderecamentoStore'
+import { useTheme } from './hooks/useTheme'
 import { allItemsAllocated } from './lib/repository'
 import {
   aplicarSaidaItens,
@@ -49,6 +50,7 @@ function buildOccupancyMap(notas: NotaFiscal[]): Map<AddressId, AddressOccupancy
 
 export default function App() {
   const { state, setState, loading, saving, error, clearError } = useEnderecamentoStore()
+  const { theme, toggleTheme } = useTheme()
   const [introDone, setIntroDone] = useState(false)
   const [pendingSelection, setPendingSelection] = useState<Set<AddressId>>(new Set())
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -57,6 +59,10 @@ export default function App() {
   const [nfBuscaSaidaId, setNfBuscaSaidaId] = useState<string | null>(null)
   const [itensFlagados, setItensFlagados] = useState<Set<number>>(new Set())
   const [buscaErro, setBuscaErro] = useState<string | null>(null)
+  const [nfEditarId, setNfEditarId] = useState<string | null>(null)
+  const [editItemIndex, setEditItemIndex] = useState<number | null>(null)
+  const [editPendingSelection, setEditPendingSelection] = useState<Set<AddressId>>(new Set())
+  const [buscaEditarErro, setBuscaEditarErro] = useState<string | null>(null)
   const [uploadCanceladaError, setUploadCanceladaError] = useState<string | null>(null)
   const [ocupadoAlert, setOcupadoAlert] = useState<{
     addressId: AddressId
@@ -68,20 +74,34 @@ export default function App() {
   const nfBuscaSaida = nfBuscaSaidaId
     ? state.notas.find((n) => n.id === nfBuscaSaidaId) ?? null
     : null
+  const nfEditar = nfEditarId ? state.notas.find((n) => n.id === nfEditarId) ?? null : null
 
   const allocateMode =
     !!activeNf &&
     activeNf.status === 'em_andamento' &&
     state.activeItemIndex != null
 
+  const editMode = nfEditar != null && editItemIndex != null
+
   const displayOccupancy = useMemo(() => {
-    if (!allocateMode || !activeNf || state.activeItemIndex == null) return occupancy
     const map = new Map(occupancy)
-    for (const addr of pendingSelection) {
-      map.delete(addr)
+    if (editMode) {
+      for (const addr of editPendingSelection) map.delete(addr)
+      return map
+    }
+    if (allocateMode && activeNf && state.activeItemIndex != null) {
+      for (const addr of pendingSelection) map.delete(addr)
     }
     return map
-  }, [occupancy, allocateMode, activeNf, state.activeItemIndex, pendingSelection])
+  }, [
+    occupancy,
+    editMode,
+    editPendingSelection,
+    allocateMode,
+    activeNf,
+    state.activeItemIndex,
+    pendingSelection,
+  ])
 
   const saidaAddresses = useMemo(() => {
     if (!nfBuscaSaida) return new Set<AddressId>()
@@ -92,6 +112,15 @@ export default function App() {
     if (!nfBuscaSaida || itensFlagados.size === 0) return new Set<AddressId>()
     return new Set(enderecosDosItens(nfBuscaSaida, [...itensFlagados]))
   }, [nfBuscaSaida, itensFlagados])
+
+  const editNfAddresses = useMemo(() => {
+    if (!nfEditar) return new Set<AddressId>()
+    return new Set(enderecosDaNf(nfEditar))
+  }, [nfEditar])
+
+  const panelPendingSelection = editMode ? editPendingSelection : pendingSelection
+  const panelAllocateMode = allocateMode || editMode
+  const panelActiveNfNumero = editMode ? nfEditar?.numero ?? null : activeNf?.numero ?? null
 
   const movimentosOrdenados = useMemo(
     () => [...state.movimentos].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -182,6 +211,22 @@ export default function App() {
     if (!canInteract) return
 
     const occ = occupancy.get(addressId)
+
+    if (editMode && nfEditar && editItemIndex != null) {
+      if (occ) {
+        const mesmoItem = occ.nfId === nfEditar.id && occ.itemIndex === editItemIndex
+        if (!mesmoItem) {
+          setOcupadoAlert({ addressId, occ })
+          return
+        }
+      }
+
+      const nextPending = new Set(editPendingSelection)
+      if (nextPending.has(addressId)) nextPending.delete(addressId)
+      else nextPending.add(addressId)
+      setEditPendingSelection(nextPending)
+      return
+    }
 
     if (allocateMode && activeNf && state.activeItemIndex != null) {
       if (occ) {
@@ -324,6 +369,68 @@ export default function App() {
     setItensFlagados(new Set())
   }
 
+  function handleBuscarEditar(numero: string) {
+    setBuscaEditarErro(null)
+    const nf = buscarNfPorNumero(state.notas, numero)
+    if (!nf) {
+      setBuscaEditarErro('NF não encontrada.')
+      setNfEditarId(null)
+      setEditItemIndex(null)
+      setEditPendingSelection(new Set())
+      return
+    }
+    setNfEditarId(nf.id)
+    setEditItemIndex(null)
+    setEditPendingSelection(new Set())
+  }
+
+  function handleSelectItemEditar(index: number) {
+    if (!nfEditar) return
+    const item = nfEditar.items.find((it) => it.index === index)
+    if (!item) return
+    setEditItemIndex(index)
+    setEditPendingSelection(new Set(item.allocatedAddresses))
+    setDetailAddress(null)
+  }
+
+  function handleSalvarEditar() {
+    if (!nfEditar || editItemIndex == null || editPendingSelection.size === 0) return
+    const addresses = [...editPendingSelection]
+    const currentItemIndex = editItemIndex
+
+    setState((s) => {
+      const notas = s.notas.map((nf) => {
+        if (nf.id !== nfEditar.id) {
+          return {
+            ...nf,
+            items: nf.items.map((it) => ({
+              ...it,
+              allocatedAddresses: it.allocatedAddresses.filter((a) => !addresses.includes(a)),
+            })),
+          }
+        }
+        return {
+          ...nf,
+          items: nf.items.map((it) => {
+            if (it.index !== currentItemIndex) {
+              return {
+                ...it,
+                allocatedAddresses: it.allocatedAddresses.filter((a) => !addresses.includes(a)),
+              }
+            }
+            return { ...it, allocatedAddresses: addresses }
+          }),
+        }
+      })
+      const updatedNf = notas.find((n) => n.id === nfEditar.id)!
+      return {
+        ...s,
+        notas,
+        movimentos: upsertMovimentoEntrada(s.movimentos, updatedNf),
+      }
+    })
+  }
+
   function handleExcluirMovimento(movId: string) {
     setState((s) => {
       const result = excluirMovimento(
@@ -365,6 +472,8 @@ export default function App() {
       <AppSidebar
         saving={saving}
         persistError={error}
+        theme={theme}
+        onToggleTheme={toggleTheme}
         entrada={{
           notas: state.notas,
           activeNfId: state.activeNfId,
@@ -387,7 +496,9 @@ export default function App() {
         }}
         historico={{
           movimentos: movimentosOrdenados,
+          canceladas: state.notasCanceladas,
           onExcluir: handleExcluirMovimento,
+          onExcluirCancelada: handleExcluirCancelada,
         }}
         canceladas={{
           canceladas: state.notasCanceladas,
@@ -398,16 +509,27 @@ export default function App() {
           onExcluir: handleExcluirCancelada,
           uploadError: uploadCanceladaError,
         }}
+        editar={{
+          nfBusca: nfEditar,
+          itemIndex: editItemIndex,
+          pendingCount: editPendingSelection.size,
+          onBuscar: handleBuscarEditar,
+          onSelectItem: handleSelectItemEditar,
+          onSalvar: handleSalvarEditar,
+          buscaErro: buscaEditarErro,
+        }}
       />
 
       <main className="main-panel">
         <LayoutPanel
           occupancy={displayOccupancy}
-          pendingSelection={pendingSelection}
-          activeNfNumero={activeNf?.numero ?? null}
-          allocateMode={allocateMode}
-          saidaAddresses={saidaAddresses}
-          saidaFlaggedAddresses={saidaFlaggedAddresses}
+          pendingSelection={panelPendingSelection}
+          activeNfNumero={panelActiveNfNumero}
+          allocateMode={panelAllocateMode}
+          editMode={editMode}
+          editAddresses={editMode ? editNfAddresses : undefined}
+          saidaAddresses={editMode ? undefined : saidaAddresses}
+          saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
           onCellClick={handleCellClick}
         />
       </main>

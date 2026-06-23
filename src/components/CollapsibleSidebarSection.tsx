@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 
-export type SidebarSectionId = 'entrada' | 'saida' | 'historico' | 'canceladas'
+export type SidebarSectionId = 'entrada' | 'saida' | 'editar' | 'historico' | 'canceladas'
 
 type Props = {
   id: SidebarSectionId
@@ -94,6 +94,28 @@ function SectionIcon({ id }: { id: SidebarSectionId }) {
         <path
           className="icon-saida-arrow"
           d="M12 20v-9m0 0-3 3m3-3 3 3"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (id === 'editar') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          className="icon-edit-grid"
+          d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5z"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinejoin="round"
+        />
+        <path
+          className="icon-edit-arrow"
+          d="M16 16l4 4M18 14v6h-6"
           stroke="currentColor"
           strokeWidth="1.75"
           strokeLinecap="round"

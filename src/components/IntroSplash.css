@@ -57,8 +57,8 @@
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: #1c2330;
-  border: 1px solid #30363d;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -73,8 +73,20 @@
 
 .intro-progress-label {
   font-size: 0.8rem;
-  color: #8b949e;
+  color: var(--text-muted);
   letter-spacing: 0.04em;
+}
+
+[data-theme='light'] .intro-splash {
+  background: radial-gradient(ellipse at center, #dbeafe 0%, #eef2f6 55%, #e8edf2 100%);
+}
+
+[data-theme='light'] .intro-glow {
+  background: radial-gradient(circle, #0969da22 0%, transparent 70%);
+}
+
+[data-theme='light'] .intro-logo {
+  filter: drop-shadow(0 12px 32px #0969da33);
 }
 
 @keyframes intro-fade-in {
