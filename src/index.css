@@ -1,0 +1,47 @@
+:root {
+  --bg: #0f1419;
+  --bg-panel: #161b22;
+  --bg-elevated: #1c2330;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #1f6feb;
+  --accent-hover: #388bfd;
+  --success: #238636;
+  --warning: #9e6a03;
+  --cell-disp: #1f6feb;
+  --cell-sel: #a371f7;
+  --cell-ocup: #8957e5;
+  --cell-porta: #484f58;
+  --cell-nv5: #21262d;
+  --sidebar-w: 360px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: #f85149;
+  font-size: 0.85rem;
+  margin: 8px 0 0;
+}

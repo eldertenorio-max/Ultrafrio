@@ -1,0 +1,18 @@
+# Blueprint Render — site estático (Vite + React)
+# Conecte o repositório GitHub e use este Blueprint ou copie os campos manualmente.
+#
+# Com Supabase configurado no Render, os dados persistem na nuvem.
+# Sem as variáveis VITE_SUPABASE_*, o app funciona igual usando localStorage.
+services:
+  - type: web
+    name: ultrafrio-enderecamento
+    runtime: static
+    buildCommand: npm ci --no-audit --no-fund && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
