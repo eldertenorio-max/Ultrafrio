@@ -1079,6 +1079,43 @@
   filter: brightness(1.08);
 }
 
+.alert-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #000000bb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 300;
+}
+
+.alert-box {
+  background: var(--bg-panel);
+  border: 1px solid #f8514966;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+  padding: 22px;
+  box-shadow: 0 12px 40px #00000088;
+}
+
+.alert-box h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  color: #f85149;
+}
+
+.alert-box p {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+.alert-address {
+  font-weight: 600;
+  color: #a371f7;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     flex-direction: column;

@@ -3,6 +3,7 @@ import { AppSidebar } from './components/AppSidebar'
 import { DetailModal } from './components/DetailModal'
 import { IntroSplash } from './components/IntroSplash'
 import { LayoutPanel } from './components/LayoutPanel'
+import { OcupadoAlert } from './components/OcupadoAlert'
 import { useEnderecamentoStore } from './hooks/useEnderecamentoStore'
 import { allItemsAllocated } from './lib/repository'
 import {
@@ -21,6 +22,7 @@ import {
   syncVinculosNotas,
   vincularNotaCancelada,
 } from './lib/nfCanceladas'
+import { mensagemNfDuplicada } from './lib/nfDuplicate'
 import { parseNfeXml } from './lib/parseNfeXml'
 import type { AddressId, AddressOccupancy, NotaFiscal } from './types'
 import './App.css'
@@ -56,6 +58,10 @@ export default function App() {
   const [itensFlagados, setItensFlagados] = useState<Set<number>>(new Set())
   const [buscaErro, setBuscaErro] = useState<string | null>(null)
   const [uploadCanceladaError, setUploadCanceladaError] = useState<string | null>(null)
+  const [ocupadoAlert, setOcupadoAlert] = useState<{
+    addressId: AddressId
+    occ: AddressOccupancy
+  } | null>(null)
 
   const occupancy = useMemo(() => buildOccupancyMap(state.notas), [state.notas])
   const activeNf = state.notas.find((n) => n.id === state.activeNfId) ?? null
@@ -107,8 +113,9 @@ export default function App() {
     try {
       const text = await file.text()
       const nf = parseNfeXml(text)
-      if (state.notas.some((n) => n.id === nf.id)) {
-        setUploadError('Esta NF já foi importada.')
+      const dup = mensagemNfDuplicada(nf, state.notas, state.notasCanceladas)
+      if (dup) {
+        setUploadError(dup)
         return
       }
       setState((s) => ({
@@ -130,12 +137,9 @@ export default function App() {
     try {
       const text = await file.text()
       const parsed = parseNfeXml(text)
-      if (state.notasCanceladas.some((c) => c.id === parsed.id)) {
-        setUploadCanceladaError('Esta NF cancelada já foi registrada.')
-        return
-      }
-      if (state.notas.some((n) => n.id === parsed.id)) {
-        setUploadCanceladaError('Esta chave já está na entrada ativa. Use outro XML.')
+      const dup = mensagemNfDuplicada(parsed, state.notas, state.notasCanceladas)
+      if (dup) {
+        setUploadCanceladaError(dup)
         return
       }
       const cancelada = notaFiscalToCancelada(parsed)
@@ -180,43 +184,45 @@ export default function App() {
     const occ = occupancy.get(addressId)
 
     if (allocateMode && activeNf && state.activeItemIndex != null) {
-      if (occ && occ.nfId === activeNf.id && occ.itemIndex !== state.activeItemIndex) {
-        setDetailAddress(addressId)
-        return
+      if (occ) {
+        const mesmoItem =
+          occ.nfId === activeNf.id && occ.itemIndex === state.activeItemIndex
+        if (!mesmoItem) {
+          setOcupadoAlert({ addressId, occ })
+          return
+        }
       }
 
-      if (!occ || occ.nfId === activeNf.id) {
-        const nextPending = new Set(pendingSelection)
-        if (nextPending.has(addressId)) nextPending.delete(addressId)
-        else nextPending.add(addressId)
+      const nextPending = new Set(pendingSelection)
+      if (nextPending.has(addressId)) nextPending.delete(addressId)
+      else nextPending.add(addressId)
 
-        const currentItemIndex = state.activeItemIndex
-        setPendingSelection(nextPending)
-        setState((s) => ({
-          ...s,
-          notas: s.notas.map((nf) => {
-            if (nf.id !== activeNf.id) return nf
-            return {
-              ...nf,
-              items: nf.items.map((it) =>
-                it.index === currentItemIndex
-                  ? { ...it, allocatedAddresses: [...nextPending] }
-                  : it,
-              ),
-            }
-          }),
-        }))
-        return
-      }
-    }
-
-    if (occ && (!allocateMode || occ.nfId !== state.activeNfId)) {
-      setDetailAddress(addressId)
+      const currentItemIndex = state.activeItemIndex
+      setPendingSelection(nextPending)
+      setState((s) => ({
+        ...s,
+        notas: s.notas.map((nf) => {
+          if (nf.id !== activeNf.id) return nf
+          return {
+            ...nf,
+            items: nf.items.map((it) =>
+              it.index === currentItemIndex
+                ? { ...it, allocatedAddresses: [...nextPending] }
+                : it,
+            ),
+          }
+        }),
+      }))
       return
     }
 
-    if (!allocateMode || !activeNf) {
-      if (occ) setDetailAddress(addressId)
+    if (occ) {
+      if (allocateMode) {
+        setOcupadoAlert({ addressId, occ })
+        return
+      }
+      setDetailAddress(addressId)
+      return
     }
   }
 
@@ -405,6 +411,14 @@ export default function App() {
           onCellClick={handleCellClick}
         />
       </main>
+
+      {ocupadoAlert && (
+        <OcupadoAlert
+          addressId={ocupadoAlert.addressId}
+          occupancy={ocupadoAlert.occ}
+          onClose={() => setOcupadoAlert(null)}
+        />
+      )}
 
       {detailAddress && detailOcc && detailNota && (
         <DetailModal
