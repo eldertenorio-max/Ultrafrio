@@ -29,7 +29,7 @@ function buildOccupancyMap(notas: import('./types').NotaFiscal[]): Map<AddressId
 }
 
 export default function App() {
-  const { state, setState, loading, saving, error, storageMode, clearError } = useEnderecamentoStore()
+  const { state, setState, loading, saving, error, clearError } = useEnderecamentoStore()
   const [pendingSelection, setPendingSelection] = useState<Set<AddressId>>(new Set())
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [detailAddress, setDetailAddress] = useState<AddressId | null>(null)
@@ -193,7 +193,6 @@ export default function App() {
         activeNfId={state.activeNfId}
         activeItemIndex={state.activeItemIndex}
         pendingCount={pendingSelection.size}
-        storageMode={storageMode}
         saving={saving}
         persistError={error}
         onUpload={handleUpload}

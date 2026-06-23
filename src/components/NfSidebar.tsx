@@ -1,7 +1,6 @@
 import type { ChangeEvent } from 'react'
 import type { NfeItem, NotaFiscal } from '../types'
 import { allItemsAllocated } from '../lib/repository'
-import type { StorageMode } from '../lib/repository'
 import { formatAddressLabel } from '../layout/camaras'
 
 type Props = {
@@ -9,7 +8,6 @@ type Props = {
   activeNfId: string | null
   activeItemIndex: number | null
   pendingCount: number
-  storageMode: StorageMode
   saving: boolean
   persistError: string | null
   onUpload: (file: File) => void
@@ -31,7 +29,6 @@ export function NfSidebar({
   activeNfId,
   activeItemIndex,
   pendingCount,
-  storageMode,
   saving,
   persistError,
   onUpload,
@@ -55,12 +52,7 @@ export function NfSidebar({
       <div className="sidebar-block">
         <h1>Endereçamento</h1>
         <p className="muted">Ultrafrio · alocação por NF-e</p>
-        <div className="storage-badge-row">
-          <span className={`storage-badge storage-badge--${storageMode}`}>
-            {storageMode === 'supabase' ? 'Nuvem · Supabase' : 'Local · navegador'}
-          </span>
-          {saving && <span className="saving-hint">Salvando…</span>}
-        </div>
+        {saving && <p className="saving-hint">Salvando…</p>}
         {persistError && <p className="error">{persistError}</p>}
       </div>
 

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getRepository, getStorageMode, type StorageMode } from '../lib/repository'
+import { getRepository, type EnderecamentoRepository } from '../lib/repository'
+import { localRepository } from '../lib/repository/localRepository'
+import { isSupabaseConfigured } from '../lib/supabaseClient'
 import type { AppState, NotaFiscal } from '../types'
 
 const emptyState: AppState = {
@@ -8,23 +10,26 @@ const emptyState: AppState = {
   activeItemIndex: null,
 }
 
+function pickRepository(): EnderecamentoRepository {
+  return isSupabaseConfigured() ? getRepository() : localRepository
+}
+
 export function useEnderecamentoStore() {
-  const repoRef = useRef(getRepository())
+  const repoRef = useRef<EnderecamentoRepository>(pickRepository())
   const [state, setState] = useState<AppState>(emptyState)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [storageMode, setStorageMode] = useState<StorageMode>(() => getStorageMode())
   const skipSave = useRef(true)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const repo = getRepository()
-    repoRef.current = repo
-    setStorageMode(repo.mode)
 
-    ;(async () => {
+    async function load() {
+      let repo = pickRepository()
+      repoRef.current = repo
+
       try {
         const notas = await repo.loadNotas()
         const ui = repo.loadUiPrefs()
@@ -32,9 +37,28 @@ export function useEnderecamentoStore() {
           setState({ notas, ...ui })
           setError(null)
         }
-      } catch (e) {
+        return
+      } catch {
+        if (repo.mode === 'supabase') {
+          repo = localRepository
+          repoRef.current = repo
+          try {
+            const notas = await repo.loadNotas()
+            const ui = repo.loadUiPrefs()
+            if (!cancelled) {
+              setState({ notas, ...ui })
+              setError(null)
+            }
+            return
+          } catch (e) {
+            if (!cancelled) {
+              setError(e instanceof Error ? e.message : 'Erro ao carregar dados.')
+            }
+            return
+          }
+        }
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Erro ao carregar dados.')
+          setError('Erro ao carregar dados.')
         }
       } finally {
         if (!cancelled) {
@@ -42,7 +66,9 @@ export function useEnderecamentoStore() {
           setLoading(false)
         }
       }
-    })()
+    }
+
+    void load()
 
     return () => {
       cancelled = true
@@ -50,7 +76,7 @@ export function useEnderecamentoStore() {
   }, [])
 
   const persist = useCallback(async (next: AppState) => {
-    const repo = repoRef.current
+    let repo = repoRef.current
     setSaving(true)
     try {
       await repo.saveNotas(next.notas)
@@ -59,8 +85,24 @@ export function useEnderecamentoStore() {
         activeItemIndex: next.activeItemIndex,
       })
       setError(null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao salvar dados.')
+    } catch {
+      if (repo.mode === 'supabase') {
+        repo = localRepository
+        repoRef.current = repo
+        try {
+          await repo.saveNotas(next.notas)
+          repo.saveUiPrefs({
+            activeNfId: next.activeNfId,
+            activeItemIndex: next.activeItemIndex,
+          })
+          setError(null)
+          return
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Erro ao salvar dados.')
+          return
+        }
+      }
+      setError('Erro ao salvar dados.')
     } finally {
       setSaving(false)
     }
@@ -89,7 +131,6 @@ export function useEnderecamentoStore() {
     loading,
     saving,
     error,
-    storageMode,
     clearError: () => setError(null),
   }
 }
