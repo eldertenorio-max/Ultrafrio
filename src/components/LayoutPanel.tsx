@@ -213,6 +213,7 @@ function RuaGrid({
                       config.porta,
                       config.semNivel5Inexistente !== false,
                       config.colunasBloqueadas,
+                      config.celulasBloqueadas,
                     )
                     const addressId = makeAddressId(camaraId, config.rua, nivel, col)
                     const occ = occupancy.get(addressId)

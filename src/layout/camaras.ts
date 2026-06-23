@@ -6,6 +6,8 @@ export type RuaConfig = {
   porta?: { cols: [number, number]; niveis: [number, number] }
   /** Colunas indisponíveis (intervalo inclusivo), em todos os níveis */
   colunasBloqueadas?: [number, number]
+  /** Posições específicas indisponíveis */
+  celulasBloqueadas?: { col: number; nivel: number }[]
   /** false = nível 5 existe em todas as colunas (ex.: Câmara 8) */
   semNivel5Inexistente?: boolean
 }
@@ -50,7 +52,7 @@ export const CAMARAS: CamaraConfig[] = [
     id: 9,
     tipo: 'Refrigerado',
     ruas: [
-      { rua: 1, colunas: 15, porta: { cols: [2, 3], niveis: [1, 3] } },
+      { rua: 1, colunas: 15, celulasBloqueadas: [{ col: 1, nivel: 4 }] },
       { rua: 2, colunas: 15, porta: { cols: [2, 3], niveis: [1, 3] } },
     ],
   },
@@ -110,12 +112,14 @@ export function cellKind(
   porta?: RuaConfig['porta'],
   semNivel5Inexistente = true,
   colunasBloqueadas?: RuaConfig['colunasBloqueadas'],
+  celulasBloqueadas?: RuaConfig['celulasBloqueadas'],
 ): CellKind {
   if (porta) {
     const [c0, c1] = porta.cols
     const [n0, n1] = porta.niveis
     if (col >= c0 && col <= c1 && nivel >= n0 && nivel <= n1) return 'porta'
   }
+  if (celulasBloqueadas?.some((c) => c.col === col && c.nivel === nivel)) return 'bloqueado'
   if (colunasBloqueadas) {
     const [c0, c1] = colunasBloqueadas
     if (col >= c0 && col <= c1) return 'bloqueado'
@@ -141,6 +145,7 @@ export function listAllAddresses(): { id: string; camara: number; rua: number; n
             rua.porta,
             rua.semNivel5Inexistente !== false,
             rua.colunasBloqueadas,
+            rua.celulasBloqueadas,
           )
           out.push({
             id: makeAddressId(cam.id, rua.rua, nivel, col),
