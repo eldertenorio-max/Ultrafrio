@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/write-supabase-config.mjs && tsc -b && vite build",
+    "build": "node scripts/write-supabase-config.mjs && node scripts/generate-icons.mjs && tsc -b && vite build",
     "build:web": "node scripts/write-supabase-config.mjs && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
