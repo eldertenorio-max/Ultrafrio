@@ -15,6 +15,7 @@
 .app-shell {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .sidebar {
@@ -367,6 +368,57 @@
 .rua-block {
   flex: 1;
   min-width: 0;
+}
+
+.rua-grid-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+}
+
+.rua-grid-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.rua-grid-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.rua-grid-inner {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.ruas-row--stacked {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.layout-panel--mobile .layout-legend {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 8px 12px;
+  padding-bottom: 8px;
+  font-size: 0.72rem;
+}
+
+.layout-panel--mobile .layout-legend span {
+  flex-shrink: 0;
+}
+
+.layout-panel--mobile .camara-section {
+  padding: 8px 8px 10px;
+}
+
+.layout-panel--mobile .camara-header h2 {
+  font-size: 1rem;
+}
+
+.layout-panel--mobile .cell {
+  touch-action: manipulation;
 }
 
 .rua-title {
@@ -1246,11 +1298,25 @@
     flex-direction: column;
   }
 
+  .main-panel {
+    order: -1;
+    padding: 8px 8px 12px;
+    overflow-x: hidden;
+  }
+
   .sidebar {
     width: 100%;
     max-height: none;
     position: static;
-    padding: 20px 16px;
+    padding: 12px 12px 16px;
+    box-shadow: none;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar:hover {
+    width: 100%;
+    padding: 12px 12px 16px;
     box-shadow: none;
   }
 
@@ -1307,7 +1373,41 @@
     padding: 10px 12px;
   }
 
-  .ruas-row {
-    flex-wrap: wrap;
+  .hist-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .hist-filter {
+    flex-shrink: 0;
+  }
+
+  .saida-busca {
+    flex-direction: column;
+  }
+
+  .saida-busca .input-nf,
+  .saida-busca .btn {
+    width: 100%;
+  }
+
+  .confirm-box,
+  .alert-box,
+  .modal {
+    max-width: calc(100vw - 32px);
+  }
+
+  .modal-backdrop,
+  .confirm-backdrop,
+  .alert-backdrop {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .confirm-box,
+  .alert-box {
+    margin-bottom: env(safe-area-inset-bottom, 0);
   }
 }

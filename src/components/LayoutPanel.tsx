@@ -12,10 +12,13 @@ import {
   type RuaConfig,
 } from '../layout/camaras'
 import type { AddressId, AddressOccupancy } from '../types'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const CELL_GAP = 2
 const MIN_CELL = 28
 const MAX_CELL = 58
+const MOBILE_MIN_CELL = 20
+const MOBILE_MAX_CELL = 34
 
 type Props = {
   occupancy: Map<AddressId, AddressOccupancy>
@@ -29,23 +32,27 @@ type Props = {
   onCellClick: (addressId: AddressId, clickable: boolean) => void
 }
 
-function computeCellSize(containerWidth: number, ruas: RuaConfig[]): number {
-  if (containerWidth <= 0) return MIN_CELL
+function computeCellSize(containerWidth: number, ruas: RuaConfig[], mobile: boolean): number {
+  if (containerWidth <= 0) return mobile ? MOBILE_MIN_CELL : MIN_CELL
 
-  const pad = 24
-  const ruasGap = 16
-  const labelArea = 30
+  const pad = mobile ? 8 : 24
+  const ruasGap = mobile ? 0 : 16
+  const labelArea = mobile ? 26 : 30
   const maxCols = Math.max(...ruas.map((r) => r.colunas))
-  const perRua = (containerWidth - pad - ruasGap * (ruas.length - 1)) / ruas.length - labelArea
+  const numRuas = mobile ? 1 : ruas.length
+  const perRua = (containerWidth - pad - ruasGap * (numRuas - 1)) / numRuas - labelArea
   const size = Math.floor((perRua - (maxCols - 1) * CELL_GAP) / maxCols)
+  const min = mobile ? MOBILE_MIN_CELL : MIN_CELL
+  const max = mobile ? MOBILE_MAX_CELL : MAX_CELL
 
-  return Math.min(MAX_CELL, Math.max(MIN_CELL, size))
+  return Math.min(max, Math.max(min, size))
 }
 
 function RuaGrid({
   camaraId,
   config,
   cellSize,
+  mobile,
   occupancy,
   pendingSelection,
   allocateMode,
@@ -58,15 +65,19 @@ function RuaGrid({
   camaraId: number
   config: RuaConfig
   cellSize: number
+  mobile: boolean
 } & Props) {
-  const labelW = Math.max(22, Math.round(cellSize * 0.82))
-  const headerH = Math.max(16, Math.round(cellSize * 0.72))
-  const axisFont = cellSize >= 40 ? 11 : 10
+  const labelW = Math.max(mobile ? 20 : 22, Math.round(cellSize * 0.82))
+  const headerH = Math.max(14, Math.round(cellSize * 0.72))
+  const axisFont = cellSize >= 36 ? 11 : 9
+  const gridWidth = labelW + 6 + config.colunas * cellSize + (config.colunas - 1) * CELL_GAP
 
   return (
     <div className="rua-block">
       <div className="rua-title">Rua {config.rua}</div>
-      <div className="rua-grid-wrap" style={{ paddingTop: headerH + 4 }}>
+      <div className="rua-grid-scroll">
+        <div className="rua-grid-inner" style={{ minWidth: gridWidth }}>
+          <div className="rua-grid-wrap" style={{ paddingTop: headerH + 4 }}>
         <div
           className="col-headers"
           style={{
@@ -161,26 +172,28 @@ function RuaGrid({
             )}
           </div>
         </div>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-function CamaraSection({ cam, ...props }: { cam: CamaraConfig } & Props) {
+function CamaraSection({ cam, mobile, ...props }: { cam: CamaraConfig; mobile: boolean } & Props) {
   const ref = useRef<HTMLElement>(null)
-  const [cellSize, setCellSize] = useState(MIN_CELL)
+  const [cellSize, setCellSize] = useState(mobile ? MOBILE_MIN_CELL : MIN_CELL)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
 
-    const update = () => setCellSize(computeCellSize(el.clientWidth, cam.ruas))
+    const update = () => setCellSize(computeCellSize(el.clientWidth, cam.ruas, mobile))
 
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [cam])
+  }, [cam, mobile])
 
   return (
     <section ref={ref} className="camara-section">
@@ -188,9 +201,16 @@ function CamaraSection({ cam, ...props }: { cam: CamaraConfig } & Props) {
         <h2>Câmara {cam.id}</h2>
         <span>{cam.tipo}</span>
       </header>
-      <div className="ruas-row">
+      <div className={`ruas-row ${mobile ? 'ruas-row--stacked' : ''}`}>
         {cam.ruas.map((rua) => (
-          <RuaGrid key={rua.rua} camaraId={cam.id} config={rua} cellSize={cellSize} {...props} />
+          <RuaGrid
+            key={rua.rua}
+            camaraId={cam.id}
+            config={rua}
+            cellSize={cellSize}
+            mobile={mobile}
+            {...props}
+          />
         ))}
       </div>
     </section>
@@ -212,8 +232,10 @@ function cellTooltip(
 }
 
 export function LayoutPanel(props: Props) {
+  const mobile = useIsMobile()
+
   return (
-    <div className="layout-panel">
+    <div className={`layout-panel ${mobile ? 'layout-panel--mobile' : ''}`}>
       <div className="layout-legend">
         <span><i className="swatch swatch--disp" /> Disponível</span>
         <span><i className="swatch swatch--sel" /> Selecionando</span>
@@ -227,7 +249,7 @@ export function LayoutPanel(props: Props) {
 
       <div className="camaras-stack">
         {CAMARAS.map((cam) => (
-          <CamaraSection key={cam.id} cam={cam} {...props} />
+          <CamaraSection key={cam.id} cam={cam} mobile={mobile} {...props} />
         ))}
       </div>
 
