@@ -1,9 +1,11 @@
-export type CellKind = 'disponivel' | 'porta' | 'sem-nivel5'
+export type CellKind = 'disponivel' | 'porta' | 'sem-nivel5' | 'bloqueado'
 
 export type RuaConfig = {
   rua: number
   colunas: number
   porta?: { cols: [number, number]; niveis: [number, number] }
+  /** Colunas indisponíveis (intervalo inclusivo), em todos os níveis */
+  colunasBloqueadas?: [number, number]
   /** false = nível 5 existe em todas as colunas (ex.: Câmara 8) */
   semNivel5Inexistente?: boolean
 }
@@ -20,7 +22,12 @@ export const CAMARAS: CamaraConfig[] = [
     tipo: 'Refrigerado',
     ruas: [
       { rua: 1, colunas: 15 },
-      { rua: 2, colunas: 13 },
+      {
+        rua: 2,
+        colunas: 13,
+        colunasBloqueadas: [1, 3],
+        porta: { cols: [2, 3], niveis: [1, 2] },
+      },
     ],
   },
   {
@@ -102,11 +109,16 @@ export function cellKind(
   totalCols: number,
   porta?: RuaConfig['porta'],
   semNivel5Inexistente = true,
+  colunasBloqueadas?: RuaConfig['colunasBloqueadas'],
 ): CellKind {
   if (porta) {
     const [c0, c1] = porta.cols
     const [n0, n1] = porta.niveis
     if (col >= c0 && col <= c1 && nivel >= n0 && nivel <= n1) return 'porta'
+  }
+  if (colunasBloqueadas) {
+    const [c0, c1] = colunasBloqueadas
+    if (col >= c0 && col <= c1) return 'bloqueado'
   }
   if (semNivel5Inexistente && nivel === 5 && col >= totalCols - 1) return 'sem-nivel5'
   return 'disponivel'
@@ -122,7 +134,14 @@ export function listAllAddresses(): { id: string; camara: number; rua: number; n
     for (const rua of cam.ruas) {
       for (const nivel of NIVEIS) {
         for (let col = 1; col <= rua.colunas; col++) {
-          const kind = cellKind(col, nivel, rua.colunas, rua.porta, rua.semNivel5Inexistente !== false)
+          const kind = cellKind(
+            col,
+            nivel,
+            rua.colunas,
+            rua.porta,
+            rua.semNivel5Inexistente !== false,
+            rua.colunasBloqueadas,
+          )
           out.push({
             id: makeAddressId(cam.id, rua.rua, nivel, col),
             camara: cam.id,

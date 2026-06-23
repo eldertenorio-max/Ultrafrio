@@ -147,6 +147,7 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
                     config.colunas,
                     config.porta,
                     config.semNivel5Inexistente !== false,
+                    config.colunasBloqueadas,
                   )
                   return (
                     <div

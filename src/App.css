@@ -593,7 +593,8 @@
 }
 
 .cell--porta,
-.cell--sem-nivel5 {
+.cell--sem-nivel5,
+.cell--bloqueado {
   cursor: default;
 }
 
@@ -601,7 +602,8 @@
   background: var(--cell-porta);
 }
 
-.cell--sem-nivel5 {
+.cell--sem-nivel5,
+.cell--bloqueado {
   background: var(--cell-nv5);
   border: 1px solid var(--border);
 }
@@ -1359,7 +1361,8 @@
   border: 0.35mm solid #222;
 }
 
-.print-cell--sem-nivel5 {
+.print-cell--sem-nivel5,
+.print-cell--bloqueado {
   background: repeating-linear-gradient(
     -45deg,
     #fafafa,

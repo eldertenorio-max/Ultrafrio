@@ -212,6 +212,7 @@ function RuaGrid({
                       config.colunas,
                       config.porta,
                       config.semNivel5Inexistente !== false,
+                      config.colunasBloqueadas,
                     )
                     const addressId = makeAddressId(camaraId, config.rua, nivel, col)
                     const occ = occupancy.get(addressId)
@@ -353,6 +354,7 @@ function cellTooltip(
   if (pending) return `${label} — Selecionando (clique para remover)`
   if (occ) return `${label} — NF ${occ.nfNumero} (confirmado)`
   if (kind === 'porta') return `${label} — Porta`
+  if (kind === 'bloqueado') return `${label} — Indisponível`
   if (kind === 'sem-nivel5') return `${label} — Nível 5 inexistente`
   return `${label} — Disponível (clique para alocar)`
 }
