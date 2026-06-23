@@ -53,7 +53,7 @@ export const CAMARAS: CamaraConfig[] = [
     tipo: 'Refrigerado',
     ruas: [
       { rua: 1, colunas: 15, celulasBloqueadas: [{ col: 1, nivel: 4 }] },
-      { rua: 2, colunas: 15, porta: { cols: [2, 3], niveis: [1, 3] }, celulasBloqueadas: [{ col: 1, nivel: 4 }] },
+      { rua: 2, colunas: 15, celulasBloqueadas: [{ col: 1, nivel: 4 }] },
     ],
   },
   {
