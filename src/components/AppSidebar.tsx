@@ -6,6 +6,7 @@ import { HistoricoPanel } from './HistoricoPanel'
 import { ImprimirPanel } from './ImprimirPanel'
 import { SaidaPanel } from './SaidaPanel'
 import { ThemeToggle } from './ThemeToggle'
+import { SidebarModeToggle } from './SidebarModeToggle'
 import type { Theme } from '../lib/theme'
 import type { ComponentProps } from 'react'
 
@@ -15,6 +16,8 @@ type Props = {
   persistError: string | null
   theme: Theme
   onToggleTheme: () => void
+  sidebarFixed: boolean
+  onToggleSidebarMode: () => void
   entrada: ComponentProps<typeof EntradaPanel>
   saida: ComponentProps<typeof SaidaPanel>
   editar: ComponentProps<typeof EditarPosicaoPanel>
@@ -29,6 +32,8 @@ export function AppSidebar({
   persistError,
   theme,
   onToggleTheme,
+  sidebarFixed,
+  onToggleSidebarMode,
   entrada,
   saida,
   editar,
@@ -37,7 +42,7 @@ export function AppSidebar({
   imprimir,
 }: Props) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${sidebarFixed ? ' sidebar--fixed' : ''}`}>
       <div className="sidebar-block sidebar-header">
         <img
           src="/logo-ultrafrio-vertical-azul.svg"
@@ -82,6 +87,7 @@ export function AppSidebar({
       </CollapsibleSidebarSection>
 
       <div className="sidebar-footer">
+        <SidebarModeToggle fixed={sidebarFixed} onToggle={onToggleSidebarMode} />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </aside>

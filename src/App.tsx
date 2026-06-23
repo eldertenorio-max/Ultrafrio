@@ -8,6 +8,7 @@ import { CAMARAS } from './layout/camaras'
 import { OcupadoAlert } from './components/OcupadoAlert'
 import { useEnderecamentoStore } from './hooks/useEnderecamentoStore'
 import { useTheme } from './hooks/useTheme'
+import { useSidebarMode } from './hooks/useSidebarMode'
 import { allItemsAllocated } from './lib/repository'
 import {
   aplicarSaidaItens,
@@ -62,6 +63,7 @@ export default function App() {
     clearError,
   } = useEnderecamentoStore()
   const { theme, toggleTheme } = useTheme()
+  const { sidebarFixed, toggleSidebarMode } = useSidebarMode()
   const [introDone, setIntroDone] = useState(false)
   const [pendingSelection, setPendingSelection] = useState<Set<AddressId>>(new Set())
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -573,6 +575,8 @@ export default function App() {
         persistError={error}
         theme={theme}
         onToggleTheme={toggleTheme}
+        sidebarFixed={sidebarFixed}
+        onToggleSidebarMode={toggleSidebarMode}
         entrada={{
           notas: state.notas,
           activeNfId: state.activeNfId,
