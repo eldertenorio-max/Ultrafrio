@@ -1178,9 +1178,10 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 3mm;
-  padding-bottom: 1.5mm;
+  margin-bottom: 2mm;
+  padding-bottom: 1mm;
   border-bottom: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .print-page-header h1 {
@@ -1206,18 +1207,21 @@
 }
 
 .print-page-body {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 0;
+  max-height: 152mm;
   padding: 0;
+  overflow: hidden;
 }
 
 .print-page-footer {
-  margin-top: 3mm;
-  padding-top: 2mm;
+  margin-top: 2mm;
+  padding-top: 1.5mm;
   border-top: 1px solid #ccc;
+  flex-shrink: 0;
 }
 
 .print-legend {
@@ -1377,13 +1381,17 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 100vh;
+    height: 200mm;
+    max-height: 200mm;
+    min-height: unset;
+    overflow: hidden;
     page-break-after: always;
     break-after: page;
     background: #fff;
     color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    box-sizing: border-box;
   }
 
   .print-page:last-child {

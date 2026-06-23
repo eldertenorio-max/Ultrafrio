@@ -9,9 +9,13 @@ import {
 
 const CELL_GAP = 0
 
-/** A4 paisagem com margem 5mm — área útil para o grid no corpo da folha. */
+/** A4 paisagem: 210mm − margens @page 5mm = 200mm úteis na vertical. */
+const PRINT_PAGE_HEIGHT_MM = 200
+const PRINT_PAGE_HEADER_MM = 20
+const PRINT_PAGE_FOOTER_MM = 28
 const PRINT_BODY_WIDTH_MM = 287
-const PRINT_BODY_HEIGHT_MM = 186
+const PRINT_BODY_HEIGHT_MM = PRINT_PAGE_HEIGHT_MM - PRINT_PAGE_HEADER_MM - PRINT_PAGE_FOOTER_MM
+const PRINT_COL_HEADER_MM = 8
 
 type PrintCellDims = {
   cellW: number
@@ -24,12 +28,11 @@ type PrintCellDims = {
 
 function printGridMetrics(colunas: number, cellW: number, cellH: number): PrintCellDims {
   const labelW = Math.max(10, Math.round(cellW * 0.55))
-  const headerH = Math.max(7, Math.round(cellW * 0.45))
   const gapsW = (colunas - 1) * CELL_GAP
   const gapsH = (NIVEIS.length - 1) * CELL_GAP
   const gridW = labelW + 3 + colunas * cellW + gapsW
-  const gridH = headerH + NIVEIS.length * cellH + gapsH
-  return { cellW, cellH, labelW, headerH, gridW, gridH }
+  const gridH = PRINT_COL_HEADER_MM + NIVEIS.length * cellH + gapsH
+  return { cellW, cellH, labelW, headerH: PRINT_COL_HEADER_MM, gridW, gridH }
 }
 
 /** Largura máxima por coluna; altura estica para preencher a folha (retângulo vertical). */
@@ -39,15 +42,19 @@ function computePrintCellDimensions(colunas: number): PrintCellDims {
   const overheadW = 12
 
   const cellW = Math.round(((PRINT_BODY_WIDTH_MM - overheadW - gapsW) / colunas) * 10) / 10
-  const { headerH } = printGridMetrics(colunas, cellW, cellW)
-  const cellH = Math.round(((PRINT_BODY_HEIGHT_MM - headerH - gapsH) / NIVEIS.length) * 10) / 10
+  const cellH = Math.round(((PRINT_BODY_HEIGHT_MM - PRINT_COL_HEADER_MM - gapsH) / NIVEIS.length) * 10) / 10
 
   let dims = printGridMetrics(colunas, cellW, cellH)
 
   while (dims.gridW > PRINT_BODY_WIDTH_MM && dims.cellW > 8) {
     const nextW = Math.round((dims.cellW - 0.1) * 10) / 10
-    const nextH = Math.round(((PRINT_BODY_HEIGHT_MM - dims.headerH - gapsH) / NIVEIS.length) * 10) / 10
+    const nextH = Math.round(((PRINT_BODY_HEIGHT_MM - PRINT_COL_HEADER_MM - gapsH) / NIVEIS.length) * 10) / 10
     dims = printGridMetrics(colunas, nextW, nextH)
+  }
+
+  while (dims.gridH > PRINT_BODY_HEIGHT_MM && dims.cellH > 8) {
+    const nextH = Math.round((dims.cellH - 0.2) * 10) / 10
+    dims = printGridMetrics(colunas, dims.cellW, nextH)
   }
 
   return dims
@@ -86,7 +93,7 @@ type Props = {
 }
 
 function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: RuaConfig; dims: PrintCellDims }) {
-  const { cellW, cellH, labelW, headerH } = dims
+  const { cellW, cellH, labelW } = dims
   const colFont = printColAxisFont(cellW)
   const rowFont = printRowAxisFont(cellH)
   const portaFont = Math.max(11, Math.round(Math.min(cellW, cellH) * 0.5))
@@ -108,7 +115,7 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
         ))}
       </div>
 
-      <div className="print-rua-body" style={{ paddingTop: headerH }}>
+      <div className="print-rua-body">
         <div className="print-row-labels" style={{ width: labelW, gap: `${CELL_GAP}mm` }}>
           {NIVEIS.map((nivel) => (
             <span
