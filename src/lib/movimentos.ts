@@ -27,9 +27,60 @@ export function criarMovimentoEntrada(nf: NotaFiscal): MovimentoRegistro {
     nfId: nf.id,
     nfNumero: nf.numero,
     emitente: nf.emitente,
-    createdAt: new Date().toISOString(),
+    createdAt: nf.createdAt || new Date().toISOString(),
     itens: snapshotItensNf(nf),
   }
+}
+
+export function atualizarMovimentoEntrada(mov: MovimentoRegistro, nf: NotaFiscal): MovimentoRegistro {
+  return {
+    ...mov,
+    nfNumero: nf.numero,
+    emitente: nf.emitente,
+    itens: snapshotItensNf(nf),
+  }
+}
+
+export function upsertMovimentoEntrada(
+  movimentos: MovimentoRegistro[],
+  nf: NotaFiscal,
+): MovimentoRegistro[] {
+  const existing = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id)
+  if (existing) {
+    const updated = atualizarMovimentoEntrada(existing, nf)
+    return movimentos.map((m) => (m.id === existing.id ? updated : m))
+  }
+  return [criarMovimentoEntrada(nf), ...movimentos]
+}
+
+/** Cria registros de entrada faltantes (ex.: NFs importadas antes do histórico). */
+export function sincronizarMovimentosEntrada(data: PersistedData): PersistedData {
+  let movimentos = data.movimentos
+  let changed = false
+
+  for (const nf of data.notas) {
+    const existing = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id)
+    if (!existing) {
+      movimentos = upsertMovimentoEntrada(movimentos, nf)
+      changed = true
+      continue
+    }
+    if (nf.status === 'em_andamento') {
+      const updated = atualizarMovimentoEntrada(existing, nf)
+      if (JSON.stringify(updated.itens) !== JSON.stringify(existing.itens)) {
+        movimentos = movimentos.map((m) => (m.id === existing.id ? updated : m))
+        changed = true
+      }
+      continue
+    }
+    if (existing.itens.length === 0 && nfTemEnderecos(nf)) {
+      const updated = atualizarMovimentoEntrada(existing, nf)
+      movimentos = movimentos.map((m) => (m.id === existing.id ? updated : m))
+      changed = true
+    }
+  }
+
+  return changed ? { ...data, movimentos } : data
 }
 
 export function criarMovimentoSaida(nf: NotaFiscal, itemIndexes: number[]): MovimentoRegistro {

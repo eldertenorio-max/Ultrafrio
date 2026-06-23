@@ -7,11 +7,11 @@ import { allItemsAllocated } from './lib/repository'
 import {
   aplicarSaidaItens,
   buscarNfPorNumero,
-  criarMovimentoEntrada,
   criarMovimentoSaida,
   enderecosDaNf,
   enderecosDosItens,
   excluirMovimento,
+  upsertMovimentoEntrada,
 } from './lib/movimentos'
 import { parseNfeXml } from './lib/parseNfeXml'
 import type { AddressId, AddressOccupancy, AppTab, NotaFiscal } from './types'
@@ -97,6 +97,7 @@ export default function App() {
       setState((s) => ({
         ...s,
         notas: [nf, ...s.notas],
+        movimentos: upsertMovimentoEntrada(s.movimentos, nf),
         activeNfId: nf.id,
         activeItemIndex: 0,
       }))
@@ -180,7 +181,12 @@ export default function App() {
           }),
         }
       })
-      return { ...s, notas }
+      const updatedNf = notas.find((n) => n.id === activeNf.id)!
+      return {
+        ...s,
+        notas,
+        movimentos: upsertMovimentoEntrada(s.movimentos, updatedNf),
+      }
     })
 
     const nextItem = activeNf.items.find(
@@ -194,13 +200,18 @@ export default function App() {
 
   function handleFinishEntrada() {
     if (!activeNf || !allItemsAllocated(activeNf)) return
-    const mov = criarMovimentoEntrada(activeNf)
-    setState((s) => ({
-      ...s,
-      notas: s.notas.map((n) => (n.id === activeNf.id ? { ...n, status: 'concluida' as const } : n)),
-      movimentos: [mov, ...s.movimentos],
-      activeItemIndex: null,
-    }))
+    setState((s) => {
+      const notas = s.notas.map((n) =>
+        n.id === activeNf.id ? { ...n, status: 'concluida' as const } : n,
+      )
+      const updatedNf = notas.find((n) => n.id === activeNf.id)!
+      return {
+        ...s,
+        notas,
+        movimentos: upsertMovimentoEntrada(s.movimentos, updatedNf),
+        activeItemIndex: null,
+      }
+    })
     setPendingSelection(new Set())
     setTab('historico')
   }
