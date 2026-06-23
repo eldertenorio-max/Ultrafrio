@@ -3,7 +3,6 @@ import {
   NIVEIS,
   cellKind,
   makeAddressId,
-  portaOverlayStyle,
   type CamaraConfig,
   type RuaConfig,
 } from '../layout/camaras'
@@ -14,49 +13,83 @@ const CELL_GAP = 0
 const PRINT_BODY_WIDTH_MM = 287
 const PRINT_BODY_HEIGHT_MM = 186
 
-function printGridMetrics(colunas: number, cellSize: number) {
-  const labelW = Math.max(9, Math.round(cellSize * 0.52))
-  const headerH = Math.max(6, Math.round(cellSize * 0.42))
-  const gapsW = (colunas - 1) * CELL_GAP
-  const gapsH = (NIVEIS.length - 1) * CELL_GAP
-  const gridW = labelW + 3 + colunas * cellSize + gapsW
-  const gridH = headerH + NIVEIS.length * cellSize + gapsH
-  return { labelW, headerH, gridW, gridH }
+type PrintCellDims = {
+  cellW: number
+  cellH: number
+  labelW: number
+  headerH: number
+  gridW: number
+  gridH: number
 }
 
-function computePrintCellSize(colunas: number): number {
+function printGridMetrics(colunas: number, cellW: number, cellH: number): PrintCellDims {
+  const labelW = Math.max(10, Math.round(cellW * 0.55))
+  const headerH = Math.max(7, Math.round(cellW * 0.45))
+  const gapsW = (colunas - 1) * CELL_GAP
+  const gapsH = (NIVEIS.length - 1) * CELL_GAP
+  const gridW = labelW + 3 + colunas * cellW + gapsW
+  const gridH = headerH + NIVEIS.length * cellH + gapsH
+  return { cellW, cellH, labelW, headerH, gridW, gridH }
+}
+
+/** Largura máxima por coluna; altura estica para preencher a folha (retângulo vertical). */
+function computePrintCellDimensions(colunas: number): PrintCellDims {
   const gapsW = (colunas - 1) * CELL_GAP
   const gapsH = (NIVEIS.length - 1) * CELL_GAP
   const overheadW = 12
 
-  let cell = (PRINT_BODY_WIDTH_MM - overheadW - gapsW) / colunas
+  const cellW = Math.round(((PRINT_BODY_WIDTH_MM - overheadW - gapsW) / colunas) * 10) / 10
+  const { headerH } = printGridMetrics(colunas, cellW, cellW)
+  const cellH = Math.round(((PRINT_BODY_HEIGHT_MM - headerH - gapsH) / NIVEIS.length) * 10) / 10
 
-  for (let i = 0; i < 4; i++) {
-    const { headerH } = printGridMetrics(colunas, cell)
-    const byHeight = (PRINT_BODY_HEIGHT_MM - headerH - gapsH) / NIVEIS.length
-    if (byHeight >= cell) break
-    cell = byHeight
+  let dims = printGridMetrics(colunas, cellW, cellH)
+
+  while (dims.gridW > PRINT_BODY_WIDTH_MM && dims.cellW > 8) {
+    const nextW = Math.round((dims.cellW - 0.1) * 10) / 10
+    const nextH = Math.round(((PRINT_BODY_HEIGHT_MM - dims.headerH - gapsH) / NIVEIS.length) * 10) / 10
+    dims = printGridMetrics(colunas, nextW, nextH)
   }
 
-  while (printGridMetrics(colunas, cell).gridW > PRINT_BODY_WIDTH_MM && cell > 10) {
-    cell = Math.round((cell - 0.1) * 10) / 10
-  }
-
-  return Math.max(10, Math.round(cell * 10) / 10)
+  return dims
 }
 
-function printAxisFont(cellSize: number): number {
-  return Math.max(12, Math.min(18, Math.round(cellSize * 0.72)))
+function printColAxisFont(cellW: number): number {
+  return Math.max(14, Math.min(22, Math.round(cellW * 0.82)))
+}
+
+function printRowAxisFont(cellH: number): number {
+  return Math.max(14, Math.min(28, Math.round(cellH * 0.36)))
+}
+
+function printPortaOverlayStyleMm(
+  porta: NonNullable<RuaConfig['porta']>,
+  cellW: number,
+  cellH: number,
+  gapMm: number,
+): { left: string; top: string; width: string; height: string } {
+  const [c0, c1] = porta.cols
+  const [n0, n1] = porta.niveis
+  const colCount = c1 - c0 + 1
+  const rowCount = n1 - n0 + 1
+  const topRow = NIVEIS.indexOf(n1 as (typeof NIVEIS)[number])
+
+  return {
+    left: `${(c0 - 1) * (cellW + gapMm)}mm`,
+    top: `${topRow * (cellH + gapMm)}mm`,
+    width: `${colCount * cellW + (colCount - 1) * gapMm}mm`,
+    height: `${rowCount * cellH + (rowCount - 1) * gapMm}mm`,
+  }
 }
 
 type Props = {
   camaraIds: number[]
 }
 
-function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config: RuaConfig; cellSize: number }) {
-  const { labelW, headerH } = printGridMetrics(config.colunas, cellSize)
-  const axisFont = printAxisFont(cellSize)
-  const portaFont = Math.max(10, Math.round(cellSize * 0.48))
+function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: RuaConfig; dims: PrintCellDims }) {
+  const { cellW, cellH, labelW, headerH } = dims
+  const colFont = printColAxisFont(cellW)
+  const rowFont = printRowAxisFont(cellH)
+  const portaFont = Math.max(11, Math.round(Math.min(cellW, cellH) * 0.5))
 
   return (
     <div className="print-rua-grid">
@@ -64,12 +97,12 @@ function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config
         className="print-col-headers"
         style={{
           marginLeft: labelW + 3,
-          gridTemplateColumns: `repeat(${config.colunas}, ${cellSize}mm)`,
+          gridTemplateColumns: `repeat(${config.colunas}, ${cellW}mm)`,
           gap: `${CELL_GAP}mm`,
         }}
       >
         {Array.from({ length: config.colunas }, (_, i) => (
-          <span key={i} className="print-axis" style={{ width: `${cellSize}mm`, fontSize: axisFont }}>
+          <span key={i} className="print-axis" style={{ width: `${cellW}mm`, fontSize: colFont }}>
             {i + 1}
           </span>
         ))}
@@ -81,7 +114,7 @@ function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config
             <span
               key={nivel}
               className="print-axis print-axis--row"
-              style={{ height: `${cellSize}mm`, lineHeight: `${cellSize}mm`, fontSize: axisFont }}
+              style={{ height: `${cellH}mm`, lineHeight: `${cellH}mm`, fontSize: rowFont }}
             >
               {nivel}
             </span>
@@ -95,7 +128,7 @@ function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config
                 key={nivel}
                 className="print-cells-row"
                 style={{
-                  gridTemplateColumns: `repeat(${config.colunas}, ${cellSize}mm)`,
+                  gridTemplateColumns: `repeat(${config.colunas}, ${cellW}mm)`,
                   gap: `${CELL_GAP}mm`,
                 }}
               >
@@ -112,7 +145,7 @@ function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config
                     <div
                       key={makeAddressId(camaraId, config.rua, nivel, col)}
                       className={`print-cell print-cell--${kind}`}
-                      style={{ width: `${cellSize}mm`, height: `${cellSize}mm` }}
+                      style={{ width: `${cellW}mm`, height: `${cellH}mm` }}
                     />
                   )
                 })}
@@ -124,7 +157,7 @@ function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config
             <div
               className="print-porta-label"
               style={{
-                ...portaOverlayStyleMm(config.porta, cellSize, CELL_GAP),
+                ...printPortaOverlayStyleMm(config.porta, cellW, cellH, CELL_GAP),
                 fontSize: portaFont,
               }}
             >
@@ -137,22 +170,8 @@ function PrintRuaGrid({ camaraId, config, cellSize }: { camaraId: number; config
   )
 }
 
-function portaOverlayStyleMm(
-  porta: NonNullable<RuaConfig['porta']>,
-  cellMm: number,
-  gapMm: number,
-): { left: string; top: string; width: string; height: string } {
-  const base = portaOverlayStyle(porta, cellMm, gapMm)
-  return {
-    left: `${base.left}mm`,
-    top: `${base.top}mm`,
-    width: `${base.width}mm`,
-    height: `${base.height}mm`,
-  }
-}
-
 function PrintPage({ cam, rua, pageIndex, totalPages }: { cam: CamaraConfig; rua: RuaConfig; pageIndex: number; totalPages: number }) {
-  const cellSize = computePrintCellSize(rua.colunas)
+  const dims = computePrintCellDimensions(rua.colunas)
   const isRua1 = rua.rua === cam.ruas[0]?.rua
   const versoRua = cam.ruas.find((r) => r.rua !== rua.rua)
 
@@ -172,7 +191,7 @@ function PrintPage({ cam, rua, pageIndex, totalPages }: { cam: CamaraConfig; rua
       </header>
 
       <div className="print-page-body">
-        <PrintRuaGrid camaraId={cam.id} config={rua} cellSize={cellSize} />
+        <PrintRuaGrid camaraId={cam.id} config={rua} dims={dims} />
       </div>
 
       <footer className="print-page-footer">

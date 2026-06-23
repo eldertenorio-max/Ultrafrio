@@ -331,10 +331,10 @@ function CamaraSection({
 }
 
 function cellNfFontSize(cellSize: number): number {
-  if (cellSize >= 48) return 11
-  if (cellSize >= 36) return 10
-  if (cellSize >= 28) return 9
-  return 8
+  if (cellSize >= 48) return 13
+  if (cellSize >= 36) return 12
+  if (cellSize >= 28) return 10
+  return 9
 }
 
 function cellNfLabel(numero: string, cellSize: number): string {

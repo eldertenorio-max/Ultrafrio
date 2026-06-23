@@ -520,12 +520,15 @@
 }
 
 .cell-nf {
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  right: 1px;
   font-weight: 700;
   color: #ffffff;
-  line-height: 1;
+  line-height: 1.05;
   text-align: center;
   word-break: break-all;
-  padding: 1px;
   pointer-events: none;
   user-select: none;
 }
@@ -1182,20 +1185,20 @@
 
 .print-page-header h1 {
   margin: 0;
-  font-size: 16pt;
+  font-size: 18pt;
   font-weight: 700;
   color: #000;
 }
 
 .print-page-sub {
   margin: 1px 0 0;
-  font-size: 11pt;
+  font-size: 12pt;
   color: #444;
 }
 
 .print-page-meta {
   text-align: right;
-  font-size: 9pt;
+  font-size: 10pt;
   color: #666;
   display: flex;
   flex-direction: column;
@@ -1205,7 +1208,7 @@
 .print-page-body {
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   min-height: 0;
   padding: 0;
@@ -1221,7 +1224,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px 20px;
-  font-size: 10pt;
+  font-size: 12pt;
   color: #333;
   margin-bottom: 2.5mm;
 }
@@ -1235,9 +1238,9 @@
 
 .print-swatch {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 1px;
+  width: 11px;
+  height: 16px;
+  border-radius: 2px;
 }
 
 .print-swatch--disp {
@@ -1263,7 +1266,7 @@
 
 .print-duplex-hint {
   margin: 0;
-  font-size: 9.5pt;
+  font-size: 11pt;
   color: #444;
   text-align: center;
   font-weight: 500;
@@ -1314,7 +1317,7 @@
 
 .print-cell {
   box-sizing: border-box;
-  border-radius: 0.5mm;
+  border-radius: 2.5mm;
 }
 
 .print-cell--disponivel {
