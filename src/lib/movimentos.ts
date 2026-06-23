@@ -72,11 +72,18 @@ export function atualizarMovimentoEntrada(mov: MovimentoRegistro, nf: NotaFiscal
   }
 }
 
+export function findMovimentoEntradaAtivo(
+  movimentos: MovimentoRegistro[],
+  nfId: string,
+): MovimentoRegistro | undefined {
+  return movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nfId && !m.excluido)
+}
+
 export function upsertMovimentoEntrada(
   movimentos: MovimentoRegistro[],
   nf: NotaFiscal,
 ): MovimentoRegistro[] {
-  const existing = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id)
+  const existing = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id && !m.excluido)
   if (existing) {
     const updated = atualizarMovimentoEntrada(existing, nf)
     return movimentos.map((m) => (m.id === existing.id ? updated : m))
@@ -90,7 +97,7 @@ export function sincronizarMovimentosEntrada(data: PersistedData): PersistedData
   let changed = false
 
   for (const nf of data.notas) {
-    const existing = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id)
+    const existing = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id && !m.excluido)
     if (!existing) {
       movimentos = upsertMovimentoEntrada(movimentos, nf)
       changed = true
@@ -147,9 +154,12 @@ export function enderecosDosItens(nf: NotaFiscal, itemIndexes: number[]): Addres
 
 export function excluirMovimento(data: PersistedData, movId: string): PersistedData {
   const mov = data.movimentos.find((m) => m.id === movId)
-  if (!mov) return data
+  if (!mov || mov.excluido) return data
 
-  const movimentos = data.movimentos.filter((m) => m.id !== movId)
+  const excluidoEm = new Date().toISOString()
+  const movimentos = data.movimentos.map((m) =>
+    m.id === movId ? { ...m, excluido: true, excluidoEm } : m,
+  )
 
   if (mov.tipo === 'entrada') {
     const notas = data.notas.filter((n) => n.id !== mov.nfId)

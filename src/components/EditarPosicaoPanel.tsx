@@ -5,27 +5,32 @@ import { formatAddressLabel } from '../layout/camaras'
 
 type Props = {
   nfBusca: NotaFiscal | null
+  movimentoEntradaId: string | null
   itemIndex: number | null
   pendingCount: number
   onBuscar: (numero: string) => void
   onSelectItem: (index: number) => void
   onSalvar: () => void
+  onExcluirEntrada: (movId: string) => void
   onCancelarEditar: () => void
   buscaErro: string | null
 }
 
 export function EditarPosicaoPanel({
   nfBusca,
+  movimentoEntradaId,
   itemIndex,
   pendingCount,
   onBuscar,
   onSelectItem,
   onSalvar,
+  onExcluirEntrada,
   onCancelarEditar,
   buscaErro,
 }: Props) {
   const [numero, setNumero] = useState('')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
+  const [confirmarExcluir, setConfirmarExcluir] = useState(false)
 
   function handleBuscar() {
     onBuscar(numero.trim())
@@ -57,13 +62,24 @@ export function EditarPosicaoPanel({
         <div className="sidebar-block nf-detail">
           <div className="nf-detail-head">
             <h3>NF {nfBusca.numero}</h3>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setConfirmarCancelar(true)}
-            >
-              Cancelar edição
-            </button>
+            <div className="nf-detail-actions">
+              {movimentoEntradaId && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => setConfirmarExcluir(true)}
+                >
+                  Excluir entrada
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setConfirmarCancelar(true)}
+              >
+                Cancelar edição
+              </button>
+            </div>
           </div>
           <p className="muted">{nfBusca.emitente}</p>
           <p className="muted">Selecione o item para editar:</p>
@@ -121,15 +137,55 @@ export function EditarPosicaoPanel({
         <div className="sidebar-block nf-detail">
           <div className="nf-detail-head">
             <h3>NF {nfBusca.numero}</h3>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setConfirmarCancelar(true)}
-            >
-              Cancelar edição
-            </button>
+            <div className="nf-detail-actions">
+              {movimentoEntradaId && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => setConfirmarExcluir(true)}
+                >
+                  Excluir entrada
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setConfirmarCancelar(true)}
+              >
+                Cancelar edição
+              </button>
+            </div>
           </div>
           <p className="muted">Esta NF não possui endereços alocados.</p>
+        </div>
+      )}
+
+      {confirmarExcluir && nfBusca && movimentoEntradaId && (
+        <div className="confirm-backdrop" onClick={() => setConfirmarExcluir(false)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h4>Excluir entrada?</h4>
+            <p>
+              NF <strong>{nfBusca.numero}</strong>
+            </p>
+            <p className="confirm-warn">
+              As posições ocupadas serão liberadas e a NF será removida do sistema. O registro permanecerá no histórico.
+            </p>
+            <div className="confirm-actions">
+              <button type="button" className="btn" onClick={() => setConfirmarExcluir(false)}>
+                Voltar
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  onExcluirEntrada(movimentoEntradaId)
+                  setConfirmarExcluir(false)
+                }}
+              >
+                Excluir entrada
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

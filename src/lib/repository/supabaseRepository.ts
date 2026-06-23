@@ -67,6 +67,8 @@ function mapMovimentos(rows: MovRow[]): MovimentoRegistro[] {
     emitente: m.emitente,
     createdAt: m.created_at,
     itens: m.payload?.itens ?? [],
+    ...(m.payload?.excluido ? { excluido: true } : {}),
+    ...(m.payload?.excluidoEm ? { excluidoEm: m.payload.excluidoEm } : {}),
   }))
 }
 
@@ -82,6 +84,8 @@ function mapCanceladas(rows: CanceladaRow[]): NotaFiscalCancelada[] {
     vinculoNfNovaId: c.vinculo_nf_nova_id,
     vinculoNfNovaNumero: c.vinculo_nf_nova_numero,
     items: c.payload?.items ?? [],
+    ...(c.payload?.excluido ? { excluido: true } : {}),
+    ...(c.payload?.excluidoEm ? { excluidoEm: c.payload.excluidoEm } : {}),
   }))
 }
 
@@ -235,7 +239,10 @@ export const supabaseRepository: EnderecamentoRepository = {
         nf_numero: mov.nfNumero,
         emitente: mov.emitente,
         created_at: mov.createdAt,
-        payload: { itens: mov.itens },
+        payload: {
+          itens: mov.itens,
+          ...(mov.excluido ? { excluido: true, excluidoEm: mov.excluidoEm ?? null } : {}),
+        },
       })
       if (error) throw new Error(error.message)
     }
@@ -261,7 +268,10 @@ export const supabaseRepository: EnderecamentoRepository = {
         created_at: c.createdAt,
         vinculo_nf_nova_id: c.vinculoNfNovaId,
         vinculo_nf_nova_numero: c.vinculoNfNovaNumero,
-        payload: { items: c.items },
+        payload: {
+          items: c.items,
+          ...(c.excluido ? { excluido: true, excluidoEm: c.excluidoEm ?? null } : {}),
+        },
       })
       if (error && !error.message.includes('does not exist')) throw new Error(error.message)
     }

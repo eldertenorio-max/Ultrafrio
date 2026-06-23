@@ -85,7 +85,11 @@ type MovRow = {
   nf_numero: string
   emitente: string
   created_at: string
-  payload: { itens: import('../types').MovimentoItemSnapshot[] }
+  payload: {
+    itens: import('../types').MovimentoItemSnapshot[]
+    excluido?: boolean
+    excluidoEm?: string | null
+  }
 }
 
 type CanceladaRow = {
@@ -98,7 +102,11 @@ type CanceladaRow = {
   created_at: string
   vinculo_nf_nova_id: string | null
   vinculo_nf_nova_numero: string | null
-  payload: { items: import('../types').NfeItemCancelado[] }
+  payload: {
+    items: import('../types').NfeItemCancelado[]
+    excluido?: boolean
+    excluidoEm?: string | null
+  }
 }
 
 export type { NfRow, ItemRow, EndRow, MovRow, CanceladaRow }

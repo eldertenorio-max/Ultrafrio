@@ -33,7 +33,7 @@ export function mensagemNfDuplicada(
     return `Esta NF já foi importada (NF ${dupNota.numero}).`
   }
 
-  const dupCancelada = notasCanceladas.find((c) => mesmaNf(c, nf))
+  const dupCancelada = notasCanceladas.find((c) => !c.excluido && mesmaNf(c, nf))
   if (dupCancelada) {
     return `Esta NF já está registrada como cancelada (NF ${dupCancelada.numero}).`
   }
@@ -46,7 +46,7 @@ export function mensagemNfCanceladaDuplicada(
   nf: NfRef,
   notasCanceladas: NotaFiscalCancelada[],
 ): string | null {
-  const dupCancelada = notasCanceladas.find((c) => mesmaNf(c, nf))
+  const dupCancelada = notasCanceladas.find((c) => !c.excluido && mesmaNf(c, nf))
   if (dupCancelada) {
     return `Esta NF já está registrada como cancelada (NF ${dupCancelada.numero}).`
   }

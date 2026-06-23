@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { AddressId, NotaFiscal } from '../types'
 import { formatAddressLabel } from '../layout/camaras'
 import { findNotaByNumero } from '../lib/nfDuplicate'
@@ -11,12 +11,20 @@ export type ManualNfModalResult =
 type Props = {
   addressId?: AddressId | null
   notas: NotaFiscal[]
+  emitentesSugeridos: string[]
   serverError?: string | null
   onConfirm: (result: ManualNfModalResult) => void
   onClose: () => void
 }
 
-export function ManualNfModal({ addressId, notas, serverError, onConfirm, onClose }: Props) {
+export function ManualNfModal({
+  addressId,
+  notas,
+  emitentesSugeridos,
+  serverError,
+  onConfirm,
+  onClose,
+}: Props) {
   const [numero, setNumero] = useState('')
   const [searched, setSearched] = useState<NotaFiscal | null | undefined>(undefined)
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null)
@@ -28,6 +36,7 @@ export function ManualNfModal({ addressId, notas, serverError, onConfirm, onClos
   const [quantidade, setQuantidade] = useState('1')
   const [unidade, setUnidade] = useState('UN')
   const [error, setError] = useState<string | null>(null)
+  const emitentesListId = useId()
 
   function handleBuscar() {
     setError(null)
@@ -145,7 +154,7 @@ export function ManualNfModal({ addressId, notas, serverError, onConfirm, onClos
               onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
             />
             <button type="button" className="btn primary" onClick={handleBuscar}>
-              Buscar
+              Registrar
             </button>
           </div>
         </section>
@@ -199,10 +208,19 @@ export function ManualNfModal({ addressId, notas, serverError, onConfirm, onClos
                 <input
                   type="text"
                   className="input-nf"
+                  list={emitentesListId}
                   value={emitente}
                   onChange={(e) => setEmitente(e.target.value)}
                   placeholder="Opcional"
+                  autoComplete="off"
                 />
+                {emitentesSugeridos.length > 0 && (
+                  <datalist id={emitentesListId}>
+                    {emitentesSugeridos.map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
+                )}
               </label>
               <label className="manual-nf-field">
                 <span>Código do item</span>

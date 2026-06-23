@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { DetailModal } from './components/DetailModal'
 import { ManualNfModal, type ManualNfModalResult } from './components/ManualNfModal'
@@ -13,6 +13,7 @@ import { useTheme } from './hooks/useTheme'
 import { useSidebarMode } from './hooks/useSidebarMode'
 import { allItemsAllocated } from './lib/repository'
 import { adicionarNotaManual, alocarEnderecoEmItem } from './lib/manualNf'
+import { mesclarEmitentesSugeridos, getEmitentesSugeridos, registrarEmitente } from './lib/emitentesRegistry'
 import {
   aplicarSaidaItens,
   buscarNfPorNumero,
@@ -20,6 +21,7 @@ import {
   enderecosDaNf,
   enderecosDosItens,
   excluirMovimento,
+  findMovimentoEntradaAtivo,
   upsertMovimentoEntrada,
 } from './lib/movimentos'
 import {
@@ -150,6 +152,35 @@ export default function App() {
     [state.movimentos],
   )
 
+  const canceladasAtivas = useMemo(
+    () => state.notasCanceladas.filter((c) => !c.excluido),
+    [state.notasCanceladas],
+  )
+
+  const movimentoEntradaEditar = useMemo(() => {
+    if (!nfEditarId) return null
+    return findMovimentoEntradaAtivo(state.movimentos, nfEditarId) ?? null
+  }, [nfEditarId, state.movimentos])
+
+  const emitentesSugeridos = useMemo(
+    () =>
+      mesclarEmitentesSugeridos(
+        getEmitentesSugeridos(),
+        state.notas.map((n) => n.emitente),
+        state.notasCanceladas.map((c) => c.emitente),
+      ),
+    [state.notas, state.notasCanceladas, manualNfModal],
+  )
+
+  const emitentesSeedDone = useRef(false)
+
+  useEffect(() => {
+    if (loading || emitentesSeedDone.current) return
+    emitentesSeedDone.current = true
+    for (const nf of state.notas) registrarEmitente(nf.emitente)
+    for (const c of state.notasCanceladas) registrarEmitente(c.emitente)
+  }, [loading, state.notas, state.notasCanceladas])
+
   const syncPendingFromItem = useCallback((nf: NotaFiscal, itemIndex: number) => {
     const item = nf.items[itemIndex]
     if (!item) {
@@ -177,6 +208,7 @@ export default function App() {
         activeNfId: nf.id,
         activeItemIndex: 0,
       }))
+      registrarEmitente(nf.emitente)
       setPendingSelection(new Set())
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : 'Erro ao ler XML.')
@@ -199,6 +231,7 @@ export default function App() {
         ...s,
         notasCanceladas: [cancelada, ...s.notasCanceladas],
       }))
+      registrarEmitente(cancelada.emitente)
       setCanceladaPendenteId(cancelada.id)
     } catch (e) {
       setUploadCanceladaError(e instanceof Error ? e.message : 'Erro ao ler XML.')
@@ -424,6 +457,7 @@ export default function App() {
         setManualNfError(added.error)
         return
       }
+      registrarEmitente(result.input.emitente ?? '')
       if (addressId) {
         const updated = alocarEnderecoEmItem(
           { notas: added.notas, movimentos: added.movimentos },
@@ -459,7 +493,7 @@ export default function App() {
 
   function handleCancelarEntrada(nfId: string) {
     setState((s) => {
-      const mov = s.movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nfId)
+      const mov = findMovimentoEntradaAtivo(s.movimentos, nfId)
       const base = mov
         ? excluirMovimento(
             { notas: s.notas, movimentos: s.movimentos, notasCanceladas: s.notasCanceladas },
@@ -647,6 +681,12 @@ export default function App() {
     }
     setState(nextState)
     await saveNow(nextState)
+    if (mov?.nfId === nfEditarId) {
+      setNfEditarId(null)
+      setEditItemIndex(null)
+      setEditPendingSelection(new Set())
+      setBuscaEditarErro(null)
+    }
     if (nfBuscaSaidaId) {
       if (mov?.nfId === nfBuscaSaidaId && mov.tipo === 'entrada') {
         setNfBuscaSaidaId(null)
@@ -711,11 +751,9 @@ export default function App() {
         historico={{
           movimentos: movimentosOrdenados,
           canceladas: state.notasCanceladas,
-          onExcluir: handleExcluirMovimento,
-          onExcluirCancelada: handleExcluirCancelada,
         }}
         canceladas={{
-          canceladas: state.notasCanceladas,
+          canceladas: canceladasAtivas,
           notas: state.notas,
           onUpload: handleUploadCancelada,
           onVincular: handleVincularCancelada,
@@ -727,11 +765,13 @@ export default function App() {
         }}
         editar={{
           nfBusca: nfEditar,
+          movimentoEntradaId: movimentoEntradaEditar?.id ?? null,
           itemIndex: editItemIndex,
           pendingCount: editPendingSelection.size,
           onBuscar: handleBuscarEditar,
           onSelectItem: handleSelectItemEditar,
           onSalvar: handleSalvarEditar,
+          onExcluirEntrada: handleExcluirMovimento,
           onCancelarEditar: handleCancelarEditar,
           buscaErro: buscaEditarErro,
         }}
@@ -777,6 +817,7 @@ export default function App() {
         <ManualNfModal
           addressId={manualNfModal.addressId ?? null}
           notas={state.notas}
+          emitentesSugeridos={emitentesSugeridos}
           serverError={manualNfError}
           onConfirm={handleManualNfConfirm}
           onClose={() => {

@@ -19,7 +19,6 @@ export function ThemeToggle({ theme, onToggle }: Props) {
       <span className="theme-toggle-icon" aria-hidden>
         {isLight ? <MoonIcon /> : <SunIcon />}
       </span>
-      <span className="theme-toggle-label">{isLight ? 'Tema escuro' : 'Tema claro'}</span>
     </button>
   )
 }

@@ -259,15 +259,6 @@ function RuaGrid({
                             {cellNfLabel(occ.nfNumero, cellSize)}
                           </span>
                         )}
-                        {kind === 'sem-nivel5' && (
-                          <span
-                            className="cell-unavailable-mark"
-                            style={{ fontSize: cellUnavailableMarkSize(cellSize) }}
-                            aria-hidden
-                          >
-                            ×
-                          </span>
-                        )}
                       </button>
                     )
                   })}
@@ -345,13 +336,6 @@ function cellNfFontSize(cellSize: number): number {
   if (cellSize >= 36) return 12
   if (cellSize >= 28) return 10
   return 9
-}
-
-function cellUnavailableMarkSize(cellSize: number): number {
-  if (cellSize >= 48) return 24
-  if (cellSize >= 36) return 20
-  if (cellSize >= 28) return 16
-  return 12
 }
 
 function cellNfLabel(numero: string, cellSize: number): string {

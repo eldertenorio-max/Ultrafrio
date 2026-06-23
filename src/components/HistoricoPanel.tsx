@@ -8,15 +8,9 @@ type HistItem =
   | { kind: 'movimento'; data: MovimentoRegistro }
   | { kind: 'cancelada'; data: NotaFiscalCancelada }
 
-type ConfirmTarget =
-  | { kind: 'movimento'; data: MovimentoRegistro }
-  | { kind: 'cancelada'; data: NotaFiscalCancelada }
-
 type Props = {
   movimentos: MovimentoRegistro[]
   canceladas: NotaFiscalCancelada[]
-  onExcluir: (id: string) => void
-  onExcluirCancelada: (id: string) => void
 }
 
 const FILTROS: { id: HistFiltro; label: string }[] = [
@@ -26,9 +20,8 @@ const FILTROS: { id: HistFiltro; label: string }[] = [
   { id: 'canceladas', label: 'Canceladas' },
 ]
 
-export function HistoricoPanel({ movimentos, canceladas, onExcluir, onExcluirCancelada }: Props) {
+export function HistoricoPanel({ movimentos, canceladas }: Props) {
   const [filtro, setFiltro] = useState<HistFiltro>('todos')
-  const [confirmar, setConfirmar] = useState<ConfirmTarget | null>(null)
 
   const contagens = useMemo(
     () => ({
@@ -41,13 +34,6 @@ export function HistoricoPanel({ movimentos, canceladas, onExcluir, onExcluirCan
   )
 
   const itens = useMemo(() => buildLista(filtro, movimentos, canceladas), [filtro, movimentos, canceladas])
-
-  function handleConfirmar() {
-    if (!confirmar) return
-    if (confirmar.kind === 'movimento') onExcluir(confirmar.data.id)
-    else onExcluirCancelada(confirmar.data.id)
-    setConfirmar(null)
-  }
 
   function filtroLabel(id: HistFiltro, label: string) {
     const count = contagens[id]
@@ -81,95 +67,35 @@ export function HistoricoPanel({ movimentos, canceladas, onExcluir, onExcluirCan
         <ul className="hist-list">
           {itens.map((item) =>
             item.kind === 'movimento' ? (
-              <MovimentoCard
-                key={`mov-${item.data.id}`}
-                mov={item.data}
-                onExcluir={() => setConfirmar({ kind: 'movimento', data: item.data })}
-              />
+              <MovimentoCard key={`mov-${item.data.id}`} mov={item.data} />
             ) : (
-              <CanceladaCard
-                key={`can-${item.data.id}`}
-                cancelada={item.data}
-                onExcluir={() => setConfirmar({ kind: 'cancelada', data: item.data })}
-              />
+              <CanceladaCard key={`can-${item.data.id}`} cancelada={item.data} />
             ),
           )}
         </ul>
-      )}
-
-      {confirmar && (
-        <div className="confirm-backdrop" onClick={() => setConfirmar(null)}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            {confirmar.kind === 'movimento' ? (
-              <>
-                <h4>Excluir {confirmar.data.tipo === 'entrada' ? 'entrada' : 'saída'}?</h4>
-                <p>
-                  NF <strong>{confirmar.data.nfNumero}</strong>
-                </p>
-                {confirmar.data.tipo === 'entrada' ? (
-                  <p className="confirm-warn">
-                    As posições ocupadas serão liberadas e a NF será removida do sistema.
-                  </p>
-                ) : (
-                  <p className="muted">
-                    O registro será removido do histórico. As posições no estoque não serão alteradas.
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <h4>Excluir NF cancelada?</h4>
-                <p>
-                  NF <strong>{confirmar.data.numero}</strong>
-                </p>
-                <p className="muted">
-                  O registro será removido. Vínculos com notas novas também serão desfeitos.
-                </p>
-              </>
-            )}
-            <div className="confirm-actions">
-              <button type="button" className="btn" onClick={() => setConfirmar(null)}>
-                Cancelar
-              </button>
-              <button type="button" className="btn btn-danger" onClick={handleConfirmar}>
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </>
   )
 }
 
-function MovimentoCard({
-  mov,
-  onExcluir,
-}: {
-  mov: MovimentoRegistro
-  onExcluir: () => void
-}) {
+function MovimentoCard({ mov }: { mov: MovimentoRegistro }) {
   const totalEnd = mov.itens.reduce((s, it) => s + it.addressIds.length, 0)
 
   return (
-    <li className={`hist-card hist-card--${mov.tipo}`}>
+    <li className={`hist-card hist-card--${mov.tipo}${mov.excluido ? ' hist-card--excluido' : ''}`}>
       <div className="hist-head">
         <span className={`hist-tipo hist-tipo--${mov.tipo}`}>
           {mov.tipo === 'entrada' ? 'Entrada' : 'Saída'}
         </span>
-        <button
-          type="button"
-          className="hist-delete"
-          title={mov.tipo === 'entrada' ? 'Excluir entrada' : 'Excluir saída'}
-          onClick={onExcluir}
-        >
-          <TrashIcon />
-        </button>
+        {mov.excluido && <span className="hist-excluido-badge">Excluído</span>}
       </div>
       <strong>NF {mov.nfNumero}</strong>
       <p className="muted hist-emitente">{mov.emitente || '—'}</p>
       <p className="muted">
-        {formatDate(mov.createdAt)} · {mov.itens.length} item(ns) · {totalEnd} end.
+        {formatDate(mov.createdAt)}
+        {mov.excluidoEm ? ` · excluído em ${formatDate(mov.excluidoEm)}` : ''}
+        {' · '}
+        {mov.itens.length} item(ns) · {totalEnd} end.
       </p>
       <ul className="addr-mini">
         {mov.itens.flatMap((it) =>
@@ -180,40 +106,24 @@ function MovimentoCard({
           )),
         )}
       </ul>
-      {mov.tipo === 'entrada' && (
-        <p className="hist-hint">Excluir libera todas as posições desta entrada.</p>
-      )}
-      {mov.tipo === 'saida' && (
-        <p className="hist-hint">Excluir remove apenas o registro do histórico.</p>
-      )}
     </li>
   )
 }
 
-function CanceladaCard({
-  cancelada,
-  onExcluir,
-}: {
-  cancelada: NotaFiscalCancelada
-  onExcluir: () => void
-}) {
+function CanceladaCard({ cancelada }: { cancelada: NotaFiscalCancelada }) {
   return (
-    <li className="hist-card hist-card--cancelada">
+    <li className={`hist-card hist-card--cancelada${cancelada.excluido ? ' hist-card--excluido' : ''}`}>
       <div className="hist-head">
         <span className="hist-tipo hist-tipo--cancelada">Cancelada</span>
-        <button
-          type="button"
-          className="hist-delete"
-          title="Excluir NF cancelada"
-          onClick={onExcluir}
-        >
-          <TrashIcon />
-        </button>
+        {cancelada.excluido && <span className="hist-excluido-badge">Excluído</span>}
       </div>
       <strong>NF {cancelada.numero}</strong>
       <p className="muted hist-emitente">{cancelada.emitente || '—'}</p>
       <p className="muted">
-        {formatDate(cancelada.createdAt)} · {cancelada.items.length} item(ns)
+        {formatDate(cancelada.createdAt)}
+        {cancelada.excluidoEm ? ` · excluído em ${formatDate(cancelada.excluidoEm)}` : ''}
+        {' · '}
+        {cancelada.items.length} item(ns)
       </p>
       <ul className="addr-mini">
         {cancelada.items.map((it) => (
@@ -227,9 +137,8 @@ function CanceladaCard({
           Vinculada à NF nova <strong>{cancelada.vinculoNfNovaNumero}</strong>
         </p>
       ) : (
-        <p className="hist-hint">Sem vínculo com NF substituta.</p>
+        !cancelada.excluido && <p className="hist-hint">Sem vínculo com NF substituta.</p>
       )}
-      <p className="hist-hint">Excluir remove o registro e desfaz vínculos.</p>
     </li>
   )
 }
@@ -269,20 +178,6 @@ function buildLista(
   ]
 
   return merged.sort((a, b) => b.sort.localeCompare(a.sort)).map((e) => e.item)
-}
-
-function TrashIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 7h16M9 7V5h6v2M10 11v6M14 11v6M6 7l1 13h10l1-13"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
 }
 
 function formatDate(raw: string): string {

@@ -80,7 +80,7 @@ export function useEnderecamentoStore() {
             activeItemIndex: next.activeItemIndex,
           })
           pendingSaveRef.current = null
-          setError('Nuvem indisponível — dados salvos só neste navegador.')
+          setError(null)
           return
         } catch (e) {
           setError(e instanceof Error ? e.message : 'Erro ao salvar dados.')
@@ -176,7 +176,7 @@ export function useEnderecamentoStore() {
             const ui = repo.loadUiPrefs()
             if (!cancelled) {
               setState({ ...data, ...ui })
-              setError('Nuvem indisponível — usando dados deste navegador.')
+              setError(null)
             }
             return
           } catch (e) {

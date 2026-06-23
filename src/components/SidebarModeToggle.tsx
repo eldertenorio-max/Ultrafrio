@@ -16,7 +16,6 @@ export function SidebarModeToggle({ fixed, onToggle }: Props) {
       <span className="sidebar-mode-toggle-icon" aria-hidden>
         {fixed ? <UnpinIcon /> : <PinIcon />}
       </span>
-      <span className="sidebar-mode-toggle-label">{fixed ? 'Menu livre' : 'Menu fixo'}</span>
     </button>
   )
 }

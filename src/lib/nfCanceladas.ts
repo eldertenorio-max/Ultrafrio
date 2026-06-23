@@ -25,7 +25,7 @@ export function notaFiscalToCancelada(nf: NotaFiscal): NotaFiscalCancelada {
 export function syncVinculosNotas(data: PersistedData): PersistedData {
   const byNovaId = new Map(
     data.notasCanceladas
-      .filter((c) => c.vinculoNfNovaId)
+      .filter((c) => c.vinculoNfNovaId && !c.excluido)
       .map((c) => [c.vinculoNfNovaId!, c]),
   )
 
@@ -77,15 +77,19 @@ export function desvincularNotaCancelada(data: PersistedData, canceladaId: strin
 }
 
 export function excluirNotaCancelada(data: PersistedData, canceladaId: string): PersistedData {
-  const alvo = data.notasCanceladas.find((c) => c.id === canceladaId)
-  const notasCanceladas = data.notasCanceladas.filter((c) => c.id !== canceladaId)
-  let next = { ...data, notasCanceladas }
-  if (alvo?.vinculoNfNovaId) {
-    next = syncVinculosNotas(next)
-  } else {
-    next = syncVinculosNotas(next)
-  }
-  return next
+  const excluidoEm = new Date().toISOString()
+  const notasCanceladas = data.notasCanceladas.map((c) =>
+    c.id === canceladaId
+      ? {
+          ...c,
+          excluido: true,
+          excluidoEm,
+          vinculoNfNovaId: null,
+          vinculoNfNovaNumero: null,
+        }
+      : c,
+  )
+  return syncVinculosNotas({ ...data, notasCanceladas })
 }
 
 export function notasDisponiveisParaVinculo(
@@ -94,7 +98,9 @@ export function notasDisponiveisParaVinculo(
   canceladaId: string,
 ): PersistedData['notas'] {
   const vinculadas = new Set(
-    canceladas.filter((c) => c.vinculoNfNovaId && c.id !== canceladaId).map((c) => c.vinculoNfNovaId!),
+    canceladas
+      .filter((c) => c.vinculoNfNovaId && !c.excluido && c.id !== canceladaId)
+      .map((c) => c.vinculoNfNovaId!),
   )
   return notas.filter((n) => !vinculadas.has(n.id))
 }

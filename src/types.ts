@@ -47,6 +47,9 @@ export type NotaFiscalCancelada = {
   vinculoNfNovaId: string | null
   vinculoNfNovaNumero: string | null
   createdAt: string
+  /** Registro mantido no histórico após exclusão na aba NF cancelada. */
+  excluido?: boolean
+  excluidoEm?: string
 }
 
 export type MovimentoTipo = 'entrada' | 'saida'
@@ -72,6 +75,9 @@ export type MovimentoRegistro = {
   emitente: string
   createdAt: string
   itens: MovimentoItemSnapshot[]
+  /** Registro mantido no histórico após exclusão na aba Movimentação. */
+  excluido?: boolean
+  excluidoEm?: string
 }
 
 export type AddressOccupancy = {
