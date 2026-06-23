@@ -68,6 +68,15 @@ export default function App() {
     activeNf.status === 'em_andamento' &&
     state.activeItemIndex != null
 
+  const displayOccupancy = useMemo(() => {
+    if (!allocateMode || !activeNf || state.activeItemIndex == null) return occupancy
+    const map = new Map(occupancy)
+    for (const addr of pendingSelection) {
+      map.delete(addr)
+    }
+    return map
+  }, [occupancy, allocateMode, activeNf, state.activeItemIndex, pendingSelection])
+
   const saidaAddresses = useMemo(() => {
     if (!nfBuscaSaida) return new Set<AddressId>()
     return new Set(enderecosDaNf(nfBuscaSaida))
@@ -170,6 +179,37 @@ export default function App() {
 
     const occ = occupancy.get(addressId)
 
+    if (allocateMode && activeNf && state.activeItemIndex != null) {
+      if (occ && occ.nfId === activeNf.id && occ.itemIndex !== state.activeItemIndex) {
+        setDetailAddress(addressId)
+        return
+      }
+
+      if (!occ || occ.nfId === activeNf.id) {
+        const nextPending = new Set(pendingSelection)
+        if (nextPending.has(addressId)) nextPending.delete(addressId)
+        else nextPending.add(addressId)
+
+        const currentItemIndex = state.activeItemIndex
+        setPendingSelection(nextPending)
+        setState((s) => ({
+          ...s,
+          notas: s.notas.map((nf) => {
+            if (nf.id !== activeNf.id) return nf
+            return {
+              ...nf,
+              items: nf.items.map((it) =>
+                it.index === currentItemIndex
+                  ? { ...it, allocatedAddresses: [...nextPending] }
+                  : it,
+              ),
+            }
+          }),
+        }))
+        return
+      }
+    }
+
     if (occ && (!allocateMode || occ.nfId !== state.activeNfId)) {
       setDetailAddress(addressId)
       return
@@ -177,21 +217,7 @@ export default function App() {
 
     if (!allocateMode || !activeNf) {
       if (occ) setDetailAddress(addressId)
-      return
     }
-
-    const occupiedByOther = occ && occ.nfId !== activeNf.id
-    if (occupiedByOther) {
-      setDetailAddress(addressId)
-      return
-    }
-
-    setPendingSelection((prev) => {
-      const next = new Set(prev)
-      if (next.has(addressId)) next.delete(addressId)
-      else next.add(addressId)
-      return next
-    })
   }
 
   function handleConfirmItem() {
@@ -370,7 +396,7 @@ export default function App() {
 
       <main className="main-panel">
         <LayoutPanel
-          occupancy={occupancy}
+          occupancy={displayOccupancy}
           pendingSelection={pendingSelection}
           activeNfNumero={activeNf?.numero ?? null}
           allocateMode={allocateMode}

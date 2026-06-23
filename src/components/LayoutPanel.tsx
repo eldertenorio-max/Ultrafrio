@@ -86,7 +86,7 @@ function RuaGrid({
                     if (pending) className += ' cell--selecionado'
                     if (saidaFlaggedAddresses?.has(addressId)) className += ' cell--saida-flag'
                     else if (saidaAddresses?.has(addressId)) className += ' cell--saida'
-                    if (allocateMode && clickable && !occ) className += ' cell--alocavel'
+                    if (allocateMode && (clickable || pending)) className += ' cell--alocavel'
 
                     return (
                       <button
@@ -94,9 +94,9 @@ function RuaGrid({
                         type="button"
                         className={className}
                         style={{ width: cell, height: cell }}
-                        disabled={!clickable && !occ}
-                        title={occ ? `NF ${occ.nfNumero}` : formatTitle(kind)}
-                        onClick={() => onCellClick(addressId, clickable || !!occ)}
+                        disabled={!clickable && !occ && !pending}
+                        title={occ ? `NF ${occ.nfNumero}` : pending ? 'Selecionado — clique para remover' : formatTitle(kind)}
+                        onClick={() => onCellClick(addressId, clickable || !!occ || pending)}
                       >
                         {occ && <span className="cell-nf">{occ.nfNumero}</span>}
                       </button>
@@ -159,7 +159,7 @@ export function LayoutPanel(props: Props) {
 
       {props.allocateMode && props.activeNfNumero && (
         <p className="layout-hint">
-          Modo alocação: clique nos quadrados azuis para marcar endereços do item selecionado.
+          Modo alocação: clique nos quadrados para marcar ou desmarcar endereços do item selecionado.
         </p>
       )}
       {props.saidaAddresses && props.saidaAddresses.size > 0 && (
