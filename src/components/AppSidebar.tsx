@@ -1,3 +1,4 @@
+import { CollapsibleSidebarSection } from './CollapsibleSidebarSection'
 import { EntradaPanel } from './EntradaPanel'
 import { HistoricoPanel } from './HistoricoPanel'
 import { SaidaPanel } from './SaidaPanel'
@@ -26,20 +27,17 @@ export function AppSidebar({ saving, persistError, entrada, saida, historico }: 
         {persistError && <p className="error">{persistError}</p>}
       </div>
 
-      <section className="sidebar-section">
-        <h2 className="sidebar-section-title">Entrada</h2>
+      <CollapsibleSidebarSection id="entrada" title="Entrada">
         <EntradaPanel {...entrada} />
-      </section>
+      </CollapsibleSidebarSection>
 
-      <section className="sidebar-section">
-        <h2 className="sidebar-section-title">Saída</h2>
+      <CollapsibleSidebarSection id="saida" title="Saída">
         <SaidaPanel {...saida} />
-      </section>
+      </CollapsibleSidebarSection>
 
-      <section className="sidebar-section">
-        <h2 className="sidebar-section-title">Histórico</h2>
+      <CollapsibleSidebarSection id="historico" title="Histórico">
         <HistoricoPanel {...historico} />
-      </section>
+      </CollapsibleSidebarSection>
     </aside>
   )
 }

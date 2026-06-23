@@ -550,21 +550,158 @@
 }
 
 .sidebar-section {
-  padding: 16px 0;
+  padding: 0;
   border-top: 1px solid var(--border);
 }
 
 .sidebar-section:first-of-type {
   border-top: none;
-  padding-top: 4px;
+}
+
+.sidebar-section-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 4px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.sidebar-section-trigger:hover,
+.sidebar-section--open .sidebar-section-trigger {
+  background: #1f6feb14;
+}
+
+.sidebar-section-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+
+.sidebar-section-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .sidebar-section-title {
-  margin: 0 0 12px;
+  flex: 1;
+  margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text);
   letter-spacing: 0.02em;
+}
+
+.sidebar-section-chevron {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  transform: rotate(0deg);
+  transition: transform 0.25s ease;
+}
+
+.sidebar-section-chevron--open {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+
+.sidebar-section-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s ease;
+}
+
+.sidebar-section--open .sidebar-section-body {
+  grid-template-rows: 1fr;
+}
+
+.sidebar-section-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 2px 14px;
+}
+
+.sidebar-section--open .sidebar-section-inner {
+  animation: section-content-in 0.28s ease-out;
+}
+
+/* Ícones animados — Entrada */
+.sidebar-section--entrada:hover .icon-entrada-arrow,
+.sidebar-section--entrada.sidebar-section--open .icon-entrada-arrow {
+  animation: icon-entrada-bounce 1.4s ease-in-out infinite;
+}
+
+.sidebar-section--entrada .sidebar-section-icon {
+  color: #388bfd;
+}
+
+/* Ícones animados — Saída */
+.sidebar-section--saida:hover .icon-saida-arrow,
+.sidebar-section--saida.sidebar-section--open .icon-saida-arrow {
+  animation: icon-saida-bounce 1.4s ease-in-out infinite;
+}
+
+.sidebar-section--saida .sidebar-section-icon {
+  color: #d29922;
+}
+
+/* Ícones animados — Histórico */
+.sidebar-section--historico:hover .icon-hist-hand,
+.sidebar-section--historico.sidebar-section--open .icon-hist-hand {
+  transform-origin: 12px 12px;
+  animation: icon-hist-tick 2s linear infinite;
+}
+
+.sidebar-section--historico:hover .icon-hist-clock,
+.sidebar-section--historico.sidebar-section--open .icon-hist-clock {
+  animation: icon-hist-pulse 2s ease-in-out infinite;
+}
+
+.sidebar-section--historico .sidebar-section-icon {
+  color: #3fb950;
+}
+
+@keyframes section-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes icon-entrada-bounce {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(3px); opacity: 0.75; }
+}
+
+@keyframes icon-saida-bounce {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(-3px); opacity: 0.75; }
+}
+
+@keyframes icon-hist-tick {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes icon-hist-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
 }
 
 .saida-busca {
