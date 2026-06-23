@@ -541,6 +541,14 @@
   margin-bottom: 8px;
 }
 
+.sidebar-logo {
+  display: block;
+  width: 100%;
+  max-width: 168px;
+  height: auto;
+  margin-bottom: 12px;
+}
+
 .sidebar-section {
   padding: 16px 0;
   border-top: 1px solid var(--border);

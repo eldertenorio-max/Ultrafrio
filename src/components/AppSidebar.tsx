@@ -15,6 +15,11 @@ export function AppSidebar({ saving, persistError, entrada, saida, historico }: 
   return (
     <aside className="sidebar">
       <div className="sidebar-block sidebar-header">
+        <img
+          src="/logo-ultrafrio-horizontal-azul.svg"
+          alt="Ultrafrio"
+          className="sidebar-logo"
+        />
         <h1>Endereçamento</h1>
         <p className="muted">Ultrafrio · entrada e saída por NF-e</p>
         {saving && <p className="saving-hint">Salvando…</p>}
