@@ -15,15 +15,29 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
-export const supabaseUrl = cleanEnv(import.meta.env.VITE_SUPABASE_URL)
-export const supabaseAnonKey = cleanEnv(import.meta.env.VITE_SUPABASE_ANON_KEY)
+let supabaseUrl = cleanEnv(import.meta.env.VITE_SUPABASE_URL)
+let supabaseAnonKey = cleanEnv(import.meta.env.VITE_SUPABASE_ANON_KEY)
+
+export function applySupabaseCredentials(url: string, anonKey: string): void {
+  supabaseUrl = cleanEnv(url)
+  supabaseAnonKey = cleanEnv(anonKey)
+  client = null
+}
+
+export function getSupabaseUrl(): string {
+  return supabaseUrl
+}
+
+export function getSupabaseAnonKey(): string {
+  return supabaseAnonKey
+}
 
 export function isSupabaseConfigured(): boolean {
   return isValidHttpUrl(supabaseUrl) && supabaseAnonKey.length > 0
 }
 
 const missingEnvError = new Error(
-  'Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no Render ou no arquivo .env local.',
+  'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no Render.',
 )
 
 let client: SupabaseClient | null = null

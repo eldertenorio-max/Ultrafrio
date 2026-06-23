@@ -7,7 +7,7 @@ services:
   - type: web
     name: ultrafrio-enderecamento
     runtime: static
-    buildCommand: npm ci --no-audit --no-fund && npm run build
+    buildCommand: npm ci --no-audit --no-fund && node scripts/write-supabase-config.mjs && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: NODE_VERSION

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getRepository, getStorageMode, type EnderecamentoRepository } from '../lib/repository'
 import { clearLocalPersistedData, localRepository } from '../lib/repository/localRepository'
+import { ensureSupabaseConfig } from '../lib/supabaseConfig'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { subscribeEnderecamentoChanges } from '../lib/supabaseRealtime'
 import { prepareLoadedData } from '../lib/persistence'
@@ -77,6 +78,8 @@ export function useEnderecamentoStore() {
     let cancelled = false
 
     async function load() {
+      await ensureSupabaseConfig()
+
       let repo = pickRepository()
       repoRef.current = repo
       setStorageMode(repo.mode)

@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:web": "vite build",
+    "build": "node scripts/write-supabase-config.mjs && tsc -b && vite build",
+    "build:web": "node scripts/write-supabase-config.mjs && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

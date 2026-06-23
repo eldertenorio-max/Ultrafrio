@@ -517,6 +517,8 @@ export default function App() {
         movimentos: upsertMovimentoEntrada(s.movimentos, updatedNf),
       }
     })
+    setEditPendingSelection(new Set())
+    setEditItemIndex(null)
   }
 
   function handleCancelarEditar() {
