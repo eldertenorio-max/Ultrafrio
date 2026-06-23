@@ -40,6 +40,14 @@ export const CAMARAS: CamaraConfig[] = [
     ],
   },
   {
+    id: 9,
+    tipo: 'Refrigerado',
+    ruas: [
+      { rua: 9, colunas: 15, porta: { cols: [2, 3], niveis: [1, 3] }, semNivel5Inexistente: false },
+      { rua: 10, colunas: 15, porta: { cols: [2, 3], niveis: [1, 3] }, semNivel5Inexistente: false },
+    ],
+  },
+  {
     id: 10,
     tipo: 'Refrigerado',
     ruas: [
