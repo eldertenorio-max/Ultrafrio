@@ -15,7 +15,10 @@ export function EntradaPendenteAlert({
 }: Props) {
   useBodyScrollLock(true)
 
-  const itensLabel = itensPendentes === 1 ? '1 item sem endereço' : `${itensPendentes} itens sem endereço`
+  const itensLabel =
+    itensPendentes === 1
+      ? '1 item com endereçamento incompleto'
+      : `${itensPendentes} itens com endereçamento incompleto`
   const podeSair = !!onConfirmLeave
 
   return (

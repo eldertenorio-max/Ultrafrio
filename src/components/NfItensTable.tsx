@@ -2,6 +2,7 @@ import { Fragment, type SyntheticEvent } from 'react'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
 import { normalizeDataFabricacao, todayDateInputMax } from '../lib/entradaCampos'
 import { canDesmembrarNfeItem } from '../lib/desmembrarItem'
+import { itemEnderecamentoCompleto, paletesLimiteItem } from '../lib/paletes'
 import type { NfeItem } from '../types'
 import { formatAddressLabel } from '../layout/camaras'
 import {
@@ -21,9 +22,11 @@ type Props = {
   canEdit?: boolean
 }
 
-function itemStatus(item: NfeItem): 'pendente' | 'ok' {
-  if (item.allocatedAddresses.length === 0) return 'pendente'
-  return 'ok'
+function itemStatus(item: NfeItem): 'pendente' | 'parcial' | 'ok' {
+  if (itemEnderecamentoCompleto(item)) return 'ok'
+  const limite = paletesLimiteItem(item)
+  if (item.allocatedAddresses.length > 0 && limite > 0) return 'parcial'
+  return 'pendente'
 }
 
 function stopRowActivate(e: SyntheticEvent) {
@@ -78,7 +81,7 @@ export function NfItensTable({
                 >
                   <td className="nf-itens-col-status">
                     <span className={`nf-itens-status nf-itens-status--${st}`}>
-                      {st === 'ok' ? '✓' : '○'}
+                      {st === 'ok' ? '✓' : st === 'parcial' ? '◐' : '○'}
                     </span>
                   </td>
                   <td className="nf-itens-col-codigo">{item.codigo || '—'}</td>

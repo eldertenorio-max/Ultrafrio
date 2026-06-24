@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react'
 import type { NfeItem, NotaFiscal } from '../types'
 import { allItemsAllocated } from '../lib/repository'
+import { itemEnderecamentoCompleto, paletesLimiteItem } from '../lib/paletes'
 import { formatAddressLabel } from '../layout/camaras'
 
 type Props = {
@@ -20,8 +21,10 @@ type Props = {
 }
 
 function itemStatus(item: NfeItem): 'pendente' | 'parcial' | 'ok' {
-  if (item.allocatedAddresses.length === 0) return 'pendente'
-  return 'ok'
+  if (itemEnderecamentoCompleto(item)) return 'ok'
+  const limite = paletesLimiteItem(item)
+  if (item.allocatedAddresses.length > 0 && limite > 0) return 'parcial'
+  return 'pendente'
 }
 
 export function NfSidebar({

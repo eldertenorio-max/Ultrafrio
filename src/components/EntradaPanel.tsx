@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type MouseEvent } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
 import type { NotaFiscal } from '../types'
+import { itemEnderecamentoCompleto } from '../lib/paletes'
 import { NfItensTable } from './NfItensTable'
 import { NfResumoGrid } from './NfResumoGrid'
 
@@ -87,7 +88,7 @@ export function EntradaPanel({
           <p className="muted nf-list-hint">Ctrl+clique para selecionar várias · Shift+clique para intervalo</p>
           <ul className="nf-list">
             {emAndamento.map((nf) => {
-              const pendentes = nf.items.filter((it) => it.allocatedAddresses.length === 0).length
+              const pendentes = nf.items.filter((it) => !itemEnderecamentoCompleto(it)).length
               const isSelected = selectedSet.has(nf.id)
               const isActive = nf.id === activeNfId
               return (
@@ -189,7 +190,10 @@ export function EntradaPanel({
                   type="button"
                   className="btn primary"
                   onClick={onConfirmItem}
-                  disabled={pendingCount === 0}
+                  disabled={
+                    pendingCount === 0 ||
+                    (paletesRestantes != null && paletesRestantes > 0)
+                  }
                 >
                   Confirmar endereços do item
                 </button>

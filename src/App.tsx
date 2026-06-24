@@ -15,7 +15,12 @@ import { useSidebarMode } from './hooks/useSidebarMode'
 import { allItemsAllocated } from './lib/repository'
 import { adicionarNotaManual } from './lib/manualNf'
 import { desmembrarNfeItem, patchNfeItemQuantidade } from './lib/desmembrarItem'
-import { parsePaletesInput, paletesLimiteItem, podeAdicionarEndereco } from './lib/paletes'
+import {
+  itemEnderecamentoCompleto,
+  parsePaletesInput,
+  paletesLimiteItem,
+  podeAdicionarEndereco,
+} from './lib/paletes'
 import { contarItensSemEndereco, nfEntradaIncompleta } from './lib/entradaPendente'
 import { mesclarEmitentesSugeridos } from './lib/emitentesRegistry'
 import {
@@ -94,9 +99,9 @@ export default function App() {
     addressId: AddressId
     occ: AddressOccupancy
   } | null>(null)
-  const [paletesLimiteAlert, setPaletesLimiteAlert] = useState<'sem_paletes' | 'maximo' | null>(
-    null,
-  )
+  const [paletesLimiteAlert, setPaletesLimiteAlert] = useState<
+    'sem_paletes' | 'maximo' | 'incompleto' | null
+  >(null)
   const [entradaPendenteAlert, setEntradaPendenteAlert] = useState<{
     nfNumero: string
     itensPendentes: number
@@ -543,6 +548,12 @@ export default function App() {
     if (!activeNf || state.activeItemIndex == null) return
     const addresses = [...pendingSelection]
     const currentItemIndex = state.activeItemIndex
+    const item = activeNf.items.find((it) => it.index === currentItemIndex)
+    const limitePaletes = paletesLimiteItem(item)
+    if (limitePaletes > 0 && addresses.length < limitePaletes) {
+      setPaletesLimiteAlert('incompleto')
+      return
+    }
 
     const notas = state.notas.map((nf) => {
       if (nf.id !== activeNf.id) {
@@ -569,7 +580,7 @@ export default function App() {
     })
     const updatedNf = notas.find((n) => n.id === activeNf.id)!
     const nextItem = activeNf.items.find(
-      (it) => it.index !== currentItemIndex && it.allocatedAddresses.length === 0,
+      (it) => it.index !== currentItemIndex && !itemEnderecamentoCompleto(it),
     )
     const nextState = {
       ...state,

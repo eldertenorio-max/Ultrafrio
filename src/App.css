@@ -628,6 +628,15 @@
   font-weight: 700;
 }
 
+.nf-itens-status--parcial {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.nf-itens-row--parcial {
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+
 .nf-itens-row-addr td {
   padding-top: 0;
   padding-bottom: 6px;
@@ -1067,6 +1076,12 @@
   background: var(--cell-sel);
   outline: 2px dashed var(--sel-outline);
   z-index: 2;
+}
+
+.cell--ocupado.cell--selecionado {
+  background: var(--cell-ocup);
+  outline: 3px solid var(--cell-sel);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
 }
 
 .cell--confirmado {

@@ -23,3 +23,12 @@ export function podeAdicionarEndereco(limite: number, selecionados: number): boo
   if (limite <= 0) return false
   return selecionados < limite
 }
+
+/** Item endereçado: ao menos 1 endereço; se há paletes, todos devem estar alocados. */
+export function itemEnderecamentoCompleto(item: NfeItem): boolean {
+  const count = item.allocatedAddresses.length
+  if (count === 0) return false
+  const limite = paletesLimiteItem(item)
+  if (limite > 0) return count >= limite
+  return true
+}

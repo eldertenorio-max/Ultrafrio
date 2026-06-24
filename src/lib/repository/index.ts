@@ -2,6 +2,7 @@ import { isSupabaseConfigured } from '../supabaseClient'
 import { localRepository } from './localRepository'
 import { supabaseRepository } from './supabaseRepository'
 import type { EnderecamentoRepository, StorageMode } from './types'
+import { itemEnderecamentoCompleto } from '../paletes'
 
 export type { EnderecamentoRepository, StorageMode }
 
@@ -14,5 +15,5 @@ export function getStorageMode(): StorageMode {
 }
 
 export function allItemsAllocated(nf: import('../../types').NotaFiscal): boolean {
-  return nf.items.every((it) => it.allocatedAddresses.length > 0)
+  return nf.items.every(itemEnderecamentoCompleto)
 }
