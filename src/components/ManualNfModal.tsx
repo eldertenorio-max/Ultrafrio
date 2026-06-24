@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
-import { pickItemCampos } from '../lib/entradaCampos'
+import { normalizeDataFabricacao, pickItemCampos, todayDateInputMax } from '../lib/entradaCampos'
 import type { NotaFiscal } from '../types'
 import { findNotaByNumero } from '../lib/nfDuplicate'
 import type { ManualNfInput } from '../lib/manualNf'
@@ -321,8 +321,13 @@ export function ManualNfModal({
                       <input
                         type="date"
                         className="input-nf"
+                        max={todayDateInputMax()}
                         value={item.dataFabricacao}
-                        onChange={(e) => updateItem(item.id, { dataFabricacao: e.target.value })}
+                        onChange={(e) =>
+                          updateItem(item.id, {
+                            dataFabricacao: normalizeDataFabricacao(e.target.value),
+                          })
+                        }
                       />
                     </label>
                     <label className="manual-nf-field">

@@ -1,5 +1,6 @@
 import { Fragment, type SyntheticEvent } from 'react'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
+import { normalizeDataFabricacao, todayDateInputMax } from '../lib/entradaCampos'
 import type { NfeItem } from '../types'
 import { formatAddressLabel } from '../layout/camaras'
 import {
@@ -104,9 +105,12 @@ export function NfItensTable({ items, activeItemIndex, onSelectItem, onUpdateIte
                         <input
                           type="date"
                           className="input-nf input-nf--compact"
+                          max={todayDateInputMax()}
                           value={item.dataFabricacao ?? ''}
                           onChange={(e) =>
-                            onUpdateItemCampos(item.index, { dataFabricacao: e.target.value })
+                            onUpdateItemCampos(item.index, {
+                              dataFabricacao: normalizeDataFabricacao(e.target.value),
+                            })
                           }
                           onClick={stopRowActivate}
                         />
