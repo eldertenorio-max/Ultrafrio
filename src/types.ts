@@ -65,7 +65,7 @@ export type MovimentoTipo = 'entrada' | 'saida'
 export type JustificativaSaidaId =
   | 'venda'
   | 'transferencia'
-  | 'descarga'
+  | 'descarte'
   | 'devolucao_remessa'
   | 'acerto_estoque'
   | 'revenda'

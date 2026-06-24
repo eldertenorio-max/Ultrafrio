@@ -3,7 +3,7 @@ import type { MovimentoRegistro, NotaFiscalCancelada } from '../types'
 import { labelJustificativaSaida } from '../lib/justificativaSaida'
 import { formatAddressLabel } from '../layout/camaras'
 
-type HistFiltro = 'todos' | 'entrada' | 'saida' | 'canceladas'
+type HistFiltro = 'todos' | 'movimentacao' | 'entrada' | 'saida' | 'canceladas'
 
 type HistItem =
   | { kind: 'movimento'; data: MovimentoRegistro }
@@ -16,6 +16,7 @@ type Props = {
 
 const FILTROS: { id: HistFiltro; label: string }[] = [
   { id: 'todos', label: 'Todos' },
+  { id: 'movimentacao', label: 'Movimentação' },
   { id: 'entrada', label: 'Entrada' },
   { id: 'saida', label: 'Saída' },
   { id: 'canceladas', label: 'Canceladas' },
@@ -26,6 +27,7 @@ export function HistoricoPanel({ movimentos, canceladas }: Props) {
 
   const contagens = useMemo(
     () => ({
+      movimentacao: movimentos.length,
       entrada: movimentos.filter((m) => m.tipo === 'entrada').length,
       saida: movimentos.filter((m) => m.tipo === 'saida').length,
       canceladas: canceladas.length,
@@ -151,6 +153,12 @@ function buildLista(
   movimentos: MovimentoRegistro[],
   canceladas: NotaFiscalCancelada[],
 ): HistItem[] {
+  if (filtro === 'movimentacao') {
+    return [...movimentos]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((data) => ({ kind: 'movimento', data }))
+  }
+
   if (filtro === 'entrada') {
     return movimentos
       .filter((m) => m.tipo === 'entrada')
