@@ -829,8 +829,9 @@
 .swatch--saida-flag { background: var(--cell-saida-flag); outline: 2px solid var(--swatch-outline); }
 .swatch--destaque,
 .swatch--consulta {
-  background: var(--cell-destaque-verde-ocup);
-  outline: 1px solid color-mix(in srgb, var(--cell-sel) 45%, transparent);
+  background: var(--cell-destaque-verde);
+  outline: 2px solid var(--cell-sel);
+  outline-offset: -1px;
 }
 .swatch--porta { background: var(--cell-porta); }
 .swatch--nv5 { background: var(--cell-nv5); border: 1px solid var(--border); }
@@ -871,8 +872,9 @@
 .ruas-row {
   display: flex;
   flex-wrap: nowrap;
-  gap: 16px;
+  gap: 8px;
   width: 100%;
+  align-items: flex-start;
 }
 
 .ruas-row:not(.ruas-row--stacked) {
@@ -894,8 +896,9 @@
 }
 
 .ruas-row:not(.ruas-row--stacked) .rua-block {
-  flex: 0 0 100%;
-  min-width: 100%;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
   scroll-snap-align: start;
 }
 
@@ -922,7 +925,7 @@
 
 .rua-grid-inner {
   display: inline-block;
-  min-width: 100%;
+  width: max-content;
 }
 
 .layout-panel--mobile .rua-grid-inner {
@@ -1128,7 +1131,14 @@
 }
 
 .cell--ocupado.cell--destaque-verde {
-  background: var(--cell-destaque-verde-ocup);
+  background: var(--cell-ocup);
+  box-shadow: inset 0 0 0 100vmax var(--cell-destaque-overlay);
+}
+
+.cell--destaque-verde .cell-nf {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.35);
 }
 
 .cell--porta,
@@ -2504,6 +2514,63 @@ html.scroll-locked .sidebar.sidebar--fixed {
   padding-left: 16px;
   font-size: 0.82rem;
   color: var(--accent-hover);
+}
+
+.consulta-adicionar {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.consulta-section-title {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.consulta-sucesso {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--success);
+}
+
+.consulta-nf-adicionar {
+  margin-top: 12px;
+}
+
+.consulta-nf-adicionar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.consulta-nf-adicionar-hint {
+  margin: 8px 0;
+  font-size: 0.82rem;
+}
+
+.consulta-itens-adicionar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.consulta-itens-adicionar li {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+}
+
+.consulta-item-adicionar-row {
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.consulta-btn-adicionar {
+  width: 100%;
 }
 
 .saida-justificativa {

@@ -21,7 +21,7 @@ import {
   paletesLimiteItem,
   podeAdicionarEndereco,
 } from './lib/paletes'
-import { buscarEstoque, temFiltroConsulta, type ConsultaEstoqueFiltros, type ConsultaEstoqueResultado } from './lib/consultaEstoque'
+import { adicionarItemNotaFiscal } from './lib/adicionarItemNf'
 import { contarItensSemEndereco, nfEntradaIncompleta } from './lib/entradaPendente'
 import { mesclarEmitentesSugeridos } from './lib/emitentesRegistry'
 import {
@@ -41,7 +41,8 @@ import {
   syncVinculosNotas,
   vincularNotaCancelada,
 } from './lib/nfCanceladas'
-import { mensagemNfCanceladaDuplicada, mensagemNfDuplicada } from './lib/nfDuplicate'
+import { buscarEstoque, temFiltroConsulta, type ConsultaEstoqueFiltros, type ConsultaEstoqueResultado } from './lib/consultaEstoque'
+import { findNotaByNumero, mensagemNfCanceladaDuplicada, mensagemNfDuplicada } from './lib/nfDuplicate'
 import { parseCanceladaXml } from './lib/parseCanceladaXml'
 import { parseNfeXml } from './lib/parseNfeXml'
 import type { EntradaItemCampos } from './lib/entradaCampos'
@@ -95,6 +96,9 @@ export default function App() {
   const [buscaEditarErro, setBuscaEditarErro] = useState<string | null>(null)
   const [consultaResultados, setConsultaResultados] = useState<ConsultaEstoqueResultado[]>([])
   const [consultaErro, setConsultaErro] = useState<string | null>(null)
+  const [consultaNfAdicionarId, setConsultaNfAdicionarId] = useState<string | null>(null)
+  const [consultaNfAdicionarErro, setConsultaNfAdicionarErro] = useState<string | null>(null)
+  const [consultaItemAdicionadoMsg, setConsultaItemAdicionadoMsg] = useState<string | null>(null)
   const [uploadCanceladaError, setUploadCanceladaError] = useState<string | null>(null)
   const [canceladaPendenteId, setCanceladaPendenteId] = useState<string | null>(null)
   const [printCamaras, setPrintCamaras] = useState<number[]>(() => CAMARAS.map((c) => c.id))
@@ -204,6 +208,10 @@ export default function App() {
     () => new Set(consultaResultados.map((r) => r.addressId)),
     [consultaResultados],
   )
+
+  const consultaNfAdicionar = consultaNfAdicionarId
+    ? state.notas.find((n) => n.id === consultaNfAdicionarId) ?? null
+    : null
 
   const panelPendingSelection = editMode ? editPendingSelection : pendingSelection
   const panelAllocateMode = allocateMode || editMode
@@ -965,6 +973,54 @@ export default function App() {
     setConsultaErro(null)
   }
 
+  function handleBuscarNfAdicionar(numero: string) {
+    setConsultaItemAdicionadoMsg(null)
+    setConsultaNfAdicionarErro(null)
+    if (!numero) {
+      setConsultaNfAdicionarErro('Informe o número da NF.')
+      setConsultaNfAdicionarId(null)
+      return
+    }
+    const nf = findNotaByNumero(state.notas, numero)
+    if (!nf) {
+      setConsultaNfAdicionarErro('NF não encontrada. Suba o XML na aba Entrada primeiro.')
+      setConsultaNfAdicionarId(null)
+      return
+    }
+    setConsultaNfAdicionarId(nf.id)
+  }
+
+  function handleLimparNfAdicionar() {
+    setConsultaNfAdicionarId(null)
+    setConsultaNfAdicionarErro(null)
+    setConsultaItemAdicionadoMsg(null)
+  }
+
+  async function handleAdicionarItemConsulta(itemIndex: number) {
+    const nf = state.notas.find((n) => n.id === consultaNfAdicionarId)
+    if (!nf) return
+
+    const result = adicionarItemNotaFiscal(nf, itemIndex)
+    if (!result) return
+
+    const notas = state.notas.map((n) => (n.id === nf.id ? result.nota : n))
+    const nextState = {
+      ...state,
+      notas,
+      movimentos: upsertMovimentoEntrada(state.movimentos, result.nota),
+      activeNfId: nf.id,
+      activeItemIndex: result.newItemIndex,
+    }
+    setState(nextState)
+    setPendingSelection(new Set())
+    setSelectedEntradaIds((prev) => (prev.includes(nf.id) ? prev : [...prev, nf.id]))
+    lastEntradaClickRef.current = nf.id
+    setConsultaItemAdicionadoMsg(
+      `Item adicionado à NF ${nf.numero}. Preencha lote, datas e paletes na aba Entrada.`,
+    )
+    await saveNow(nextState)
+  }
+
   async function handleExcluirMovimento(movId: string) {
     const mov = state.movimentos.find((m) => m.id === movId)
     const result = excluirMovimento(
@@ -1092,6 +1148,12 @@ export default function App() {
           buscaErro: consultaErro,
           onBuscar: handleBuscarConsulta,
           onLimpar: handleLimparConsulta,
+          nfAdicionar: consultaNfAdicionar,
+          nfAdicionarErro: consultaNfAdicionarErro,
+          itemAdicionadoMsg: consultaItemAdicionadoMsg,
+          onBuscarNfAdicionar: handleBuscarNfAdicionar,
+          onAdicionarItem: handleAdicionarItemConsulta,
+          onLimparNfAdicionar: handleLimparNfAdicionar,
         }}
         imprimir={{
           selectedCamaras: printCamaras,

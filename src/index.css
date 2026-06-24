@@ -36,8 +36,9 @@
   --highlight-bg-strong: #1f6feb18;
   --bg-inset: #0f1419;
   --item-active-bg: #3fb95022;
-  --cell-destaque-verde: color-mix(in srgb, var(--cell-sel) 30%, var(--rack-bay));
-  --cell-destaque-verde-ocup: color-mix(in srgb, var(--cell-sel) 28%, var(--cell-ocup));
+  --cell-destaque-verde: color-mix(in srgb, var(--cell-sel) 18%, var(--rack-bay));
+  --cell-destaque-verde-ocup: var(--cell-ocup);
+  --cell-destaque-overlay: rgb(63 185 80 / 0.32);
   --sel-outline: #56d364;
   --swatch-outline: #ffffff;
   --sidebar-w: 50vw;
@@ -86,8 +87,9 @@
   --highlight-bg-strong: #0969da18;
   --bg-inset: #eaeef2;
   --item-active-bg: #2da44e18;
-  --cell-destaque-verde: color-mix(in srgb, var(--cell-sel) 32%, var(--rack-bay));
-  --cell-destaque-verde-ocup: color-mix(in srgb, var(--cell-sel) 30%, var(--cell-ocup));
+  --cell-destaque-verde: color-mix(in srgb, var(--cell-sel) 16%, var(--rack-bay));
+  --cell-destaque-verde-ocup: var(--cell-ocup);
+  --cell-destaque-overlay: rgb(45 164 78 / 0.28);
   --sel-outline: #1a7f37;
   --swatch-outline: #24292f;
 }

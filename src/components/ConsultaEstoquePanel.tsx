@@ -5,6 +5,7 @@ import {
   type ConsultaEstoqueFiltros,
   type ConsultaEstoqueResultado,
 } from '../lib/consultaEstoque'
+import type { NotaFiscal } from '../types'
 
 type Props = {
   emitentesSugeridos: string[]
@@ -12,6 +13,12 @@ type Props = {
   buscaErro: string | null
   onBuscar: (filtros: ConsultaEstoqueFiltros) => void
   onLimpar: () => void
+  nfAdicionar: NotaFiscal | null
+  nfAdicionarErro: string | null
+  itemAdicionadoMsg: string | null
+  onBuscarNfAdicionar: (numero: string) => void
+  onAdicionarItem: (itemIndex: number) => void
+  onLimparNfAdicionar: () => void
 }
 
 export function ConsultaEstoquePanel({
@@ -20,8 +27,15 @@ export function ConsultaEstoquePanel({
   buscaErro,
   onBuscar,
   onLimpar,
+  nfAdicionar,
+  nfAdicionarErro,
+  itemAdicionadoMsg,
+  onBuscarNfAdicionar,
+  onAdicionarItem,
+  onLimparNfAdicionar,
 }: Props) {
   const [filtros, setFiltros] = useState<ConsultaEstoqueFiltros>(CONSULTA_FILTROS_VAZIOS)
+  const [numeroNf, setNumeroNf] = useState('')
 
   function patch(partial: Partial<ConsultaEstoqueFiltros>) {
     setFiltros((prev) => ({ ...prev, ...partial }))
@@ -35,6 +49,11 @@ export function ConsultaEstoquePanel({
   function handleLimpar() {
     setFiltros(CONSULTA_FILTROS_VAZIOS)
     onLimpar()
+  }
+
+  function handleBuscarNf() {
+    onBuscarNfAdicionar(numeroNf.trim())
+    setNumeroNf('')
   }
 
   const agrupados = agruparPorNf(resultados)
@@ -152,6 +171,69 @@ export function ConsultaEstoquePanel({
           </ul>
         </div>
       )}
+
+      <div className="sidebar-block consulta-adicionar">
+        <h3 className="consulta-section-title">Adicionar item à NF</h3>
+        <p className="muted">
+          Busque uma NF já importada por XML e duplique um item para registrar outro lote ou data.
+          Depois enderece na aba Entrada.
+        </p>
+        <div className="saida-busca">
+          <input
+            type="text"
+            className="input-nf"
+            placeholder="Número da NF"
+            value={numeroNf}
+            onChange={(e) => setNumeroNf(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleBuscarNf()}
+          />
+          <button type="button" className="btn primary" onClick={handleBuscarNf}>
+            Buscar
+          </button>
+        </div>
+        {nfAdicionarErro && <p className="error">{nfAdicionarErro}</p>}
+        {itemAdicionadoMsg && <p className="consulta-sucesso">{itemAdicionadoMsg}</p>}
+
+        {nfAdicionar && (
+          <div className="consulta-nf-adicionar">
+            <div className="consulta-nf-adicionar-head">
+              <p className="consulta-grupo-titulo">
+                <strong>NF {nfAdicionar.numero}</strong>
+                <span className="muted"> · {nfAdicionar.emitente}</span>
+              </p>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={onLimparNfAdicionar}>
+                Limpar
+              </button>
+            </div>
+            <p className="muted consulta-nf-adicionar-hint">
+              Escolha o item de origem para criar uma nova linha:
+            </p>
+            <ul className="consulta-itens-adicionar">
+              {nfAdicionar.items.map((item) => (
+                <li key={item.index}>
+                  <div className="consulta-item-adicionar-row">
+                    <span className="consulta-item-codigo">{item.codigo}</span>
+                    <span className="muted"> — {item.descricao}</span>
+                    {(item.lote || item.up) && (
+                      <span className="consulta-item-meta">
+                        {item.lote ? ` · Lote ${item.lote}` : ''}
+                        {item.up ? ` · UP ${item.up}` : ''}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost consulta-btn-adicionar"
+                    onClick={() => onAdicionarItem(item.index)}
+                  >
+                    + Adicionar item
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </>
   )
 }
