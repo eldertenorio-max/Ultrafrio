@@ -48,7 +48,7 @@ import {
   syncVinculosNotas,
   vincularNotaCancelada,
 } from './lib/nfCanceladas'
-import { buscarEstoque, temFiltroConsulta, type ConsultaEstoqueFiltros, type ConsultaEstoqueResultado } from './lib/consultaEstoque'
+import { buscarEstoque, temFiltroConsulta, alternarDestaqueConsulta, type ConsultaEstoqueFiltros, type ConsultaEstoqueResultado } from './lib/consultaEstoque'
 import { findNotaByNumero, mensagemNfCanceladaDuplicada, mensagemNfDuplicada } from './lib/nfDuplicate'
 import { parseCanceladaXml } from './lib/parseCanceladaXml'
 import { parseNfeXml } from './lib/parseNfeXml'
@@ -999,8 +999,8 @@ export default function App() {
     setConsultaErro(null)
   }
 
-  function handleDestacarInventario(resultados: ConsultaEstoqueResultado[]) {
-    setConsultaResultados(resultados)
+  function handleAlternarDestaqueInventario(resultados: ConsultaEstoqueResultado[]) {
+    setConsultaResultados((prev) => alternarDestaqueConsulta(prev, resultados))
     setConsultaErro(null)
   }
 
@@ -1291,7 +1291,8 @@ export default function App() {
           buscaErro: consultaErro,
           onBuscar: handleBuscarConsulta,
           onLimpar: handleLimparConsulta,
-          onDestacarInventario: handleDestacarInventario,
+          onAlternarDestaqueInventario: handleAlternarDestaqueInventario,
+          resultadosDestacados: consultaResultados,
           nfAdicionar: consultaNfAdicionar,
           nfAdicionarErro: consultaNfAdicionarErro,
           itemAdicionadoMsg: consultaItemAdicionadoMsg,

@@ -2520,7 +2520,13 @@ html.scroll-locked .sidebar.sidebar--fixed {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
+}
+
+.consulta-inventario-dica {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .consulta-inventario-vista {
@@ -2567,6 +2573,38 @@ html.scroll-locked .sidebar.sidebar--fixed {
 
 .consulta-inventario-nf--resumo {
   padding: 10px 12px;
+}
+
+.consulta-inventario-nf--clickable {
+  cursor: pointer;
+}
+
+.consulta-inventario-nf--clickable:hover {
+  border-color: var(--highlight-border);
+}
+
+.consulta-inventario-nf--destacada {
+  border-color: var(--cell-destaque-borda);
+  background: color-mix(in srgb, var(--cell-destaque-verde) 14%, var(--bg-elevated));
+  box-shadow: inset 0 0 0 1px var(--cell-destaque-borda);
+}
+
+.consulta-inventario-destaque-btn {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.consulta-inventario-destaque-btn.is-active {
+  border-color: var(--cell-destaque-borda);
+  color: var(--cell-destaque-borda);
+  background: color-mix(in srgb, var(--cell-destaque-verde) 20%, var(--bg-panel));
 }
 
 .consulta-inventario-nf-head {

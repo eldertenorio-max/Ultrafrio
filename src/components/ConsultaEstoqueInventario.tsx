@@ -4,6 +4,7 @@ import {
   inventariarEstoque,
   inventarioParaResultados,
   nfInventarioParaResultados,
+  resultadosEstaoDestacados,
   type ConsultaEstoqueResultado,
   type EstoqueNfInventario,
 } from '../lib/consultaEstoque'
@@ -11,14 +12,24 @@ import type { NotaFiscal } from '../types'
 
 type Props = {
   notas: NotaFiscal[]
-  onDestacar: (resultados: ConsultaEstoqueResultado[]) => void
+  resultadosDestacados: ConsultaEstoqueResultado[]
+  onAlternarDestaque: (resultados: ConsultaEstoqueResultado[]) => void
 }
 
 type Vista = 'resumido' | 'detalhado'
 
-export function ConsultaEstoqueInventario({ notas, onDestacar }: Props) {
+export function ConsultaEstoqueInventario({
+  notas,
+  resultadosDestacados,
+  onAlternarDestaque,
+}: Props) {
   const inventario = useMemo(() => inventariarEstoque(notas), [notas])
   const [vista, setVista] = useState<Vista>('resumido')
+
+  const todosDestacados = useMemo(
+    () => resultadosEstaoDestacados(inventarioParaResultados(inventario), resultadosDestacados),
+    [inventario, resultadosDestacados],
+  )
 
   if (inventario.totalNotas === 0) {
     return (
@@ -26,6 +37,14 @@ export function ConsultaEstoqueInventario({ notas, onDestacar }: Props) {
         <p className="muted">Nenhum item endereçado no estoque no momento.</p>
       </div>
     )
+  }
+
+  function alternarNf(nf: EstoqueNfInventario) {
+    onAlternarDestaque(nfInventarioParaResultados(nf))
+  }
+
+  function alternarTudo() {
+    onAlternarDestaque(inventarioParaResultados(inventario))
   }
 
   return (
@@ -64,19 +83,35 @@ export function ConsultaEstoqueInventario({ notas, onDestacar }: Props) {
             Detalhado
           </button>
         </div>
-        <button
-          type="button"
-          className="btn btn-sm btn-ghost"
-          onClick={() => onDestacar(inventarioParaResultados(inventario))}
-        >
-          Destacar tudo
+        <button type="button" className="btn btn-sm btn-ghost" onClick={alternarTudo}>
+          {todosDestacados ? 'Desestacar tudo' : 'Destacar tudo'}
         </button>
       </div>
 
+      <p className="muted consulta-inventario-dica">
+        Clique em uma NF para destacar ou desestacar no painel.
+      </p>
+
       <ul className={`consulta-inventario-lista consulta-inventario-lista--${vista}`}>
-        {inventario.notas.map((nf) =>
-          vista === 'resumido' ? (
-            <li key={nf.nfId} className="consulta-inventario-nf consulta-inventario-nf--resumo">
+        {inventario.notas.map((nf) => {
+          const nfResultados = nfInventarioParaResultados(nf)
+          const destacada = resultadosEstaoDestacados(nfResultados, resultadosDestacados)
+
+          return vista === 'resumido' ? (
+            <li
+              key={nf.nfId}
+              className={`consulta-inventario-nf consulta-inventario-nf--resumo consulta-inventario-nf--clickable${destacada ? ' consulta-inventario-nf--destacada' : ''}`}
+              role="button"
+              tabIndex={0}
+              aria-pressed={destacada}
+              onClick={() => alternarNf(nf)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  alternarNf(nf)
+                }
+              }}
+            >
               <div className="consulta-inventario-nf-head">
                 <div>
                   <p className="consulta-inventario-nf-titulo">
@@ -93,18 +128,29 @@ export function ConsultaEstoqueInventario({ notas, onDestacar }: Props) {
                     <StatusBadge status={nf.status} />
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  onClick={() => onDestacar(nfInventarioParaResultados(nf))}
-                >
-                  Destacar
-                </button>
+                <span className={`consulta-inventario-destaque-btn${destacada ? ' is-active' : ''}`}>
+                  {destacada ? 'Desestacar' : 'Destacar'}
+                </span>
               </div>
             </li>
           ) : (
-            <li key={nf.nfId} className="consulta-inventario-nf consulta-inventario-nf--detalhe">
-              <div className="consulta-inventario-nf-head consulta-inventario-nf-head--detalhe">
+            <li
+              key={nf.nfId}
+              className={`consulta-inventario-nf consulta-inventario-nf--detalhe${destacada ? ' consulta-inventario-nf--destacada' : ''}`}
+            >
+              <div
+                className="consulta-inventario-nf-head consulta-inventario-nf-head--detalhe consulta-inventario-nf--clickable"
+                role="button"
+                tabIndex={0}
+                aria-pressed={destacada}
+                onClick={() => alternarNf(nf)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    alternarNf(nf)
+                  }
+                }}
+              >
                 <div>
                   <p className="consulta-inventario-nf-titulo">
                     <strong>NF {nf.nfNumero}</strong>
@@ -117,13 +163,9 @@ export function ConsultaEstoqueInventario({ notas, onDestacar }: Props) {
                     <StatusBadge status={nf.status} />
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  onClick={() => onDestacar(nfInventarioParaResultados(nf))}
-                >
-                  Destacar
-                </button>
+                <span className={`consulta-inventario-destaque-btn${destacada ? ' is-active' : ''}`}>
+                  {destacada ? 'Desestacar' : 'Destacar'}
+                </span>
               </div>
               <div className="consulta-inventario-nf-body">
                 <ul className="consulta-inventario-itens">
@@ -135,8 +177,8 @@ export function ConsultaEstoqueInventario({ notas, onDestacar }: Props) {
                 </ul>
               </div>
             </li>
-          ),
-        )}
+          )
+        })}
       </ul>
     </div>
   )

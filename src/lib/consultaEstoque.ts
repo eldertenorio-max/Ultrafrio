@@ -200,3 +200,28 @@ export function nfInventarioParaResultados(nf: EstoqueNfInventario): ConsultaEst
 export function inventarioParaResultados(inventario: EstoqueInventario): ConsultaEstoqueResultado[] {
   return inventario.notas.flatMap(nfInventarioParaResultados)
 }
+
+export function resultadosEstaoDestacados(
+  resultados: ConsultaEstoqueResultado[],
+  destacados: ConsultaEstoqueResultado[],
+): boolean {
+  if (resultados.length === 0) return false
+  const ids = new Set(destacados.map((r) => r.addressId))
+  return resultados.every((r) => ids.has(r.addressId))
+}
+
+export function alternarDestaqueConsulta(
+  atuais: ConsultaEstoqueResultado[],
+  toggle: ConsultaEstoqueResultado[],
+): ConsultaEstoqueResultado[] {
+  if (resultadosEstaoDestacados(toggle, atuais)) {
+    const remove = new Set(toggle.map((r) => r.addressId))
+    return atuais.filter((r) => !remove.has(r.addressId))
+  }
+  const existing = new Set(atuais.map((r) => r.addressId))
+  const next = [...atuais]
+  for (const r of toggle) {
+    if (!existing.has(r.addressId)) next.push(r)
+  }
+  return next
+}

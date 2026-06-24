@@ -19,7 +19,8 @@ type Props = {
   buscaErro: string | null
   onBuscar: (filtros: ConsultaEstoqueFiltros) => void
   onLimpar: () => void
-  onDestacarInventario: (resultados: ConsultaEstoqueResultado[]) => void
+  onAlternarDestaqueInventario: (resultados: ConsultaEstoqueResultado[]) => void
+  resultadosDestacados: ConsultaEstoqueResultado[]
   nfAdicionar: NotaFiscal | null
   nfAdicionarErro: string | null
   itemAdicionadoMsg: string | null
@@ -43,7 +44,8 @@ export function ConsultaEstoquePanel({
   buscaErro,
   onBuscar,
   onLimpar,
-  onDestacarInventario,
+  onAlternarDestaqueInventario,
+  resultadosDestacados,
   nfAdicionar,
   nfAdicionarErro,
   itemAdicionadoMsg,
@@ -123,7 +125,11 @@ export function ConsultaEstoquePanel({
             Todas as notas com itens armazenados no painel. Use a visão resumida para uma lista
             rápida ou detalhada para ver lote, datas e posições de cada item.
           </p>
-          <ConsultaEstoqueInventario notas={notas} onDestacar={onDestacarInventario} />
+          <ConsultaEstoqueInventario
+            notas={notas}
+            resultadosDestacados={resultadosDestacados}
+            onAlternarDestaque={onAlternarDestaqueInventario}
+          />
         </div>
       ) : (
         <>
