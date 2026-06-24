@@ -401,13 +401,16 @@ function buildLegendItems(props: Props): LegendItem[] {
     items.push({ swatch: 'swatch--confirm', label: 'Confirmado' })
   }
 
-  const destaqueAtivo =
-    props.editMode ||
-    (props.consultaAddresses != null && props.consultaAddresses.size > 0) ||
-    (props.editAddresses != null && props.editAddresses.size > 0)
+  const consultaAtiva =
+    props.consultaAddresses != null && props.consultaAddresses.size > 0
+  const movimentacaoAtiva =
+    props.editMode || (props.editAddresses != null && props.editAddresses.size > 0)
 
-  if (destaqueAtivo) {
-    items.push({ swatch: 'swatch--destaque', label: 'Destaque da busca' })
+  if (consultaAtiva) {
+    items.push({ swatch: 'swatch--consulta', label: 'Consulta' })
+  }
+  if (movimentacaoAtiva) {
+    items.push({ swatch: 'swatch--destaque', label: 'Movimentação' })
   }
 
   if (props.saidaAddresses != null && props.saidaAddresses.size > 0) {

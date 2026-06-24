@@ -827,7 +827,8 @@
   outline-offset: -1px;
 }
 .swatch--saida-flag { background: var(--cell-saida-flag); outline: 2px solid var(--swatch-outline); }
-.swatch--destaque {
+.swatch--destaque,
+.swatch--consulta {
   background: var(--cell-destaque-verde-ocup);
   outline: 1px solid color-mix(in srgb, var(--cell-sel) 45%, transparent);
 }
