@@ -17,26 +17,55 @@ function isUnidadePeso(unidade: string): boolean {
   return u === 'KG' || u === 'KGM' || u === 'QUILO' || u === 'QUILOGRAMA'
 }
 
-function parsePesoBrutoItem(prod: Element, quantidade: number, unidade: string): number | undefined {
-  const uTrib = textOf(prod, 'uTrib')
+function parsePesoBrutoItem(prod: Element): number | undefined {
+  const qCom = numOf(prod, 'qCom')
+  const uCom = textOf(prod, 'uCom')
   const qTrib = numOf(prod, 'qTrib')
+  const uTrib = textOf(prod, 'uTrib')
   if (isUnidadePeso(uTrib) && qTrib > 0) return qTrib
-  if (isUnidadePeso(unidade) && quantidade > 0) return quantidade
+  if (isUnidadePeso(uCom) && qCom > 0) return qCom
   return undefined
 }
 
-function parseQuantidadeVolume(transp: Element | undefined): string | undefined {
-  if (!transp) return undefined
-  const volNodes = Array.from(transp.getElementsByTagName('vol'))
-  if (volNodes.length === 0) return undefined
+type VolumeInfo = { quantidade: number; unidade: string }
 
-  const parts: string[] = []
-  for (const vol of volNodes) {
-    const q = numOf(vol, 'qVol')
-    const esp = textOf(vol, 'esp') || 'VOL'
-    if (q > 0) parts.push(`${q.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${esp}`)
+function parseVolumesFromTransport(transp: Element | undefined): VolumeInfo[] {
+  if (!transp) return []
+  return Array.from(transp.getElementsByTagName('vol'))
+    .map((vol) => ({
+      quantidade: numOf(vol, 'qVol'),
+      unidade: textOf(vol, 'esp') || 'VOL',
+    }))
+    .filter((v) => v.quantidade > 0)
+}
+
+function parseItemQuantidadeUnidade(prod: Element): { quantidade: number; unidade: string } {
+  const qCom = numOf(prod, 'qCom')
+  const uCom = textOf(prod, 'uCom') || 'UN'
+  const qTrib = numOf(prod, 'qTrib')
+  const uTrib = textOf(prod, 'uTrib')
+
+  if (isUnidadePeso(uCom) && uTrib && !isUnidadePeso(uTrib) && qTrib > 0) {
+    return { quantidade: qTrib, unidade: uTrib }
   }
-  return parts.length > 0 ? parts.join(' · ') : undefined
+  return { quantidade: qCom, unidade: uCom }
+}
+
+function applyTransportVolumeToItems(items: NfeItem[], volumes: VolumeInfo[]): void {
+  if (volumes.length === 0 || items.length !== 1) return
+  const item = items[0]
+  if (!isUnidadePeso(item.unidade)) return
+  item.quantidade = volumes[0].quantidade
+  item.unidade = volumes[0].unidade
+}
+
+function parseQuantidadeVolume(volumes: VolumeInfo[]): string | undefined {
+  if (volumes.length === 0) return undefined
+  const parts = volumes.map(
+    (v) =>
+      `${v.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${v.unidade}`,
+  )
+  return parts.join(' · ')
 }
 
 function parseTotaisTransporte(transp: Element | undefined): {
@@ -86,14 +115,16 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
   const emitente = textOf(emit, 'xNome') || textOf(emit, 'xFant')
   const dataEmissao = textOf(ide, 'dhEmi') || textOf(ide, 'dEmi')
 
+  const transp = inf.getElementsByTagName('transp')[0]
+  const volumes = parseVolumesFromTransport(transp)
+
   const detNodes = Array.from(inf.getElementsByTagName('det'))
   const items: NfeItem[] = detNodes.map((det, index) => {
     const prod = det.getElementsByTagName('prod')[0]
-    const quantidade = numOf(prod, 'qCom')
-    const unidade = textOf(prod, 'uCom')
+    const { quantidade, unidade } = parseItemQuantidadeUnidade(prod)
     const valorUnitario = numOf(prod, 'vUnCom')
     const valorTotal = numOf(prod, 'vProd')
-    const pesoBruto = parsePesoBrutoItem(prod, quantidade, unidade)
+    const pesoBruto = parsePesoBrutoItem(prod)
     return {
       index,
       codigo: textOf(prod, 'cProd'),
@@ -107,6 +138,8 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
     }
   })
 
+  applyTransportVolumeToItems(items, volumes)
+
   if (items.length === 0) {
     throw new Error('Nenhum item encontrado na nota fiscal.')
   }
@@ -115,9 +148,8 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
 
   const total = inf.getElementsByTagName('total')[0]
   const valorTotalNota = numOf(total, 'vNF')
-  const transp = inf.getElementsByTagName('transp')[0]
   const totaisTransp = parseTotaisTransporte(transp)
-  const quantidadeVolume = parseQuantidadeVolume(transp)
+  const quantidadeVolume = parseQuantidadeVolume(volumes)
 
   return {
     id,
