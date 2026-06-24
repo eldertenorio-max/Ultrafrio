@@ -246,7 +246,7 @@ export function ConsultaEstoquePanel({
       )}
 
       <div className="sidebar-block consulta-adicionar">
-        <h3 className="consulta-section-title">Adicionar item à NF</h3>
+        <h3 className="consulta-section-title">Adicionar mais itens em um novo endereço</h3>
         <p className="muted">
           Busque uma NF já importada por XML. Replique um item existente ou cadastre um item manual
           e depois enderece na aba Entrada.
