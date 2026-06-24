@@ -6,6 +6,11 @@ import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { subscribeEnderecamentoChanges } from '../lib/supabaseRealtime'
 import { prepareLoadedData } from '../lib/persistence'
 import { mesclarEmitentesSugeridos, normalizarEmitente } from '../lib/emitentesRegistry'
+import {
+  mergePersistedData,
+  persistedEquals,
+  pickPersisted,
+} from '../lib/syncMerge'
 import type { AppState, PersistedData } from '../types'
 import type { StorageMode } from '../lib/repository/types'
 
@@ -19,19 +24,24 @@ const emptyState: AppState = {
 }
 
 const SAVE_DEBOUNCE_MS = 400
-const REMOTE_RELOAD_DEBOUNCE_MS = 700
-const IGNORE_REMOTE_MS = 4000
-const POLL_INTERVAL_MS = 20_000
+const REMOTE_RELOAD_DEBOUNCE_MS = 350
+const IGNORE_REMOTE_AFTER_SAVE_MS = 2500
+const POLL_INTERVAL_MS = 5000
 
 function pickRepository(): EnderecamentoRepository {
   return isSupabaseConfigured() ? getRepository() : localRepository
 }
 
-function mergeRemoteState(prev: AppState, data: PersistedData): AppState {
+function preserveUi(prev: AppState, data: PersistedData): AppState {
   const activeNfId =
     prev.activeNfId && data.notas.some((n) => n.id === prev.activeNfId) ? prev.activeNfId : null
   const activeItemIndex = activeNfId ? prev.activeItemIndex : null
   return { ...data, activeNfId, activeItemIndex }
+}
+
+function isDirtyComparedToBase(current: PersistedData, base: PersistedData | null): boolean {
+  if (!base) return false
+  return !persistedEquals(current, base)
 }
 
 export function useEnderecamentoStore() {
@@ -48,39 +58,76 @@ export function useEnderecamentoStore() {
   const savingRef = useRef(false)
   const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSaveRef = useRef<AppState | null>(null)
+  const lastPersistedRef = useRef<PersistedData | null>(null)
+  const stateRef = useRef(state)
+
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
+
+  const applyPersistedToState = useCallback((data: PersistedData, base: AppState) => {
+    const next = preserveUi(base, data)
+    if (persistedEquals(pickPersisted(base), data)) return base
+    skipSave.current = true
+    setState(next)
+    setTimeout(() => {
+      skipSave.current = false
+    }, 250)
+    return next
+  }, [])
 
   const persist = useCallback(async (next: AppState) => {
-    let repo = repoRef.current
-    ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_MS
+    const repo = repoRef.current
     savingRef.current = true
     setSaving(true)
+
     try {
+      let dataToSave = pickPersisted(next)
+
+      if (repo.mode === 'supabase' && lastPersistedRef.current) {
+        try {
+          const remote = pickPersisted(await repo.loadData())
+          dataToSave = mergePersistedData(lastPersistedRef.current, dataToSave, remote)
+        } catch {
+          /* salva versão local se a leitura remota falhar */
+        }
+      }
+
       await repo.saveData({
-        notas: next.notas,
-        movimentos: next.movimentos,
-        notasCanceladas: next.notasCanceladas,
+        notas: dataToSave.notas,
+        movimentos: dataToSave.movimentos,
+        notasCanceladas: dataToSave.notasCanceladas,
       })
       repo.saveUiPrefs({
         activeNfId: next.activeNfId,
         activeItemIndex: next.activeItemIndex,
       })
+
+      lastPersistedRef.current = dataToSave
       pendingSaveRef.current = null
+      ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
+
+      if (!persistedEquals(dataToSave, pickPersisted(next))) {
+        applyPersistedToState(dataToSave, next)
+      }
+
       setError(null)
     } catch {
       if (repo.mode === 'supabase') {
-        repo = localRepository
-        repoRef.current = repo
+        repoRef.current = localRepository
         setStorageMode('local')
         try {
-          await repo.saveData({
-            notas: next.notas,
-            movimentos: next.movimentos,
-            notasCanceladas: next.notasCanceladas,
+          const dataToSave = pickPersisted(next)
+          await localRepository.saveData({
+            notas: dataToSave.notas,
+            movimentos: dataToSave.movimentos,
+            notasCanceladas: dataToSave.notasCanceladas,
           })
-          repo.saveUiPrefs({
+          localRepository.saveUiPrefs({
             activeNfId: next.activeNfId,
             activeItemIndex: next.activeItemIndex,
           })
+          lastPersistedRef.current = dataToSave
           pendingSaveRef.current = null
           setError(null)
           return
@@ -94,7 +141,7 @@ export function useEnderecamentoStore() {
       savingRef.current = false
       setSaving(false)
     }
-  }, [])
+  }, [applyPersistedToState])
 
   const saveNow = useCallback(
     async (next: AppState) => {
@@ -110,14 +157,28 @@ export function useEnderecamentoStore() {
 
   const reloadFromRemote = useCallback(async () => {
     if (repoRef.current.mode !== 'supabase') return
-    if (savingRef.current || Date.now() < ignoreRemoteUntil.current) return
+    if (savingRef.current || pendingSaveRef.current) return
+    if (Date.now() < ignoreRemoteUntil.current) return
 
     setSyncing(true)
     skipSave.current = true
     try {
       const remote = await repoRef.current.loadData()
       const { data } = prepareLoadedData(remote)
-      setState((prev) => mergeRemoteState(prev, data))
+      const base = lastPersistedRef.current
+
+      setState((prev) => {
+        const local = pickPersisted(prev)
+        let merged = data
+
+        if (base && isDirtyComparedToBase(local, base)) {
+          merged = mergePersistedData(base, local, data)
+        } else {
+          lastPersistedRef.current = data
+        }
+
+        return preserveUi(prev, merged)
+      })
       setError(null)
     } catch {
       /* mantém estado atual se a nuvem falhar momentaneamente */
@@ -166,10 +227,11 @@ export function useEnderecamentoStore() {
             emitentes: await repo.loadData().then((d) => d.emitentes).catch(() => data.emitentes),
           }
           clearLocalPersistedData()
-          ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_MS
+          ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
         }
 
         if (!cancelled) {
+          lastPersistedRef.current = data
           setState({ ...data, ...ui })
           setError(null)
         }
@@ -183,6 +245,7 @@ export function useEnderecamentoStore() {
             const { data } = prepareLoadedData(await repo.loadData())
             const ui = repo.loadUiPrefs()
             if (!cancelled) {
+              lastPersistedRef.current = data
               setState({ ...data, ...ui })
               setError(null)
             }
@@ -227,8 +290,9 @@ export function useEnderecamentoStore() {
     pendingSaveRef.current = state
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
+      const pending = pendingSaveRef.current ?? stateRef.current
       pendingSaveRef.current = null
-      void persist(state)
+      void persist(pending)
     }, SAVE_DEBOUNCE_MS)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -237,8 +301,8 @@ export function useEnderecamentoStore() {
 
   useEffect(() => {
     const flushPendingSave = () => {
-      const pending = pendingSaveRef.current
-      if (!pending || skipSave.current || savingRef.current) return
+      const pending = pendingSaveRef.current ?? stateRef.current
+      if (skipSave.current || savingRef.current) return
       if (saveTimer.current) {
         clearTimeout(saveTimer.current)
         saveTimer.current = null

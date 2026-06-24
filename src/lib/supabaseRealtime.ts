@@ -21,7 +21,12 @@ export function subscribeEnderecamentoChanges(onChange: () => void): () => void 
     )
   }
 
-  channel.subscribe()
+  channel.subscribe((status) => {
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      onChange()
+    }
+  })
+
   return () => {
     void sb.removeChannel(channel)
   }

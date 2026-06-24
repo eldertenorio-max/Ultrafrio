@@ -213,14 +213,16 @@ export default function App() {
     }
 
     if (imported.length > 0) {
-      setState((s) => ({
-        ...s,
-        notas: [...imported, ...s.notas],
+      const nextState = {
+        ...state,
+        notas: [...imported, ...state.notas],
         movimentos,
         activeNfId: imported[0].id,
         activeItemIndex: 0,
-      }))
+      }
+      setState(nextState)
       setPendingSelection(new Set())
+      await saveNow(nextState)
     }
 
     const feedback: string[] = []
@@ -257,12 +259,14 @@ export default function App() {
         return
       }
       const cancelada = notaFiscalToCancelada(parsed)
-      setState((s) => ({
-        ...s,
-        notasCanceladas: [cancelada, ...s.notasCanceladas],
-      }))
+      const nextState = {
+        ...state,
+        notasCanceladas: [cancelada, ...state.notasCanceladas],
+      }
+      setState(nextState)
       registrarEmitente(cancelada.emitente)
       setCanceladaPendenteId(cancelada.id)
+      await saveNow(nextState)
     } catch (e) {
       setUploadCanceladaError(e instanceof Error ? e.message : 'Erro ao ler XML.')
     }
@@ -277,9 +281,12 @@ export default function App() {
     setState((s) => ({ ...s, ...syncVinculosNotas(desvincularNotaCancelada(s, canceladaId)) }))
   }
 
-  function handleExcluirCancelada(canceladaId: string) {
-    setState((s) => ({ ...s, ...syncVinculosNotas(excluirNotaCancelada(s, canceladaId)) }))
+  async function handleExcluirCancelada(canceladaId: string) {
+    const nextSlice = syncVinculosNotas(excluirNotaCancelada(state, canceladaId))
+    const nextState = { ...state, ...nextSlice }
+    setState(nextState)
     if (canceladaId === canceladaPendenteId) setCanceladaPendenteId(null)
+    await saveNow(nextState)
   }
 
   function handleCancelarCancelada(canceladaId: string) {
@@ -372,50 +379,47 @@ export default function App() {
     }
   }
 
-  function handleConfirmItem() {
+  async function handleConfirmItem() {
     if (!activeNf || state.activeItemIndex == null) return
     const addresses = [...pendingSelection]
     const currentItemIndex = state.activeItemIndex
 
-    setState((s) => {
-      const notas = s.notas.map((nf) => {
-        if (nf.id !== activeNf.id) {
-          return {
-            ...nf,
-            items: nf.items.map((it) => ({
-              ...it,
-              allocatedAddresses: it.allocatedAddresses.filter((a) => !addresses.includes(a)),
-            })),
-          }
-        }
+    const notas = state.notas.map((nf) => {
+      if (nf.id !== activeNf.id) {
         return {
           ...nf,
-          items: nf.items.map((it) => {
-            if (it.index !== currentItemIndex) {
-              return {
-                ...it,
-                allocatedAddresses: it.allocatedAddresses.filter((a) => !addresses.includes(a)),
-              }
-            }
-            return { ...it, allocatedAddresses: addresses }
-          }),
+          items: nf.items.map((it) => ({
+            ...it,
+            allocatedAddresses: it.allocatedAddresses.filter((a) => !addresses.includes(a)),
+          })),
         }
-      })
-      const updatedNf = notas.find((n) => n.id === activeNf.id)!
+      }
       return {
-        ...s,
-        notas,
-        movimentos: upsertMovimentoEntrada(s.movimentos, updatedNf),
+        ...nf,
+        items: nf.items.map((it) => {
+          if (it.index !== currentItemIndex) {
+            return {
+              ...it,
+              allocatedAddresses: it.allocatedAddresses.filter((a) => !addresses.includes(a)),
+            }
+          }
+          return { ...it, allocatedAddresses: addresses }
+        }),
       }
     })
-
+    const updatedNf = notas.find((n) => n.id === activeNf.id)!
     const nextItem = activeNf.items.find(
       (it) => it.index !== currentItemIndex && it.allocatedAddresses.length === 0,
     )
-    if (nextItem) {
-      setState((s) => ({ ...s, activeItemIndex: nextItem.index }))
+    const nextState = {
+      ...state,
+      notas,
+      movimentos: upsertMovimentoEntrada(state.movimentos, updatedNf),
+      activeItemIndex: nextItem?.index ?? state.activeItemIndex,
     }
+    setState(nextState)
     setPendingSelection(new Set())
+    await saveNow(nextState)
   }
 
   function handleUpdateItemCampos(itemIndex: number, patch: EntradaItemCampos) {
@@ -432,21 +436,21 @@ export default function App() {
     }))
   }
 
-  function handleFinishEntrada() {
+  async function handleFinishEntrada() {
     if (!activeNf || !allItemsAllocated(activeNf)) return
-    setState((s) => {
-      const notas = s.notas.map((n) =>
-        n.id === activeNf.id ? { ...n, status: 'concluida' as const } : n,
-      )
-      const updatedNf = notas.find((n) => n.id === activeNf.id)!
-      return {
-        ...s,
-        notas,
-        movimentos: upsertMovimentoEntrada(s.movimentos, updatedNf),
-        activeItemIndex: null,
-      }
-    })
+    const notas = state.notas.map((n) =>
+      n.id === activeNf.id ? { ...n, status: 'concluida' as const } : n,
+    )
+    const updatedNf = notas.find((n) => n.id === activeNf.id)!
+    const nextState = {
+      ...state,
+      notas,
+      movimentos: upsertMovimentoEntrada(state.movimentos, updatedNf),
+      activeItemIndex: null,
+    }
+    setState(nextState)
     setPendingSelection(new Set())
+    await saveNow(nextState)
   }
 
   async function handleManualNfConfirm(result: ManualNfModalResult) {
@@ -487,42 +491,42 @@ export default function App() {
     setManualNfError(null)
   }
 
-  function handleCancelarEntrada(nfId: string) {
-    setState((s) => {
-      const mov = findMovimentoEntradaAtivo(s.movimentos, nfId)
-      const base = mov
-        ? excluirMovimento(
-            {
-              notas: s.notas,
-              movimentos: s.movimentos,
-              notasCanceladas: s.notasCanceladas,
-              emitentes: s.emitentes,
-            },
-            mov.id,
-          )
-        : {
-            notas: s.notas.filter((n) => n.id !== nfId),
-            movimentos: s.movimentos,
-            notasCanceladas: s.notasCanceladas,
-            emitentes: s.emitentes,
-          }
+  async function handleCancelarEntrada(nfId: string) {
+    const mov = findMovimentoEntradaAtivo(state.movimentos, nfId)
+    const base = mov
+      ? excluirMovimento(
+          {
+            notas: state.notas,
+            movimentos: state.movimentos,
+            notasCanceladas: state.notasCanceladas,
+            emitentes: state.emitentes,
+          },
+          mov.id,
+        )
+      : {
+          notas: state.notas.filter((n) => n.id !== nfId),
+          movimentos: state.movimentos,
+          notasCanceladas: state.notasCanceladas,
+          emitentes: state.emitentes,
+        }
 
-      const wasActive = s.activeNfId === nfId
-      const nextNf = wasActive
-        ? base.notas.find((n) => n.status === 'em_andamento') ?? null
-        : base.notas.find((n) => n.id === s.activeNfId) ?? null
+    const wasActive = state.activeNfId === nfId
+    const nextNf = wasActive
+      ? base.notas.find((n) => n.status === 'em_andamento') ?? null
+      : base.notas.find((n) => n.id === state.activeNfId) ?? null
 
-      return {
-        ...s,
-        notas: base.notas,
-        movimentos: base.movimentos,
-        notasCanceladas: base.notasCanceladas,
-        activeNfId: wasActive ? nextNf?.id ?? null : s.activeNfId,
-        activeItemIndex: wasActive ? nextNf?.items[0]?.index ?? null : s.activeItemIndex,
-      }
-    })
+    const nextState = {
+      ...state,
+      notas: base.notas,
+      movimentos: base.movimentos,
+      notasCanceladas: base.notasCanceladas,
+      activeNfId: wasActive ? nextNf?.id ?? null : state.activeNfId,
+      activeItemIndex: wasActive ? nextNf?.items[0]?.index ?? null : state.activeItemIndex,
+    }
+    setState(nextState)
     setPendingSelection(new Set())
     setUploadError(null)
+    await saveNow(nextState)
   }
 
   function handleLimparSelecao() {
@@ -801,8 +805,8 @@ export default function App() {
           activeNfId={editMode ? nfEditar?.id ?? null : activeNf?.id ?? null}
           allocateMode={panelAllocateMode}
           editMode={editMode}
-          editAddresses={editMode ? editNfAddresses : undefined}
-          saidaAddresses={editMode ? undefined : saidaAddresses}
+          editAddresses={nfEditar ? editNfAddresses : undefined}
+          saidaAddresses={nfEditar ? undefined : saidaAddresses}
           saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
           paintMode={editMode || allocateMode}
           onCellClick={handleCellClick}

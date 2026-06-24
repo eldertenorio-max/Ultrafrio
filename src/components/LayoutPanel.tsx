@@ -230,7 +230,7 @@ function RuaGrid({
                     if (occ) className += ' cell--ocupado'
                     if (pending) className += ' cell--selecionado'
                     else if (confirmed) className += ' cell--confirmado'
-                    if (editMode && editAddresses?.has(addressId) && !pending) className += ' cell--editar'
+                    if (editAddresses?.has(addressId) && !pending) className += ' cell--editar'
                     else if (saidaFlaggedAddresses?.has(addressId)) className += ' cell--saida-flag'
                     else if (saidaAddresses?.has(addressId)) className += ' cell--saida'
                     if (allocateMode && (clickable || pending)) className += ' cell--alocavel'
@@ -375,7 +375,7 @@ export function LayoutPanel(props: Props) {
         <span><i className="swatch swatch--ocup" /> Ocupado (outras NF)</span>
         <span><i className="swatch swatch--saida" /> Saída (NF buscada)</span>
         <span><i className="swatch swatch--saida-flag" /> Item marcado p/ saída</span>
-        <span><i className="swatch swatch--editar" /> NF em edição</span>
+        <span><i className="swatch swatch--editar" /> Movimentação (NF buscada)</span>
         <span><i className="swatch swatch--porta" /> Porta</span>
         <span><i className="swatch swatch--nv5" /> Nível 5 inexistente</span>
       </div>
@@ -389,6 +389,11 @@ export function LayoutPanel(props: Props) {
       {props.editMode && props.activeNfNumero && (
         <p className="layout-hint">
           Edição: clique ou arraste no painel para marcar ou desmarcar posições — depois salve na barra lateral.
+        </p>
+      )}
+      {props.editAddresses && props.editAddresses.size > 0 && !props.editMode && (
+        <p className="layout-hint">
+          Movimentação: endereços roxos indicam onde a NF buscada está armazenada. Selecione um item na barra lateral para editar.
         </p>
       )}
       {props.allocateMode && !props.editMode && props.activeNfNumero && (
