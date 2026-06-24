@@ -7,10 +7,26 @@ type Props = {
   title: string
   children: ReactNode
   defaultOpen?: boolean
+  onBeforeToggle?: (nextOpen: boolean, proceed: () => void) => void
 }
 
-export function CollapsibleSidebarSection({ id, title, children, defaultOpen = false }: Props) {
+export function CollapsibleSidebarSection({
+  id,
+  title,
+  children,
+  defaultOpen = false,
+  onBeforeToggle,
+}: Props) {
   const [open, setOpen] = useState(defaultOpen)
+
+  function handleToggle() {
+    const nextOpen = !open
+    if (onBeforeToggle) {
+      onBeforeToggle(nextOpen, () => setOpen(nextOpen))
+      return
+    }
+    setOpen(nextOpen)
+  }
 
   return (
     <section
@@ -19,7 +35,7 @@ export function CollapsibleSidebarSection({ id, title, children, defaultOpen = f
       <button
         type="button"
         className="sidebar-section-trigger"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleToggle}
         aria-expanded={open}
         title={title}
       >

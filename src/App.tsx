@@ -6,6 +6,7 @@ import { IntroSplash } from './components/IntroSplash'
 import { LayoutPanel } from './components/LayoutPanel'
 import { PrintLayoutDocument } from './components/PrintLayoutDocument'
 import { CAMARAS } from './layout/camaras'
+import { EntradaPendenteAlert } from './components/EntradaPendenteAlert'
 import { OcupadoAlert } from './components/OcupadoAlert'
 import { PaletesLimiteAlert } from './components/PaletesLimiteAlert'
 import { useEnderecamentoStore } from './hooks/useEnderecamentoStore'
@@ -15,6 +16,7 @@ import { allItemsAllocated } from './lib/repository'
 import { adicionarNotaManual } from './lib/manualNf'
 import { desmembrarNfeItem, patchNfeItemQuantidade } from './lib/desmembrarItem'
 import { parsePaletesInput, paletesLimiteItem, podeAdicionarEndereco } from './lib/paletes'
+import { contarItensSemEndereco, nfEntradaIncompleta } from './lib/entradaPendente'
 import { mesclarEmitentesSugeridos } from './lib/emitentesRegistry'
 import {
   aplicarSaidaItens,
@@ -95,6 +97,12 @@ export default function App() {
   const [paletesLimiteAlert, setPaletesLimiteAlert] = useState<'sem_paletes' | 'maximo' | null>(
     null,
   )
+  const [entradaPendenteAlert, setEntradaPendenteAlert] = useState<{
+    nfNumero: string
+    itensPendentes: number
+    onConfirmLeave?: () => void
+  } | null>(null)
+  const entradaPendenteDismissedRef = useRef<string | null>(null)
   const [manualNfModalOpen, setManualNfModalOpen] = useState(false)
   const [manualNfError, setManualNfError] = useState<string | null>(null)
   const [selectedEntradaIds, setSelectedEntradaIds] = useState<string[]>([])
@@ -115,6 +123,28 @@ export default function App() {
 
   const occupancy = useMemo(() => buildOccupancyMap(state.notas), [state.notas])
   const activeNf = state.notas.find((n) => n.id === state.activeNfId) ?? null
+
+  const trySairEntradaIncompleta = useCallback(
+    (action: () => void) => {
+      if (
+        !nfEntradaIncompleta(activeNf) ||
+        entradaPendenteDismissedRef.current === activeNf!.id
+      ) {
+        action()
+        return
+      }
+      setEntradaPendenteAlert({
+        nfNumero: activeNf!.numero,
+        itensPendentes: contarItensSemEndereco(activeNf!),
+        onConfirmLeave: () => {
+          entradaPendenteDismissedRef.current = activeNf!.id
+          setEntradaPendenteAlert(null)
+          action()
+        },
+      })
+    },
+    [activeNf],
+  )
   const nfBuscaSaida = nfBuscaSaidaId
     ? state.notas.find((n) => n.id === nfBuscaSaidaId) ?? null
     : null
@@ -243,18 +273,28 @@ export default function App() {
     }
 
     if (imported.length > 0) {
-      const nextState = {
-        ...state,
-        notas: [...imported, ...state.notas],
-        movimentos,
-        activeNfId: imported[0].id,
-        activeItemIndex: 0,
+      const applyImport = async () => {
+        const nextState = {
+          ...state,
+          notas: [...imported, ...state.notas],
+          movimentos,
+          activeNfId: imported[0].id,
+          activeItemIndex: 0,
+        }
+        setState(nextState)
+        setPendingSelection(new Set())
+        setSelectedEntradaIds(imported.map((nf) => nf.id))
+        lastEntradaClickRef.current = imported[0].id
+        await saveNow(nextState)
       }
-      setState(nextState)
-      setPendingSelection(new Set())
-      setSelectedEntradaIds(imported.map((nf) => nf.id))
-      lastEntradaClickRef.current = imported[0].id
-      await saveNow(nextState)
+
+      const switchingAway =
+        nfEntradaIncompleta(activeNf) && activeNf && imported[0].id !== activeNf.id
+      if (switchingAway) {
+        trySairEntradaIncompleta(() => void applyImport())
+      } else {
+        await applyImport()
+      }
     }
 
     const feedback: string[] = []
@@ -359,8 +399,6 @@ export default function App() {
       nextSelected = [id]
     }
 
-    lastEntradaClickRef.current = id
-
     let nextActiveId: string | null
     if (nextSelected.length === 0) {
       nextActiveId = null
@@ -374,23 +412,38 @@ export default function App() {
       nextActiveId = nextSelected[nextSelected.length - 1] ?? null
     }
 
-    setSelectedEntradaIds(nextSelected)
-
     const nextNf = nextActiveId ? state.notas.find((n) => n.id === nextActiveId) ?? null : null
     const switchingNf = nextActiveId !== state.activeNfId
     const nextItemIndex =
       !nextActiveId ? null : switchingNf ? (nextNf?.items[0]?.index ?? null) : state.activeItemIndex
+    const leavingIncomplete =
+      switchingNf && nfEntradaIncompleta(activeNf) && activeNf != null
 
-    setState((s) => ({
-      ...s,
-      activeNfId: nextActiveId,
-      activeItemIndex: nextItemIndex,
-    }))
+    const applySelection = () => {
+      if (nextActiveId === entradaPendenteDismissedRef.current) {
+        entradaPendenteDismissedRef.current = null
+      }
 
-    if (nextNf && nextItemIndex != null) syncPendingFromItem(nextNf, nextItemIndex)
-    else setPendingSelection(new Set())
+      lastEntradaClickRef.current = id
+      setSelectedEntradaIds(nextSelected)
+      setState((s) => ({
+        ...s,
+        activeNfId: nextActiveId,
+        activeItemIndex: nextItemIndex,
+      }))
 
-    setDetailAddress(null)
+      if (nextNf && nextItemIndex != null) syncPendingFromItem(nextNf, nextItemIndex)
+      else setPendingSelection(new Set())
+
+      setDetailAddress(null)
+    }
+
+    if (leavingIncomplete) {
+      trySairEntradaIncompleta(applySelection)
+      return
+    }
+
+    applySelection()
   }
 
   function handleSelectItem(index: number) {
@@ -607,7 +660,14 @@ export default function App() {
   }
 
   async function handleFinishEntrada() {
-    if (!activeNf || !allItemsAllocated(activeNf)) return
+    if (!activeNf || activeNf.status !== 'em_andamento') return
+    if (!allItemsAllocated(activeNf)) {
+      setEntradaPendenteAlert({
+        nfNumero: activeNf.numero,
+        itensPendentes: contarItensSemEndereco(activeNf),
+      })
+      return
+    }
     const notas = state.notas.map((n) =>
       n.id === activeNf.id ? { ...n, status: 'concluida' as const } : n,
     )
@@ -626,47 +686,61 @@ export default function App() {
   async function handleManualNfConfirm(result: ManualNfModalResult) {
     setManualNfError(null)
 
-    let nextState = state
+    const applyManual = async () => {
+      let nextState = state
 
-    if (result.kind === 'existing') {
-      if (!state.notas.some((n) => n.id === result.nfId)) {
-        setManualNfError('Nota fiscal não encontrada.')
-        return
+      if (result.kind === 'existing') {
+        if (!state.notas.some((n) => n.id === result.nfId)) {
+          setManualNfError('Nota fiscal não encontrada.')
+          return
+        }
+        nextState = {
+          ...state,
+          activeNfId: result.nfId,
+          activeItemIndex: result.itemIndex,
+        }
+      } else {
+        const added = adicionarNotaManual(state, result.input)
+        if ('error' in added) {
+          setManualNfError(added.error)
+          return
+        }
+        registrarEmitente(result.input.emitente ?? '')
+        nextState = {
+          ...state,
+          notas: added.notas,
+          movimentos: added.movimentos,
+          activeNfId: added.nf.id,
+          activeItemIndex: 0,
+        }
       }
-      nextState = {
-        ...state,
-        activeNfId: result.nfId,
-        activeItemIndex: result.itemIndex,
-      }
-    } else {
-      const added = adicionarNotaManual(state, result.input)
-      if ('error' in added) {
-        setManualNfError(added.error)
-        return
-      }
-      registrarEmitente(result.input.emitente ?? '')
-      nextState = {
-        ...state,
-        notas: added.notas,
-        movimentos: added.movimentos,
-        activeNfId: added.nf.id,
-        activeItemIndex: 0,
-      }
+
+      setState(nextState)
+      setPendingSelection(new Set())
+      setSelectedEntradaIds((prev) => {
+        const exists = prev.includes(result.kind === 'existing' ? result.nfId : nextState.activeNfId!)
+        if (result.kind === 'existing') {
+          return exists ? prev : [...prev, result.nfId]
+        }
+        return nextState.activeNfId ? [nextState.activeNfId] : prev
+      })
+      if (nextState.activeNfId) lastEntradaClickRef.current = nextState.activeNfId
+      await saveNow(nextState)
+      setManualNfModalOpen(false)
+      setManualNfError(null)
     }
 
-    setState(nextState)
-    setPendingSelection(new Set())
-    setSelectedEntradaIds((prev) => {
-      const exists = prev.includes(result.kind === 'existing' ? result.nfId : nextState.activeNfId!)
-      if (result.kind === 'existing') {
-        return exists ? prev : [...prev, result.nfId]
-      }
-      return nextState.activeNfId ? [nextState.activeNfId] : prev
-    })
-    if (nextState.activeNfId) lastEntradaClickRef.current = nextState.activeNfId
-    await saveNow(nextState)
-    setManualNfModalOpen(false)
-    setManualNfError(null)
+    const leavingIncomplete =
+      nfEntradaIncompleta(activeNf) &&
+      (result.kind === 'new' ||
+        (result.kind === 'existing' && result.nfId !== activeNf!.id))
+
+    if (leavingIncomplete) {
+      trySairEntradaIncompleta(() => void applyManual())
+      return
+    }
+
+    await applyManual()
   }
 
   function toggleEntradaSelection(list: string[], id: string): string[] {
@@ -911,6 +985,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
         sidebarFixed={sidebarFixed}
         onToggleSidebarMode={toggleSidebarMode}
+        onBeforeLeaveEntrada={trySairEntradaIncompleta}
         entrada={{
           notas: state.notas,
           activeNfId: state.activeNfId,
@@ -930,8 +1005,10 @@ export default function App() {
           onCancelarEntrada: handleCancelarEntrada,
           onLimparSelecao: handleLimparSelecao,
           onCadastrarManual: () => {
-            setManualNfError(null)
-            setManualNfModalOpen(true)
+            trySairEntradaIncompleta(() => {
+              setManualNfError(null)
+              setManualNfModalOpen(true)
+            })
           },
           uploadError,
         }}
@@ -1002,6 +1079,15 @@ export default function App() {
       </main>
 
       <PrintLayoutDocument camaraIds={printCamaras} />
+
+      {entradaPendenteAlert && (
+        <EntradaPendenteAlert
+          nfNumero={entradaPendenteAlert.nfNumero}
+          itensPendentes={entradaPendenteAlert.itensPendentes}
+          onClose={() => setEntradaPendenteAlert(null)}
+          onConfirmLeave={entradaPendenteAlert.onConfirmLeave}
+        />
+      )}
 
       {paletesLimiteAlert && (
         <PaletesLimiteAlert

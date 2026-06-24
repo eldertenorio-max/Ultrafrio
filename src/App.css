@@ -2650,6 +2650,15 @@ html.scroll-locked .sidebar.sidebar--fixed {
   font-size: 0.9rem;
 }
 
+.alert-box--entrada-pendente {
+  max-width: 420px;
+  border-color: var(--accent);
+}
+
+.alert-box--entrada-pendente h2 {
+  color: var(--accent-hover);
+}
+
 .alert-address {
   font-weight: 600;
   color: var(--cell-sel);

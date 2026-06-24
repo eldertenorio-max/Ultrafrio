@@ -24,6 +24,7 @@ type Props = {
   historico: ComponentProps<typeof HistoricoPanel>
   canceladas: ComponentProps<typeof CanceladasPanel>
   imprimir: ComponentProps<typeof ImprimirPanel>
+  onBeforeLeaveEntrada?: (proceed: () => void) => void
 }
 
 export function AppSidebar({
@@ -39,7 +40,24 @@ export function AppSidebar({
   historico,
   canceladas,
   imprimir,
+  onBeforeLeaveEntrada,
 }: Props) {
+  const guardOtherSection = (nextOpen: boolean, proceed: () => void) => {
+    if (!nextOpen || !onBeforeLeaveEntrada) {
+      proceed()
+      return
+    }
+    onBeforeLeaveEntrada(proceed)
+  }
+
+  const guardEntradaSection = (nextOpen: boolean, proceed: () => void) => {
+    if (nextOpen || !onBeforeLeaveEntrada) {
+      proceed()
+      return
+    }
+    onBeforeLeaveEntrada(proceed)
+  }
+
   const { expanded, sidebarRef, onSidebarPointerDown, onMouseEnter, onMouseLeave } =
     useSidebarExpand(sidebarFixed)
 
@@ -70,27 +88,27 @@ export function AppSidebar({
         {persistError && <p className="error">{persistError}</p>}
       </div>
 
-      <CollapsibleSidebarSection id="entrada" title="Entrada">
+      <CollapsibleSidebarSection id="entrada" title="Entrada" onBeforeToggle={guardEntradaSection}>
         <EntradaPanel {...entrada} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="saida" title="Saída">
+      <CollapsibleSidebarSection id="saida" title="Saída" onBeforeToggle={guardOtherSection}>
         <SaidaPanel {...saida} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="editar" title="Movimentação">
+      <CollapsibleSidebarSection id="editar" title="Movimentação" onBeforeToggle={guardOtherSection}>
         <EditarPosicaoPanel {...editar} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="canceladas" title="NF cancelada">
+      <CollapsibleSidebarSection id="canceladas" title="NF cancelada" onBeforeToggle={guardOtherSection}>
         <CanceladasPanel {...canceladas} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="historico" title="Histórico">
+      <CollapsibleSidebarSection id="historico" title="Histórico" onBeforeToggle={guardOtherSection}>
         <HistoricoPanel {...historico} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="imprimir" title="Imprimir">
+      <CollapsibleSidebarSection id="imprimir" title="Imprimir" onBeforeToggle={guardOtherSection}>
         <ImprimirPanel {...imprimir} />
       </CollapsibleSidebarSection>
 

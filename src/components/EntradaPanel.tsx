@@ -2,7 +2,6 @@ import { useState, type ChangeEvent, type MouseEvent } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
 import type { NotaFiscal } from '../types'
-import { allItemsAllocated } from '../lib/repository'
 import { NfItensTable } from './NfItensTable'
 import { NfResumoGrid } from './NfResumoGrid'
 
@@ -198,7 +197,7 @@ export function EntradaPanel({
             </div>
           )}
 
-          {allItemsAllocated(activeNf) && (
+          {activeNf && activeNf.status === 'em_andamento' && (
             <button type="button" className="btn success full" onClick={onFinishEntrada}>
               Finalizar entrada — NF {activeNf.numero}
             </button>
