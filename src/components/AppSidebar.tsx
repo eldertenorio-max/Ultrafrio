@@ -91,6 +91,10 @@ export function AppSidebar({
         {persistError && <p className="error">{persistError}</p>}
       </div>
 
+      <CollapsibleSidebarSection id="consulta" title="Consulta estoque" onBeforeToggle={guardOtherSection}>
+        <ConsultaEstoquePanel {...consulta} />
+      </CollapsibleSidebarSection>
+
       <CollapsibleSidebarSection id="entrada" title="Entrada" onBeforeToggle={guardEntradaSection}>
         <EntradaPanel {...entrada} />
       </CollapsibleSidebarSection>
@@ -101,10 +105,6 @@ export function AppSidebar({
 
       <CollapsibleSidebarSection id="editar" title="Movimentação" onBeforeToggle={guardOtherSection}>
         <EditarPosicaoPanel {...editar} />
-      </CollapsibleSidebarSection>
-
-      <CollapsibleSidebarSection id="consulta" title="Consulta estoque" onBeforeToggle={guardOtherSection}>
-        <ConsultaEstoquePanel {...consulta} />
       </CollapsibleSidebarSection>
 
       <CollapsibleSidebarSection id="canceladas" title="NF cancelada" onBeforeToggle={guardOtherSection}>
