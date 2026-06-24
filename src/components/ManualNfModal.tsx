@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { NotaFiscal } from '../types'
 import { findNotaByNumero } from '../lib/nfDuplicate'
 import type { ManualNfInput } from '../lib/manualNf'
@@ -59,6 +60,8 @@ export function ManualNfModal({
   const [items, setItems] = useState<ManualItemDraft[]>(() => [createItemDraft()])
   const [error, setError] = useState<string | null>(null)
   const emitentesListId = useId()
+
+  useBodyScrollLock(true)
 
   function resetCreateForm() {
     setSerie('')

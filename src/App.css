@@ -1101,6 +1101,29 @@
   justify-content: center;
   padding: 20px;
   z-index: 100;
+  overscroll-behavior: contain;
+}
+
+html.scroll-locked {
+  overflow: hidden;
+}
+
+html.scroll-locked body {
+  overflow: hidden;
+}
+
+html.scroll-locked .app-shell {
+  overflow: hidden;
+  max-height: 100dvh;
+}
+
+html.scroll-locked .main-panel {
+  overflow: hidden;
+}
+
+html.scroll-locked .sidebar.sidebar--expanded,
+html.scroll-locked .sidebar.sidebar--fixed {
+  overflow: hidden;
 }
 
 .modal {
