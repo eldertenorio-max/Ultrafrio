@@ -29,6 +29,7 @@ export function ConsultaEstoquePanel({
 
   function handleBuscar() {
     onBuscar(filtros)
+    setFiltros(CONSULTA_FILTROS_VAZIOS)
   }
 
   function handleLimpar() {

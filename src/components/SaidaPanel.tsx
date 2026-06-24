@@ -35,6 +35,7 @@ export function SaidaPanel({
 
   function handleBuscar() {
     onBuscar(numero.trim())
+    setNumero('')
   }
 
   const itensComEndereco = nfBusca?.items.filter((it) => it.allocatedAddresses.length > 0) ?? []
@@ -138,7 +139,10 @@ export function SaidaPanel({
                 type="button"
                 className="btn warning full"
                 disabled={!justificativa}
-                onClick={() => justificativa && onFinalizarSaida(justificativa)}
+                onClick={() => {
+                  if (justificativa) onFinalizarSaida(justificativa)
+                  setNumero('')
+                }}
               >
                 Finalizar saída — NF {nfBusca.numero}
               </button>
@@ -183,6 +187,7 @@ export function SaidaPanel({
                 onClick={() => {
                   onCancelarSaida()
                   setConfirmarCancelar(false)
+                  setNumero('')
                 }}
               >
                 Cancelar saída

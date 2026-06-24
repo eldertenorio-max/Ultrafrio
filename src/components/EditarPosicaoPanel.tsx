@@ -36,6 +36,7 @@ export function EditarPosicaoPanel({
 
   function handleBuscar() {
     onBuscar(numero.trim())
+    setNumero('')
   }
 
   const itensComEndereco = nfBusca?.items.filter((it) => it.allocatedAddresses.length > 0) ?? []
@@ -125,7 +126,10 @@ export function EditarPosicaoPanel({
               <button
                 type="button"
                 className="btn success full"
-                onClick={onSalvar}
+                onClick={() => {
+                  onSalvar()
+                  setNumero('')
+                }}
                 disabled={pendingCount === 0}
               >
                 Salvar novas posições
@@ -182,6 +186,7 @@ export function EditarPosicaoPanel({
                 onClick={() => {
                   onExcluirEntrada(movimentoEntradaId)
                   setConfirmarExcluir(false)
+                  setNumero('')
                 }}
               >
                 Excluir entrada
@@ -213,6 +218,7 @@ export function EditarPosicaoPanel({
                 onClick={() => {
                   onCancelarEditar()
                   setConfirmarCancelar(false)
+                  setNumero('')
                 }}
               >
                 Cancelar edição

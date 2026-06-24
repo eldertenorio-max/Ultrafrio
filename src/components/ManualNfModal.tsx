@@ -62,6 +62,7 @@ export function ManualNfModal({
   onClose,
 }: Props) {
   const [numero, setNumero] = useState('')
+  const [numeroCadastro, setNumeroCadastro] = useState('')
   const [searched, setSearched] = useState<NotaFiscal | null | undefined>(undefined)
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -90,7 +91,13 @@ export function ManualNfModal({
     setSearched(nf ?? null)
     setSelectedItemIndex(nf?.items[0]?.index ?? null)
     setShowCreate(!nf)
-    if (!nf) resetCreateForm()
+    if (!nf) {
+      setNumeroCadastro(trimmed)
+      resetCreateForm()
+    } else {
+      setNumeroCadastro('')
+    }
+    setNumero('')
   }
 
   function updateItem(id: string, patch: Partial<Omit<ManualItemDraft, 'id'>>) {
@@ -123,7 +130,7 @@ export function ManualNfModal({
     }
 
     const input: ManualNfInput = {
-      numero: numero.trim(),
+      numero: numeroCadastro.trim(),
       serie,
       emitente,
       items: parseItemsDraft(items),
@@ -217,7 +224,7 @@ export function ManualNfModal({
           <section className="modal-section">
             <h3>{searched === null ? 'Cadastrar NF manual' : 'Nova NF manual'}</h3>
             {searched === null && (
-              <p className="muted">NF {numero.trim()} não está no sistema. Preencha os dados abaixo.</p>
+              <p className="muted">NF {numeroCadastro.trim()} não está no sistema. Preencha os dados abaixo.</p>
             )}
             <div className="manual-nf-form manual-nf-form--nf">
               <label className="manual-nf-field">
