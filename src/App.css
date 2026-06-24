@@ -1080,7 +1080,7 @@
   cursor: pointer;
 }
 
-.cell--alocavel:hover {
+.cell--alocavel:hover:not(.cell--selecionado):not(.cell--confirmado):not(.cell--destaque-verde) {
   filter: none;
   background: #f4f7fb;
   box-shadow: inset 0 0 0 2px var(--accent);
@@ -1092,10 +1092,22 @@
   z-index: 2;
 }
 
+.cell--selecionado:hover,
+.cell--selecionado:focus-visible {
+  background: var(--cell-sel);
+  box-shadow: none;
+}
+
 .cell--ocupado.cell--selecionado {
   background: var(--cell-ocup);
   outline: 3px solid var(--cell-sel);
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+
+.cell--ocupado.cell--selecionado:hover,
+.cell--ocupado.cell--selecionado:focus-visible {
+  background: var(--cell-ocup);
+  filter: brightness(1.1);
 }
 
 .cell--confirmado {
@@ -1103,6 +1115,12 @@
   outline: 3px solid var(--cell-sel);
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
   z-index: 1;
+}
+
+.cell--confirmado:hover,
+.cell--confirmado:focus-visible {
+  background: var(--cell-ocup);
+  filter: brightness(1.1);
 }
 
 .cell--ocupado {

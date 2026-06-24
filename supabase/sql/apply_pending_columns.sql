@@ -22,3 +22,10 @@ alter table public.ultrafrio_nf_itens
   add column if not exists data_fabricacao text,
   add column if not exists data_validade text,
   add column if not exists paletes integer;
+
+-- Histórico de movimentos sem FK obrigatória para NF (ex.: exclusão do estoque)
+alter table public.ultrafrio_movimentos
+  drop constraint if exists ultrafrio_movimentos_nf_id_fkey;
+
+alter table public.ultrafrio_movimentos
+  alter column nf_id drop not null;

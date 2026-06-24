@@ -89,12 +89,13 @@ type EndRow = {
 type MovRow = {
   id: string
   tipo: 'entrada' | 'saida'
-  nf_id: string
+  nf_id: string | null
   nf_numero: string
   emitente: string
   created_at: string
   payload: {
     itens: import('../types').MovimentoItemSnapshot[]
+    nfIdHistorico?: string
     justificativaSaida?: import('../types').JustificativaSaidaId
     excluido?: boolean
     excluidoEm?: string | null

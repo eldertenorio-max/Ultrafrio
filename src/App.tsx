@@ -38,6 +38,7 @@ import {
   enderecosDosItens,
   excluirMovimento,
   findMovimentoEntradaAtivo,
+  removerMovimentoEntradaAtivo,
   upsertMovimentoEntrada,
 } from './lib/movimentos'
 import {
@@ -1107,12 +1108,7 @@ export default function App() {
 
     if (result.acao === 'remover_nf') {
       notas = state.notas.filter((n) => n.id !== nf.id)
-      const mov = findMovimentoEntradaAtivo(state.movimentos, nf.id)
-      if (mov) {
-        movimentos = movimentos.map((m) =>
-          m.id === mov.id ? { ...m, itens: [] } : m,
-        )
-      }
+      movimentos = removerMovimentoEntradaAtivo(movimentos, nf.id)
       if (activeNfId === nf.id) {
         activeNfId = null
         activeItemIndex = null

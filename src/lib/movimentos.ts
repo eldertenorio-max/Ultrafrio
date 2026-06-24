@@ -87,6 +87,26 @@ export function findMovimentoEntradaAtivo(
   return movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nfId && !m.excluido)
 }
 
+export function removerMovimentoEntradaAtivo(
+  movimentos: MovimentoRegistro[],
+  nfId: string,
+): MovimentoRegistro[] {
+  return movimentos.filter((m) => !(m.tipo === 'entrada' && m.nfId === nfId && !m.excluido))
+}
+
+/** Remove entradas ativas cujo nfId não existe mais no estoque (evita FK no Supabase). */
+export function limparMovimentosEntradaOrfaos(data: PersistedData): PersistedData {
+  const notaIds = new Set(data.notas.map((n) => n.id))
+  let changed = false
+  const movimentos = data.movimentos.filter((m) => {
+    if (m.tipo !== 'entrada' || m.excluido) return true
+    if (notaIds.has(m.nfId)) return true
+    changed = true
+    return false
+  })
+  return changed ? { ...data, movimentos } : data
+}
+
 export function upsertMovimentoEntrada(
   movimentos: MovimentoRegistro[],
   nf: NotaFiscal,

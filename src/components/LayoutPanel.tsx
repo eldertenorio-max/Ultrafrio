@@ -252,7 +252,7 @@ function RuaGrid({
                     if (pending) className += editMode ? ' cell--destaque-verde' : ' cell--selecionado'
                     else if (confirmed) className += ' cell--confirmado'
                     if (editAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
-                    else if (consultaAddresses?.has(addressId)) className += ' cell--destaque-verde'
+                    else if (consultaAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
                     else if (saidaFlaggedAddresses?.has(addressId)) className += ' cell--saida-flag'
                     else if (saidaAddresses?.has(addressId)) className += ' cell--saida'
                     if (allocateMode && (clickable || pending)) className += ' cell--alocavel'

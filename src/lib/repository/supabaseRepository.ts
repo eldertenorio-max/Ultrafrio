@@ -1,5 +1,6 @@
 import type { AppState, MovimentoRegistro, NotaFiscal, NotaFiscalCancelada } from '../../types'
 import { emitenteKey, normalizarEmitente } from '../emitentesRegistry'
+import { limparMovimentosEntradaOrfaos } from '../movimentos'
 import { getSupabase, type CanceladaRow, type EmitenteRow, type EndRow, type ItemRow, type MovRow, type NfRow } from '../supabaseClient'
 import type { EnderecamentoRepository } from './types'
 
@@ -142,7 +143,7 @@ function mapMovimentos(rows: MovRow[]): MovimentoRegistro[] {
   return rows.map((m) => ({
     id: m.id,
     tipo: m.tipo,
-    nfId: m.nf_id,
+    nfId: m.nf_id ?? m.payload?.nfIdHistorico ?? '',
     nfNumero: m.nf_numero,
     emitente: m.emitente,
     createdAt: m.created_at,
@@ -151,6 +152,44 @@ function mapMovimentos(rows: MovRow[]): MovimentoRegistro[] {
     ...(m.payload?.excluido ? { excluido: true } : {}),
     ...(m.payload?.excluidoEm ? { excluidoEm: m.payload.excluidoEm } : {}),
   }))
+}
+
+function movimentoUpsertRow(mov: MovimentoRegistro, notaIds: Set<string>) {
+  const nfInDb = notaIds.has(mov.nfId)
+  return {
+    id: mov.id,
+    tipo: mov.tipo,
+    nf_id: nfInDb ? mov.nfId : null,
+    nf_numero: mov.nfNumero,
+    emitente: mov.emitente,
+    created_at: mov.createdAt,
+    payload: {
+      itens: mov.itens,
+      ...(nfInDb ? {} : { nfIdHistorico: mov.nfId }),
+      ...(mov.justificativaSaida ? { justificativaSaida: mov.justificativaSaida } : {}),
+      ...(mov.excluido ? { excluido: true, excluidoEm: mov.excluidoEm ?? null } : {}),
+    },
+  }
+}
+
+async function upsertMovimento(
+  sb: ReturnType<typeof getSupabase>,
+  mov: MovimentoRegistro,
+  notaIds: Set<string>,
+): Promise<{ error: { message: string } | null }> {
+  const row = movimentoUpsertRow(mov, notaIds)
+  let result = await sb.from('ultrafrio_movimentos').upsert(row)
+  if (
+    result.error &&
+    row.nf_id &&
+    (result.error.message.includes('foreign key') ||
+      result.error.message.includes('nf_id_fkey'))
+  ) {
+    result = await sb.from('ultrafrio_movimentos').upsert(
+      movimentoUpsertRow({ ...mov }, new Set()),
+    )
+  }
+  return result
 }
 
 function mapCanceladas(rows: CanceladaRow[]): NotaFiscalCancelada[] {
@@ -251,7 +290,17 @@ export const supabaseRepository: EnderecamentoRepository = {
     omitNfCommercialFields = false
     omitItemExtendedFields = false
 
+    const cleaned = limparMovimentosEntradaOrfaos({
+      notas,
+      movimentos,
+      notasCanceladas,
+      emitentes: [],
+    })
+    notas = cleaned.notas
+    movimentos = cleaned.movimentos
+
     const sb = getSupabase()
+    const notaIds = new Set(notas.map((n) => n.id))
     const keepIds = notas.map((n) => n.id)
 
     if (keepIds.length === 0) {
@@ -309,19 +358,7 @@ export const supabaseRepository: EnderecamentoRepository = {
     }
 
     for (const mov of movimentos) {
-      const { error } = await sb.from('ultrafrio_movimentos').upsert({
-        id: mov.id,
-        tipo: mov.tipo,
-        nf_id: mov.nfId,
-        nf_numero: mov.nfNumero,
-        emitente: mov.emitente,
-        created_at: mov.createdAt,
-        payload: {
-          itens: mov.itens,
-          ...(mov.justificativaSaida ? { justificativaSaida: mov.justificativaSaida } : {}),
-          ...(mov.excluido ? { excluido: true, excluidoEm: mov.excluidoEm ?? null } : {}),
-        },
-      })
+      const { error } = await upsertMovimento(sb, mov, notaIds)
       if (error) throw new Error(error.message)
     }
 
