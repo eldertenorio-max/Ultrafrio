@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { NotaFiscal, NotaFiscalCancelada } from '../types'
 import { notasDisponiveisParaVinculo } from '../lib/nfCanceladas'
 
@@ -28,6 +29,7 @@ export function CanceladasPanel({
   const [selecao, setSelecao] = useState<Record<string, string>>({})
   const [confirmarCancelar, setConfirmarCancelar] = useState<string | null>(null)
   const [confirmarExcluir, setConfirmarExcluir] = useState<string | null>(null)
+  useBodyScrollLock(confirmarCancelar !== null || confirmarExcluir !== null)
 
   function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

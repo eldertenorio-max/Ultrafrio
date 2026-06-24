@@ -1324,11 +1324,23 @@ html.scroll-locked .sidebar.sidebar--fixed {
 /* Modal de detalhe do endereço */
 .detail-modal {
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, calc(100dvh - 40px));
   overflow: hidden;
+}
+
+.detail-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .detail-modal-top {
   position: relative;
+  flex-shrink: 0;
   padding: 20px 20px 16px;
   background: linear-gradient(180deg, var(--highlight-bg-strong) 0%, transparent 100%);
   border-bottom: 1px solid var(--border);
@@ -1437,6 +1449,35 @@ html.scroll-locked .sidebar.sidebar--fixed {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text);
+}
+
+.detail-product-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.detail-product-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-product-meta dt {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.detail-product-meta dd {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .detail-modal .modal-section {
@@ -2493,6 +2534,7 @@ html.scroll-locked .sidebar.sidebar--fixed {
   justify-content: center;
   padding: 16px;
   z-index: 200;
+  overscroll-behavior: contain;
 }
 
 .confirm-box {

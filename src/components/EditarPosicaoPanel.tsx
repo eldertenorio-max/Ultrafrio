@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { NotaFiscal } from '../types'
 import { nfTemEnderecos } from '../lib/movimentos'
 import { formatAddressLabel } from '../layout/camaras'
@@ -31,6 +32,7 @@ export function EditarPosicaoPanel({
   const [numero, setNumero] = useState('')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
   const [confirmarExcluir, setConfirmarExcluir] = useState(false)
+  useBodyScrollLock(confirmarCancelar || confirmarExcluir)
 
   function handleBuscar() {
     onBuscar(numero.trim())

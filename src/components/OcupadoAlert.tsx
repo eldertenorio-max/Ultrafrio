@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { formatAddressLabel } from '../layout/camaras'
 import type { AddressId, AddressOccupancy } from '../types'
 
@@ -8,6 +9,8 @@ type Props = {
 }
 
 export function OcupadoAlert({ addressId, occupancy, onClose }: Props) {
+  useBodyScrollLock(true)
+
   return (
     <div className="alert-backdrop" onClick={onClose} role="presentation">
       <div

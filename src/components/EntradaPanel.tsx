@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type MouseEvent } from 'react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
 import type { NotaFiscal } from '../types'
 import { allItemsAllocated } from '../lib/repository'
@@ -41,6 +42,7 @@ export function EntradaPanel({
   uploadError,
 }: Props) {
   const [confirmarCancelar, setConfirmarCancelar] = useState<string | null>(null)
+  useBodyScrollLock(confirmarCancelar !== null)
   const emAndamento = notas.filter((n) => n.status === 'em_andamento')
   const selectedSet = new Set(selectedNfIds)
   const activeNf = notas.find((n) => n.id === activeNfId) ?? null

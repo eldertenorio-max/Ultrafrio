@@ -1,5 +1,8 @@
-import type { NotaFiscal } from '../types'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { formatAddressLabel } from '../layout/camaras'
+import { buildNfResumo, formatPesoKg } from '../lib/nfResumo'
+import { formatValorNfe } from '../lib/formatNfeItem'
+import type { NotaFiscal } from '../types'
 
 type Props = {
   addressId: string
@@ -7,7 +10,17 @@ type Props = {
   onClose: () => void
 }
 
+function formatItemData(iso: string | undefined): string {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}/${m}/${y}`
+}
+
 export function DetailModal({ addressId, nota, onClose }: Props) {
+  useBodyScrollLock(true)
+
+  const resumo = buildNfResumo(nota)
   const itensNf = nota.items.filter((it) => it.allocatedAddresses.includes(addressId))
   const todosEnderecos = nota.items.flatMap((it) =>
     it.allocatedAddresses.map((addr) => ({ addr, item: it })),
@@ -28,6 +41,7 @@ export function DetailModal({ addressId, nota, onClose }: Props) {
           </div>
         </header>
 
+        <div className="detail-modal-body">
         <section className="detail-product-block">
           <h3>Produto neste endereço</h3>
           {itensNf.length === 0 ? (
@@ -44,6 +58,34 @@ export function DetailModal({ addressId, nota, onClose }: Props) {
                       {formatItemQuantidade(it.quantidade)} {it.unidade}
                     </span>
                   </div>
+                  {(it.up || it.lote || it.dataFabricacao || it.dataValidade) && (
+                    <dl className="detail-product-meta">
+                      {it.up && (
+                        <div>
+                          <dt>UP</dt>
+                          <dd>{it.up}</dd>
+                        </div>
+                      )}
+                      {it.lote && (
+                        <div>
+                          <dt>Lote</dt>
+                          <dd>{it.lote}</dd>
+                        </div>
+                      )}
+                      {it.dataFabricacao && (
+                        <div>
+                          <dt>Fabricação</dt>
+                          <dd>{formatItemData(it.dataFabricacao)}</dd>
+                        </div>
+                      )}
+                      {it.dataValidade && (
+                        <div>
+                          <dt>Validade</dt>
+                          <dd>{formatItemData(it.dataValidade)}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
                 </li>
               ))}
             </ul>
@@ -69,6 +111,18 @@ export function DetailModal({ addressId, nota, onClose }: Props) {
             <div>
               <dt>Chave</dt>
               <dd className="chave">{nota.chave || '—'}</dd>
+            </div>
+            <div>
+              <dt>Qtd. / vol.</dt>
+              <dd>{resumo.quantidadeVolume}</dd>
+            </div>
+            <div>
+              <dt>Peso bruto</dt>
+              <dd>{formatPesoKg(resumo.pesoBruto)}</dd>
+            </div>
+            <div>
+              <dt>Valor total</dt>
+              <dd>{formatValorNfe(resumo.valorTotalNota)}</dd>
             </div>
           </dl>
         </section>
@@ -98,6 +152,7 @@ export function DetailModal({ addressId, nota, onClose }: Props) {
             ))}
           </ul>
         </section>
+        </div>
       </div>
     </div>
   )

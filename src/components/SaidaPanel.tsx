@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { JustificativaSaidaId, NotaFiscal } from '../types'
 import { enderecosDosItens, nfTemEnderecos } from '../lib/movimentos'
 import { JUSTIFICATIVAS_SAIDA } from '../lib/justificativaSaida'
@@ -26,6 +27,7 @@ export function SaidaPanel({
   const [numero, setNumero] = useState('')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
   const [justificativa, setJustificativa] = useState<JustificativaSaidaId | null>(null)
+  useBodyScrollLock(confirmarCancelar)
 
   useEffect(() => {
     setJustificativa(null)
