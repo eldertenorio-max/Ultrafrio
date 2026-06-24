@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { DetailModal } from './components/DetailModal'
 import { ManualNfModal, type ManualNfModalResult } from './components/ManualNfModal'
@@ -93,6 +93,21 @@ export default function App() {
   } | null>(null)
   const [manualNfModalOpen, setManualNfModalOpen] = useState(false)
   const [manualNfError, setManualNfError] = useState<string | null>(null)
+  const [selectedEntradaIds, setSelectedEntradaIds] = useState<string[]>([])
+  const lastEntradaClickRef = useRef<string | null>(null)
+
+  const emAndamentoIds = useMemo(
+    () => state.notas.filter((n) => n.status === 'em_andamento').map((n) => n.id),
+    [state.notas],
+  )
+
+  useEffect(() => {
+    const valid = new Set(emAndamentoIds)
+    setSelectedEntradaIds((prev) => {
+      const next = prev.filter((id) => valid.has(id))
+      return next.length === prev.length ? prev : next
+    })
+  }, [emAndamentoIds])
 
   const occupancy = useMemo(() => buildOccupancyMap(state.notas), [state.notas])
   const activeNf = state.notas.find((n) => n.id === state.activeNfId) ?? null
@@ -221,6 +236,8 @@ export default function App() {
       }
       setState(nextState)
       setPendingSelection(new Set())
+      setSelectedEntradaIds(imported.map((nf) => nf.id))
+      lastEntradaClickRef.current = imported[0].id
       await saveNow(nextState)
     }
 
@@ -302,11 +319,61 @@ export default function App() {
     handleExcluirCancelada(canceladaId)
   }
 
-  function handleSelectNf(id: string) {
+  function handleSelectNf(id: string, event?: MouseEvent) {
     const nf = state.notas.find((n) => n.id === id)
-    setState((s) => ({ ...s, activeNfId: id, activeItemIndex: nf?.items[0]?.index ?? null }))
-    if (nf && nf.items[0]) syncPendingFromItem(nf, nf.items[0].index)
+    if (!nf || nf.status !== 'em_andamento') return
+
+    const multi = event?.ctrlKey || event?.metaKey
+    const range = event?.shiftKey
+    let nextSelected: string[]
+
+    if (range && lastEntradaClickRef.current && emAndamentoIds.includes(lastEntradaClickRef.current)) {
+      const a = emAndamentoIds.indexOf(lastEntradaClickRef.current)
+      const b = emAndamentoIds.indexOf(id)
+      if (a >= 0 && b >= 0) {
+        const [lo, hi] = a <= b ? [a, b] : [b, a]
+        const slice = emAndamentoIds.slice(lo, hi + 1)
+        nextSelected = multi ? [...new Set([...selectedEntradaIds, ...slice])] : slice
+      } else {
+        nextSelected = multi ? toggleEntradaSelection(selectedEntradaIds, id) : [id]
+      }
+    } else if (multi) {
+      nextSelected = toggleEntradaSelection(selectedEntradaIds, id)
+    } else {
+      nextSelected = [id]
+    }
+
+    lastEntradaClickRef.current = id
+
+    let nextActiveId: string | null
+    if (nextSelected.length === 0) {
+      nextActiveId = null
+    } else if (!multi && !range) {
+      nextActiveId = id
+    } else if (nextSelected.includes(id)) {
+      nextActiveId = id
+    } else if (state.activeNfId && nextSelected.includes(state.activeNfId)) {
+      nextActiveId = state.activeNfId
+    } else {
+      nextActiveId = nextSelected[nextSelected.length - 1] ?? null
+    }
+
+    setSelectedEntradaIds(nextSelected)
+
+    const nextNf = nextActiveId ? state.notas.find((n) => n.id === nextActiveId) ?? null : null
+    const switchingNf = nextActiveId !== state.activeNfId
+    const nextItemIndex =
+      !nextActiveId ? null : switchingNf ? (nextNf?.items[0]?.index ?? null) : state.activeItemIndex
+
+    setState((s) => ({
+      ...s,
+      activeNfId: nextActiveId,
+      activeItemIndex: nextItemIndex,
+    }))
+
+    if (nextNf && nextItemIndex != null) syncPendingFromItem(nextNf, nextItemIndex)
     else setPendingSelection(new Set())
+
     setDetailAddress(null)
   }
 
@@ -495,9 +562,21 @@ export default function App() {
 
     setState(nextState)
     setPendingSelection(new Set())
+    setSelectedEntradaIds((prev) => {
+      const exists = prev.includes(result.kind === 'existing' ? result.nfId : nextState.activeNfId!)
+      if (result.kind === 'existing') {
+        return exists ? prev : [...prev, result.nfId]
+      }
+      return nextState.activeNfId ? [nextState.activeNfId] : prev
+    })
+    if (nextState.activeNfId) lastEntradaClickRef.current = nextState.activeNfId
     await saveNow(nextState)
     setManualNfModalOpen(false)
     setManualNfError(null)
+  }
+
+  function toggleEntradaSelection(list: string[], id: string): string[] {
+    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
   }
 
   async function handleCancelarEntrada(nfId: string) {
@@ -534,6 +613,11 @@ export default function App() {
     }
     setState(nextState)
     setPendingSelection(new Set())
+    setSelectedEntradaIds((prev) => {
+      const next = prev.filter((nid) => nid !== nfId)
+      if (next.length > 0) return next
+      return nextNf ? [nextNf.id] : []
+    })
     setUploadError(null)
     await saveNow(nextState)
   }
@@ -736,6 +820,7 @@ export default function App() {
         entrada={{
           notas: state.notas,
           activeNfId: state.activeNfId,
+          selectedNfIds: selectedEntradaIds,
           activeItemIndex: state.activeItemIndex,
           pendingCount: pendingSelection.size,
           camposConfig: entradaCampos.config,
