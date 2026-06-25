@@ -3773,6 +3773,15 @@ html.scroll-locked .sidebar.sidebar--fixed {
   color: var(--danger, #f85149);
 }
 
+.hist-excluido-badge--estoque {
+  background: rgb(210 153 34 / 0.18);
+  color: #d29922;
+}
+
+.confirm-box--wide {
+  max-width: 26rem;
+}
+
 .hist-card--excluido {
   opacity: 0.82;
 }

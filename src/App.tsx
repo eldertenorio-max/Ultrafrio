@@ -43,10 +43,9 @@ import {
   buscarNfPorNumero,
   criarMovimentoMovimentacao,
   criarMovimentoSaida,
+  enderecosAlterados,
   enderecosDaNf,
-  excluirMovimento,
   removerNfDoEstoque,
-  findMovimentoEntradaAtivo,
   removerMovimentoEntradaAtivo,
   upsertMovimentoEntrada,
 } from './lib/movimentos'
@@ -68,7 +67,7 @@ import {
   vincularSaidaXmlOrigem,
 } from './lib/saidaXml'
 import type { EntradaItemCampos } from './lib/entradaCampos'
-import type { AddressId, AddressOccupancy, JustificativaSaidaId, NotaFiscal, SaidaXmlDocumento } from './types'
+import type { AddressId, AddressOccupancy, JustificativaSaidaId, MotivoRemocaoEstoqueId, NotaFiscal, SaidaXmlDocumento } from './types'
 import type { SaidaModoBusca } from './components/SaidaPanel'
 import './App.css'
 
@@ -303,11 +302,8 @@ export default function App() {
 
   const panelPaletesTotal = paletesTotal
 
-  const movimentosOrdenados = useMemo(
-    () =>
-      [...state.movimentos]
-        .filter((m) => !m.excluido)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  const movimentosHistorico = useMemo(
+    () => [...state.movimentos].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [state.movimentos],
   )
 
@@ -315,11 +311,6 @@ export default function App() {
     () => state.notasCanceladas.filter((c) => !c.excluido),
     [state.notasCanceladas],
   )
-
-  const movimentoEntradaEditar = useMemo(() => {
-    if (!nfEditarId) return null
-    return findMovimentoEntradaAtivo(state.movimentos, nfEditarId) ?? null
-  }, [nfEditarId, state.movimentos])
 
   const emitentesSugeridos = useMemo(
     () =>
@@ -1308,6 +1299,10 @@ export default function App() {
     const currentItemIndex = editItemIndex
     const item = nfEditar.items.find((it) => it.index === currentItemIndex)
     if (!item) return
+
+    const original = editOriginalAddressesRef.current
+    if (!enderecosAlterados(original, addresses)) return
+
     const removedFromItem = item.allocatedAddresses.filter((a) => !addresses.includes(a))
 
     const notas = state.notas.map((nf) => ({
@@ -1330,11 +1325,12 @@ export default function App() {
       notas,
       movimentos: [
         criarMovimentoMovimentacao(updatedNf, currentItemIndex, addresses),
-        ...upsertMovimentoEntrada(state.movimentos, updatedNf),
+        ...state.movimentos,
       ],
     }
     setState(nextState)
     await saveNow(nextState)
+    editOriginalAddressesRef.current = new Set(addresses)
     setEditPendingSelection(new Set())
     setEditItemIndex(null)
   }
@@ -1530,38 +1526,40 @@ export default function App() {
     await saveNow(nextState)
   }
 
-  async function handleExcluirMovimento(movId: string) {
-    const mov = state.movimentos.find((m) => m.id === movId)
-    const result = excluirMovimento(
+  async function handleRemoverDoEstoque(nfId: string, motivo: MotivoRemocaoEstoqueId) {
+    const base = removerNfDoEstoque(
       {
         notas: state.notas,
         movimentos: state.movimentos,
         notasCanceladas: state.notasCanceladas,
         emitentes: state.emitentes,
       },
-      movId,
+      nfId,
+      { motivoRemocaoEstoque: motivo },
     )
+
     const nextState = {
       ...state,
-      notas: result.notas,
-      movimentos: result.movimentos,
-      notasCanceladas: result.notasCanceladas,
+      notas: base.notas,
+      movimentos: base.movimentos,
+      notasCanceladas: base.notasCanceladas,
     }
     setState(nextState)
     await saveNow(nextState)
-    if (mov?.nfId === nfEditarId) {
+
+    if (nfEditarId === nfId) {
       setNfEditarId(null)
       setEditItemIndex(null)
       setEditPendingSelection(new Set())
       setBuscaEditarErro(null)
     }
-    if (nfBuscaSaidaId) {
-      if (mov?.nfId === nfBuscaSaidaId && mov.tipo === 'entrada') {
-        setNfBuscaSaidaId(null)
-        limparEstadoSaida()
-      }
+    if (nfBuscaSaidaId === nfId) {
+      setNfBuscaSaidaId(null)
+      limparEstadoSaida()
     }
-    setPendingSelection(new Set())
+    if (state.activeNfId === nfId) {
+      setPendingSelection(new Set())
+    }
     setDetailAddress(null)
   }
 
@@ -1645,7 +1643,7 @@ export default function App() {
           selecaoErro: saidaSelecaoErro,
         }}
         historico={{
-          movimentos: movimentosOrdenados,
+          movimentos: movimentosHistorico,
           canceladas: state.notasCanceladas,
           notas: state.notas,
         }}
@@ -1662,13 +1660,12 @@ export default function App() {
         }}
         editar={{
           nfBusca: nfEditar,
-          movimentoEntradaId: movimentoEntradaEditar?.id ?? null,
           itemIndex: editItemIndex,
           pendingCount: editPendingSelection.size,
           onBuscar: handleBuscarEditar,
           onSelectItem: handleSelectItemEditar,
           onSalvar: handleSalvarEditar,
-          onExcluirEntrada: handleExcluirMovimento,
+          onRemoverDoEstoque: handleRemoverDoEstoque,
           onCancelarEditar: handleCancelarEditar,
           buscaErro: buscaEditarErro,
         }}

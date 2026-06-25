@@ -97,6 +97,16 @@ export type JustificativaSaidaId =
   | 'acerto_estoque'
   | 'revenda'
 
+export type MotivoRemocaoEstoqueId =
+  | 'nf_incorreta'
+  | 'enderecamento_incorreto'
+  | 'entrada_duplicada'
+  | 'dados_item_incorretos'
+  | 'xml_errado'
+  | 'quantidade_incorreta'
+  | 'entrada_indevida'
+  | 'outro_erro'
+
 export type MovimentoItemSnapshot = {
   itemIndex: number
   codigo: string
@@ -133,6 +143,8 @@ export type MovimentoRegistro = {
   valorTotal?: number
   /** Motivo da saída (venda, transferência, etc.). */
   justificativaSaida?: JustificativaSaidaId
+  /** Motivo informado ao remover a NF do estoque pela aba Movimentação. */
+  motivoRemocaoEstoque?: MotivoRemocaoEstoqueId
   /** NF de saída (documento) quando a retirada foi iniciada por XML de saída. */
   nfSaida?: NfeDocumentoResumo
   /** Registro mantido no histórico após exclusão na aba Movimentação. */

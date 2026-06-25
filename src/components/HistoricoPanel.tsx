@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import type { MovimentoItemSnapshot, MovimentoRegistro, NotaFiscal, NotaFiscalCancelada } from '../types'
 import { dadosCanceladaParaHistorico } from '../lib/nfCanceladas'
 import { labelJustificativaSaida } from '../lib/justificativaSaida'
+import { labelMotivoRemocaoEstoque } from '../lib/motivoRemocaoEstoque'
 import { formatAddressLabel } from '../layout/camaras'
 import { formatPesoBruto, formatQuantidadeNfe, formatValorNfe } from '../lib/formatNfeItem'
 
@@ -129,11 +130,17 @@ function MovimentoCardShell({
   mov: MovimentoRegistro
   children: ReactNode
 }) {
+  const badgeRemovido = mov.excluido && mov.motivoRemocaoEstoque
+
   return (
     <li className={`hist-card hist-card--${mov.tipo}${mov.excluido ? ' hist-card--excluido' : ''}`}>
       <div className="hist-head">
         <span className={`hist-tipo hist-tipo--${mov.tipo}`}>{TIPO_LABEL[mov.tipo]}</span>
-        {mov.excluido && <span className="hist-excluido-badge">Excluído</span>}
+        {mov.excluido && (
+          <span className={`hist-excluido-badge${badgeRemovido ? ' hist-excluido-badge--estoque' : ''}`}>
+            {badgeRemovido ? 'Removido do estoque' : 'Excluído'}
+          </span>
+        )}
       </div>
       {children}
     </li>
@@ -164,36 +171,60 @@ function MovimentoCabecalho({
           <span className="muted"> · excluído em {formatDate(mov.excluidoEm)}</span>
         )}
       </p>
-      {(mov.pesoBruto != null || mov.pesoLiquido != null || mov.valorTotal != null) && (
-        <p className="hist-doc-totais muted">
-          {mov.pesoBruto != null && (
-            <span>P. bruto {formatPesoBruto(mov.pesoBruto)} kg</span>
-          )}
-          {mov.pesoLiquido != null && (
-            <span>
-              {mov.pesoBruto != null ? ' · ' : ''}
-              P. líq. {formatPesoBruto(mov.pesoLiquido)} kg
-            </span>
-          )}
-          {mov.valorTotal != null && (
-            <span>
-              {' · '}
-              V. total {formatValorNfe(mov.valorTotal)}
-            </span>
-          )}
-        </p>
-      )}
     </>
+  )
+}
+
+function HistDocTotais({
+  pesoBruto,
+  pesoLiquido,
+  valorTotal,
+}: {
+  pesoBruto?: number | null
+  pesoLiquido?: number | null
+  valorTotal?: number | null
+}) {
+  if (pesoBruto == null && pesoLiquido == null && valorTotal == null) return null
+
+  return (
+    <p className="hist-doc-totais muted">
+      {pesoBruto != null && <span>P. bruto {formatPesoBruto(pesoBruto)} kg</span>}
+      {pesoLiquido != null && (
+        <span>
+          {pesoBruto != null ? ' · ' : ''}
+          P. líq. {formatPesoBruto(pesoLiquido)} kg
+        </span>
+      )}
+      {valorTotal != null && (
+        <span>
+          {' · '}
+          V. total {formatValorNfe(valorTotal)}
+        </span>
+      )}
+    </p>
   )
 }
 
 function EntradaMovimentoCard({ mov }: { mov: MovimentoRegistro }) {
   const totalEnd = mov.itens.reduce((s, it) => s + it.addressIds.length, 0)
   const totalPaletes = mov.itens.reduce((s, it) => s + (it.paletes ?? it.addressIds.length), 0)
+  const motivoRemocao = labelMotivoRemocaoEstoque(mov.motivoRemocaoEstoque)
 
   return (
     <MovimentoCardShell mov={mov}>
-      <MovimentoCabecalho mov={mov} />
+      <MovimentoCabecalho
+        mov={mov}
+        extra={
+          motivoRemocao ? (
+            <>
+              <span className="hist-saida-sep" aria-hidden>
+                ·
+              </span>
+              <span>{motivoRemocao}</span>
+            </>
+          ) : null
+        }
+      />
       <p className="hist-saida-resumo muted">
         {mov.itens.length} item(ns)
         {' · '}
@@ -202,6 +233,11 @@ function EntradaMovimentoCard({ mov }: { mov: MovimentoRegistro }) {
         {totalEnd} endereço(s)
       </p>
       <HistDetalhesColapsaveis>
+        <HistDocTotais
+          pesoBruto={mov.pesoBruto}
+          pesoLiquido={mov.pesoLiquido}
+          valorTotal={mov.valorTotal}
+        />
         <HistItensLista itens={mov.itens} modo="entrada" movId={mov.id} />
       </HistDetalhesColapsaveis>
     </MovimentoCardShell>
@@ -218,6 +254,11 @@ function MovimentacaoMovimentoCard({ mov }: { mov: MovimentoRegistro }) {
         Reposicionamento de {mov.itens.length} item(ns) · {totalEnd} endereço(s)
       </p>
       <HistDetalhesColapsaveis>
+        <HistDocTotais
+          pesoBruto={mov.pesoBruto}
+          pesoLiquido={mov.pesoLiquido}
+          valorTotal={mov.valorTotal}
+        />
         <HistItensLista itens={mov.itens} modo="movimentacao" movId={mov.id} />
       </HistDetalhesColapsaveis>
     </MovimentoCardShell>
@@ -270,20 +311,13 @@ function SaidaMovimentoCard({ mov }: { mov: MovimentoRegistro }) {
             {posLiberadas} pos. liberada(s)
           </>
         )}
-        {totalPesoBruto > 0 && (
-          <>
-            {' · '}
-            P. bruto {formatPesoBruto(totalPesoBruto)} kg
-          </>
-        )}
-        {totalValor > 0 && (
-          <>
-            {' · '}
-            {formatValorNfe(totalValor)}
-          </>
-        )}
       </p>
       <HistDetalhesColapsaveis>
+        <HistDocTotais
+          pesoBruto={totalPesoBruto > 0 ? totalPesoBruto : mov.pesoBruto}
+          pesoLiquido={mov.pesoLiquido}
+          valorTotal={totalValor > 0 ? totalValor : mov.valorTotal}
+        />
         <HistItensLista itens={mov.itens} modo="saida" movId={mov.id} />
       </HistDetalhesColapsaveis>
     </MovimentoCardShell>
@@ -444,25 +478,6 @@ function CanceladaCard({
           <span className="muted"> · excluído em {formatDate(cancelada.excluidoEm)}</span>
         )}
       </p>
-      {(dados.pesoBruto != null || dados.pesoLiquido != null || dados.valorTotal != null) && (
-        <p className="hist-doc-totais muted">
-          {dados.pesoBruto != null && (
-            <span>P. bruto {formatPesoBruto(dados.pesoBruto)} kg</span>
-          )}
-          {dados.pesoLiquido != null && (
-            <span>
-              {dados.pesoBruto != null ? ' · ' : ''}
-              P. líq. {formatPesoBruto(dados.pesoLiquido)} kg
-            </span>
-          )}
-          {dados.valorTotal != null && (
-            <span>
-              {' · '}
-              V. total {formatValorNfe(dados.valorTotal)}
-            </span>
-          )}
-        </p>
-      )}
       <p className="hist-saida-resumo muted">
         {dados.items.length} item(ns)
         {totalQtd > 0 && (
@@ -474,6 +489,11 @@ function CanceladaCard({
       </p>
       {dados.items.length > 0 ? (
         <HistDetalhesColapsaveis>
+          <HistDocTotais
+            pesoBruto={dados.pesoBruto}
+            pesoLiquido={dados.pesoLiquido}
+            valorTotal={dados.valorTotal}
+          />
           <ul className="hist-saida-itens">
             {dados.items.map((it) => (
               <li key={`${cancelada.id}-${it.index}`} className="hist-saida-item">
@@ -525,21 +545,21 @@ function CanceladaCard({
               </li>
             ))}
           </ul>
+          {dados.chave && (
+            <p className="hist-chave muted" title={dados.chave}>
+              Chave {dados.chave.slice(0, 8)}…{dados.chave.slice(-6)}
+            </p>
+          )}
+          {cancelada.vinculoNfNovaNumero ? (
+            <p className="hist-vinculo">
+              Vinculada à NF nova <strong>{cancelada.vinculoNfNovaNumero}</strong>
+            </p>
+          ) : (
+            !cancelada.excluido && <p className="hist-hint">Sem vínculo com NF substituta.</p>
+          )}
         </HistDetalhesColapsaveis>
       ) : (
         <p className="muted hist-sem-itens">Itens não disponíveis no registro de cancelamento.</p>
-      )}
-      {dados.chave && (
-        <p className="hist-chave muted" title={dados.chave}>
-          Chave {dados.chave.slice(0, 8)}…{dados.chave.slice(-6)}
-        </p>
-      )}
-      {cancelada.vinculoNfNovaNumero ? (
-        <p className="hist-vinculo">
-          Vinculada à NF nova <strong>{cancelada.vinculoNfNovaNumero}</strong>
-        </p>
-      ) : (
-        !cancelada.excluido && <p className="hist-hint">Sem vínculo com NF substituta.</p>
       )}
     </li>
   )
@@ -553,7 +573,7 @@ function buildLista(
 ): HistItem[] {
   if (filtro === 'movimentacao') {
     return movimentos
-      .filter((m) => m.tipo === 'movimentacao')
+      .filter((m) => m.tipo === 'movimentacao' && !m.excluido)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((data) => ({ kind: 'movimento', data }))
   }

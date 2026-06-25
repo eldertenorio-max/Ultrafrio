@@ -3,7 +3,7 @@
 
 create table if not exists public.ultrafrio_movimentos (
   id text primary key,
-  tipo text not null check (tipo in ('entrada', 'saida')),
+  tipo text not null check (tipo in ('entrada', 'saida', 'movimentacao')),
   nf_id text not null references public.ultrafrio_notas_fiscais (id) on delete cascade,
   nf_numero text not null,
   emitente text not null default '',

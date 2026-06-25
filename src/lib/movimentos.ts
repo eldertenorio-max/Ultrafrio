@@ -1,6 +1,7 @@
 import type {
   AddressId,
   JustificativaSaidaId,
+  MotivoRemocaoEstoqueId,
   MovimentoItemSnapshot,
   MovimentoRegistro,
   NfeDocumentoResumo,
@@ -137,6 +138,15 @@ export function atualizarMovimentoEntrada(mov: MovimentoRegistro, nf: NotaFiscal
     ...totaisDocumentoMovimento(nf),
     itens: snapshotItensNf(nf),
   }
+}
+
+export function enderecosAlterados(
+  antes: Set<AddressId> | AddressId[],
+  depois: AddressId[],
+): boolean {
+  const origem = antes instanceof Set ? antes : new Set(antes)
+  if (origem.size !== depois.length) return true
+  return depois.some((id) => !origem.has(id))
 }
 
 export function criarMovimentoMovimentacao(
@@ -306,15 +316,45 @@ export function marcarMovimentoExcluidoHistorico(
   }
 }
 
-/** Remove a NF do estoque e marca a entrada no histórico como excluída. */
-export function removerNfDoEstoque(data: PersistedData, nfId: string): PersistedData {
+/** Remove a NF do estoque e registra no histórico com motivo opcional. */
+export function removerNfDoEstoque(
+  data: PersistedData,
+  nfId: string,
+  options?: { motivoRemocaoEstoque?: MotivoRemocaoEstoqueId },
+): PersistedData {
+  const nf = data.notas.find((n) => n.id === nfId)
   const notas = data.notas.filter((n) => n.id !== nfId)
   const excluidoEm = new Date().toISOString()
-  const movimentos = data.movimentos.map((m) =>
-    m.tipo === 'entrada' && m.nfId === nfId && !m.excluido
-      ? { ...m, excluido: true, excluidoEm }
-      : m,
+  const motivo = options?.motivoRemocaoEstoque
+
+  let movimentos = data.movimentos
+  const entradaAtiva = movimentos.find(
+    (m) => m.tipo === 'entrada' && m.nfId === nfId && !m.excluido,
   )
+
+  if (entradaAtiva) {
+    movimentos = movimentos.map((m) =>
+      m.id === entradaAtiva.id
+        ? {
+            ...m,
+            excluido: true,
+            excluidoEm,
+            ...(motivo ? { motivoRemocaoEstoque: motivo } : {}),
+          }
+        : m,
+    )
+  } else if (nf && motivo) {
+    movimentos = [
+      {
+        ...criarMovimentoEntrada(nf),
+        excluido: true,
+        excluidoEm,
+        motivoRemocaoEstoque: motivo,
+      },
+      ...movimentos,
+    ]
+  }
+
   const notasCanceladas = data.notasCanceladas.map((c) =>
     c.vinculoNfNovaId === nfId
       ? { ...c, vinculoNfNovaId: null, vinculoNfNovaNumero: null }

@@ -1,55 +1,58 @@
 import { useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
-import type { NotaFiscal } from '../types'
+import { MOTIVOS_REMOCAO_ESTOQUE } from '../lib/motivoRemocaoEstoque'
+import type { MotivoRemocaoEstoqueId, NotaFiscal } from '../types'
 import { nfTemEnderecos } from '../lib/movimentos'
 import { NfDetalheLeitura } from './NfDetalheLeitura'
 
 type Props = {
   nfBusca: NotaFiscal | null
-  movimentoEntradaId: string | null
   itemIndex: number | null
   pendingCount: number
   onBuscar: (numero: string) => void
   onSelectItem: (index: number) => void
   onSalvar: () => void
-  onExcluirEntrada: (movId: string) => void
+  onRemoverDoEstoque: (nfId: string, motivo: MotivoRemocaoEstoqueId) => void
   onCancelarEditar: () => void
   buscaErro: string | null
 }
 
 export function EditarPosicaoPanel({
   nfBusca,
-  movimentoEntradaId,
   itemIndex,
   pendingCount,
   onBuscar,
   onSelectItem,
   onSalvar,
-  onExcluirEntrada,
+  onRemoverDoEstoque,
   onCancelarEditar,
   buscaErro,
 }: Props) {
   const [numero, setNumero] = useState('')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
-  const [confirmarExcluir, setConfirmarExcluir] = useState(false)
-  useBodyScrollLock(confirmarCancelar || confirmarExcluir)
+  const [confirmarRemover, setConfirmarRemover] = useState(false)
+  const [motivoRemocao, setMotivoRemocao] = useState<MotivoRemocaoEstoqueId | null>(null)
+  useBodyScrollLock(confirmarCancelar || confirmarRemover)
 
   function handleBuscar() {
     onBuscar(numero.trim())
     setNumero('')
   }
 
+  function fecharRemover() {
+    setConfirmarRemover(false)
+    setMotivoRemocao(null)
+  }
+
   const nfActions = nfBusca ? (
     <div className="nf-detail-actions">
-      {movimentoEntradaId && (
-        <button
-          type="button"
-          className="btn btn-danger btn-sm"
-          onClick={() => setConfirmarExcluir(true)}
-        >
-          Remover do histórico
-        </button>
-      )}
+      <button
+        type="button"
+        className="btn btn-danger btn-sm"
+        onClick={() => setConfirmarRemover(true)}
+      >
+        Remover do estoque
+      </button>
       <button
         type="button"
         className="btn btn-ghost btn-sm"
@@ -120,31 +123,52 @@ export function EditarPosicaoPanel({
         </div>
       )}
 
-      {confirmarExcluir && nfBusca && movimentoEntradaId && (
-        <div className="confirm-backdrop" onClick={() => setConfirmarExcluir(false)}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h4>Remover do histórico?</h4>
+      {confirmarRemover && nfBusca && (
+        <div className="confirm-backdrop" onClick={fecharRemover}>
+          <div className="confirm-box confirm-box--wide" onClick={(e) => e.stopPropagation()}>
+            <h4>Remover do estoque?</h4>
             <p>
               NF <strong>{nfBusca.numero}</strong>
             </p>
             <p className="confirm-warn">
-              O registro sai das abas Histórico e Movimentação. O estoque no painel permanece
-              inalterado.
+              A NF será retirada do painel e os endereços liberados. O registro permanece no
+              histórico com o motivo informado.
             </p>
+            <fieldset className="saida-justificativa">
+              <legend className="saida-justificativa-title">Motivo do erro</legend>
+              <ul className="saida-justificativa-list">
+                {MOTIVOS_REMOCAO_ESTOQUE.map((opt) => (
+                  <li key={opt.id}>
+                    <label className="saida-justificativa-option">
+                      <input
+                        type="radio"
+                        name="motivo-remocao-estoque"
+                        value={opt.id}
+                        checked={motivoRemocao === opt.id}
+                        onChange={() => setMotivoRemocao(opt.id)}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
             <div className="confirm-actions">
-              <button type="button" className="btn" onClick={() => setConfirmarExcluir(false)}>
+              <button type="button" className="btn" onClick={fecharRemover}>
                 Voltar
               </button>
               <button
                 type="button"
                 className="btn btn-danger"
+                disabled={!motivoRemocao}
                 onClick={() => {
-                  onExcluirEntrada(movimentoEntradaId)
-                  setConfirmarExcluir(false)
+                  if (!motivoRemocao) return
+                  onRemoverDoEstoque(nfBusca.id, motivoRemocao)
+                  fecharRemover()
                   setNumero('')
                 }}
               >
-                Remover do histórico
+                Remover do estoque
               </button>
             </div>
           </div>
