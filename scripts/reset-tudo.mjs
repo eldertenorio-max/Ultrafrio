@@ -1,6 +1,8 @@
 /**
  * Zera estoque (posições/NFs) e histórico de movimentação no Supabase.
  * Uso: node scripts/reset-tudo.mjs --confirm
+ *
+ * Feche todas as abas do painel antes de rodar, ou recarregue (F5) logo após.
  */
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -39,45 +41,54 @@ const headers = {
   Prefer: 'return=minimal',
 }
 
+async function contar(table) {
+  const res = await fetch(`${url}/rest/v1/${table}?select=id`, {
+    headers: { ...headers, Prefer: 'count=exact' },
+  })
+  if (!res.ok) throw new Error(`${table}: ${await res.text()}`)
+  const range = res.headers.get('content-range')
+  if (range) {
+    const m = range.match(/\/(\d+|\*)/)
+    if (m && m[1] !== '*') return Number(m[1])
+  }
+  const rows = await res.json()
+  return rows.length
+}
+
 async function listar(table, select = 'id') {
   const res = await fetch(`${url}/rest/v1/${table}?select=${select}`, { headers })
   if (!res.ok) throw new Error(`${table}: ${await res.text()}`)
   return res.json()
 }
 
-async function apagar(table, ids) {
-  if (!ids.length) return 0
-  const chunkSize = 100
-  let removidos = 0
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    const chunk = ids.slice(i, i + chunkSize)
-    const q = chunk.map((id) => `id.eq.${encodeURIComponent(id)}`).join(',')
-    const res = await fetch(`${url}/rest/v1/${table}?or=(${q})`, {
-      method: 'DELETE',
-      headers,
-    })
-    if (!res.ok) throw new Error(`${table} delete: ${await res.text()}`)
-    removidos += chunk.length
-  }
-  return removidos
+/** Apaga todas as linhas (sem depender de listagem paginada). */
+async function apagarTudo(table, idColumn = 'id') {
+  const res = await fetch(
+    `${url}/rest/v1/${table}?${idColumn}=not.is.null`,
+    { method: 'DELETE', headers },
+  )
+  if (!res.ok) throw new Error(`${table} delete all: ${await res.text()}`)
 }
 
 async function main() {
-  const [movs, canceladas, nfs, enderecos] = await Promise.all([
-    listar('ultrafrio_movimentos'),
-    listar('ultrafrio_notas_canceladas').catch(() => []),
-    listar('ultrafrio_notas_fiscais', 'id,numero,status'),
-    listar('ultrafrio_enderecamentos', 'id').catch(() => []),
+  const [movs, canceladas, nfs, enderecos, itens] = await Promise.all([
+    contar('ultrafrio_movimentos').catch(() => listar('ultrafrio_movimentos').then((r) => r.length)),
+    contar('ultrafrio_notas_canceladas').catch(() => 0),
+    contar('ultrafrio_notas_fiscais').catch(() => listar('ultrafrio_notas_fiscais').then((r) => r.length)),
+    contar('ultrafrio_enderecamentos').catch(() => 0),
+    contar('ultrafrio_nf_itens').catch(() => 0),
   ])
 
+  const nfsDetalhe =
+    nfs > 0 ? (await listar('ultrafrio_notas_fiscais', 'numero')).map((n) => n.numero) : []
+
   console.log('=== Reset completo ===')
-  console.log(`Movimentos (histórico): ${movs.length}`)
-  console.log(`NFs no estoque: ${nfs.length}`)
-  if (nfs.length) {
-    console.log('  NFs:', nfs.map((n) => n.numero).join(', '))
-  }
-  console.log(`Endereços alocados: ${enderecos.length}`)
-  console.log(`NFs canceladas: ${canceladas.length}`)
+  console.log(`Movimentos (histórico): ${movs}`)
+  console.log(`NFs no estoque: ${nfs}`)
+  if (nfsDetalhe.length) console.log('  NFs:', nfsDetalhe.join(', '))
+  console.log(`Itens de NF: ${itens}`)
+  console.log(`Endereços alocados: ${enderecos}`)
+  console.log(`NFs canceladas: ${canceladas}`)
   console.log('Cadastro de remetentes: mantido')
 
   if (dryRun) {
@@ -85,30 +96,34 @@ async function main() {
     return
   }
 
-  const movIds = movs.map((m) => m.id)
-  const canIds = canceladas.map((c) => c.id)
-  const nfIds = nfs.map((n) => n.id)
+  console.log('\nApagando…')
+  await apagarTudo('ultrafrio_movimentos')
+  await apagarTudo('ultrafrio_notas_canceladas').catch(() => {})
+  await apagarTudo('ultrafrio_enderecamentos').catch(() => {})
+  await apagarTudo('ultrafrio_nf_itens', 'nf_id').catch(() => {})
+  await apagarTudo('ultrafrio_notas_fiscais')
 
-  const remMov = await apagar('ultrafrio_movimentos', movIds)
-  console.log(`\nRemovidos ${remMov} movimento(s).`)
-
-  const remCan = await apagar('ultrafrio_notas_canceladas', canIds)
-  if (remCan) console.log(`Removidas ${remCan} NF cancelada(s).`)
-
-  const remNf = await apagar('ultrafrio_notas_fiscais', nfIds)
-  console.log(`Removidas ${remNf} NF(s) — itens e endereços em cascata.`)
-
-  const [movsFinal, nfsFinal, endFinal] = await Promise.all([
-    listar('ultrafrio_movimentos'),
-    listar('ultrafrio_notas_fiscais', 'id'),
-    listar('ultrafrio_enderecamentos', 'id').catch(() => []),
+  const [movsFinal, nfsFinal, endFinal, itensFinal, canFinal] = await Promise.all([
+    contar('ultrafrio_movimentos').catch(() => 0),
+    contar('ultrafrio_notas_fiscais').catch(() => 0),
+    contar('ultrafrio_enderecamentos').catch(() => 0),
+    contar('ultrafrio_nf_itens').catch(() => 0),
+    contar('ultrafrio_notas_canceladas').catch(() => 0),
   ])
 
   console.log('\n=== Após reset ===')
-  console.log(`Movimentos: ${movsFinal.length}`)
-  console.log(`NFs: ${nfsFinal.length}`)
-  console.log(`Endereços: ${endFinal.length}`)
-  console.log('\nPronto. Recarregue o painel no navegador.')
+  console.log(`Movimentos: ${movsFinal}`)
+  console.log(`NFs: ${nfsFinal}`)
+  console.log(`Itens: ${itensFinal}`)
+  console.log(`Endereços: ${endFinal}`)
+  console.log(`Canceladas: ${canFinal}`)
+
+  if (movsFinal + nfsFinal + endFinal + itensFinal + canFinal > 0) {
+    console.error('\nERRO: ainda há registros. Verifique RLS ou use o SQL em supabase/sql/reset_tudo.sql')
+    process.exit(1)
+  }
+
+  console.log('\nPronto. Recarregue TODAS as abas do painel (F5).')
 }
 
 main().catch((e) => {

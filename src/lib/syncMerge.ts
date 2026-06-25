@@ -61,10 +61,8 @@ function mergeNotaFiscal(base: NotaFiscal[], local: NotaFiscal[], remote: NotaFi
       if (r !== undefined) {
         const fallback = l ?? b
         result.push(fallback ? preserveOptionalNfFields(r, fallback) : r)
-      } else if (l !== undefined) {
-        result.push(l)
-      } else if (b !== undefined) {
-        result.push(b)
+      } else if (entityJson(b) !== entityJson(l)) {
+        if (l !== undefined) result.push(l)
       }
       continue
     }
@@ -119,11 +117,11 @@ export function mergeEntityList<T extends { id: string }>(
     if (entityJson(b) !== entityJson(r)) {
       if (r !== undefined) {
         result.push(r)
-      } else if (l !== undefined) {
-        result.push(l)
-      } else if (b !== undefined) {
-        result.push(b)
+      } else if (entityJson(b) !== entityJson(l)) {
+        // Remoto apagou, mas há alteração local — mantém local (recriação).
+        if (l !== undefined) result.push(l)
       }
+      // Remoto apagou e local = base — descarta (ex.: reset do banco).
       continue
     }
 
