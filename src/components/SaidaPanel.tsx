@@ -10,6 +10,7 @@ import { SaidaPaleteForm } from './SaidaPaleteForm'
 
 type Props = {
   nfBusca: NotaFiscal | null
+  itemIndex: number | null
   modoPalete: boolean
   qtdPaletesInput: string
   qtdPaletesAlvo: number | null
@@ -20,6 +21,7 @@ type Props = {
   caixasPalete: string
   paletesConfirmados: SaidaPaleteDraft[]
   onBuscar: (numero: string) => void
+  onSelectItem: (index: number) => void
   onQtdPaletesChange: (value: string) => void
   onIniciarSelecao: () => void
   onConfirmarSelecaoPaletes: () => void
@@ -34,6 +36,7 @@ type Props = {
 
 export function SaidaPanel({
   nfBusca,
+  itemIndex,
   modoPalete,
   qtdPaletesInput,
   qtdPaletesAlvo,
@@ -44,6 +47,7 @@ export function SaidaPanel({
   caixasPalete,
   paletesConfirmados,
   onBuscar,
+  onSelectItem,
   onQtdPaletesChange,
   onIniciarSelecao,
   onConfirmarSelecaoPaletes,
@@ -75,8 +79,8 @@ export function SaidaPanel({
     <>
       <div className="sidebar-block">
         <p className="muted">
-          Busque a NF, informe quantos paletes vai retirar, selecione no painel e confirme as
-          caixas de cada um.
+          Busque a NF, selecione o item na tabela, informe os paletes, marque no painel e confirme
+          as caixas.
         </p>
         <div className="saida-busca">
           <input
@@ -130,19 +134,27 @@ export function SaidaPanel({
 
           <h4 className="nf-section-title nf-section-title--sm">Itens da nota</h4>
           <p className="muted nf-itens-intro saida-itens-intro">
-            A coluna <strong>Sobra</strong> é atualizada conforme você confirma cada palete na saída.
+            Clique no <strong>item</strong> que vai sair (linha fica verde). A coluna{' '}
+            <strong>Sobra</strong> é atualizada conforme você confirma cada palete.
           </p>
 
           <SaidaItensTable
             nf={nfBusca}
             items={nfBusca.items}
+            activeItemIndex={itemIndex}
             paletesConfirmados={paletesConfirmados}
             paleteAtivo={paleteAtivo}
             paletesConfirmadosIds={paletesConfirmados.map((p) => p.addressId)}
             paletesSelecionadosIds={paletesSelecionados}
+            onSelectItem={onSelectItem}
           />
 
-          <SaidaPaleteForm
+          {itemIndex == null && (
+            <p className="muted saida-selecione-item">Selecione um item na tabela para continuar.</p>
+          )}
+
+          {itemIndex != null && (
+            <SaidaPaleteForm
             nf={nfBusca}
             modoPalete={modoPalete}
             qtdPaletesInput={qtdPaletesInput}
@@ -161,6 +173,7 @@ export function SaidaPanel({
             onRemoverPalete={onRemoverPalete}
             selecaoErro={selecaoErro}
           />
+          )}
 
           {paletesConfirmados.length > 0 && (
             <div className="item-actions">

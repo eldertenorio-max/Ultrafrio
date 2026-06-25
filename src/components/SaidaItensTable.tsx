@@ -1,5 +1,9 @@
 import { Fragment } from 'react'
-import { sobrasPorItem, pesoBrutoTotalItem, pesoLiquidoTotalItem } from '../lib/saidaParcial'
+import {
+  sobrasPorItem,
+  pesoBrutoTotalItem,
+  pesoLiquidoTotalItem,
+} from '../lib/saidaParcial'
 import type { SaidaPaleteDraft } from '../lib/saidaParcial'
 import type { NfeItem, NotaFiscal } from '../types'
 import { formatAddressLabel } from '../layout/camaras'
@@ -12,19 +16,23 @@ import {
 type Props = {
   nf: NotaFiscal
   items: NfeItem[]
+  activeItemIndex: number | null
   paletesConfirmados: SaidaPaleteDraft[]
   paleteAtivo: string | null
   paletesConfirmadosIds: string[]
   paletesSelecionadosIds?: string[]
+  onSelectItem: (index: number) => void
 }
 
 export function SaidaItensTable({
   nf,
   items,
+  activeItemIndex,
   paletesConfirmados,
   paleteAtivo,
   paletesConfirmadosIds,
   paletesSelecionadosIds = [],
+  onSelectItem,
 }: Props) {
   const itensEstoque = items.filter((it) => it.allocatedAddresses.length > 0)
   const sobras = sobrasPorItem(items, paletesConfirmados)
@@ -49,15 +57,35 @@ export function SaidaItensTable({
         <tbody>
           {itensEstoque.map((item) => {
             const sobra = sobras[item.index] ?? item.quantidade
+            const esgotado = sobra <= 1e-9
             const temSaida = sobra < item.quantidade - 1e-9
+            const isActive = activeItemIndex === item.index
+            const selecionavel = !esgotado
 
             return (
               <Fragment key={item.index}>
                 <tr
-                  className={`nf-itens-row nf-itens-row--ok${temSaida ? ' nf-itens-row--active' : ''}`}
+                  className={`nf-itens-row nf-itens-row--ok${isActive ? ' nf-itens-row--active' : ''}${temSaida && !isActive ? ' nf-itens-row--parcial' : ''}${selecionavel ? ' nf-itens-row--clickable' : ''}`}
+                  onClick={selecionavel ? () => onSelectItem(item.index) : undefined}
+                  role={selecionavel ? 'button' : undefined}
+                  tabIndex={selecionavel ? 0 : undefined}
+                  onKeyDown={
+                    selecionavel
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            onSelectItem(item.index)
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   <td className="nf-itens-col-status">
-                    <span className="nf-itens-status nf-itens-status--ok">✓</span>
+                    <span
+                      className={`nf-itens-status${esgotado || (!isActive && !temSaida) ? ' nf-itens-status--ok' : ''}${temSaida && !isActive ? ' nf-itens-status--parcial' : ''}`}
+                    >
+                      {isActive ? '✎' : esgotado ? '✓' : temSaida ? '◐' : '○'}
+                    </span>
                   </td>
                   <td className="nf-itens-col-codigo">{item.codigo || '—'}</td>
                   <td className="nf-itens-col-descricao" title={item.descricao}>
@@ -79,7 +107,9 @@ export function SaidaItensTable({
                     </span>
                   </td>
                 </tr>
-                <tr className="nf-itens-row-addr">
+                <tr
+                  className={`nf-itens-row-addr${isActive ? ' nf-itens-row-addr--active' : ''}`}
+                >
                   <td colSpan={10}>
                     <ul className="addr-mini nf-itens-addr-list addr-mini--saida">
                       {item.allocatedAddresses.map((a) => (

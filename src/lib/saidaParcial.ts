@@ -40,6 +40,24 @@ export function paletesDisponiveisNf(
   return enderecosDaNf(nf).filter((a) => !confirmadosSet.has(a)).length
 }
 
+export function paletesDisponiveisItem(
+  item: NfeItem,
+  confirmados: SaidaPaleteDraft[],
+): number {
+  const confirmadosSet = new Set(confirmados.map((p) => p.addressId))
+  return item.allocatedAddresses.filter((a) => !confirmadosSet.has(a)).length
+}
+
+export function sobraItem(
+  item: NfeItem,
+  confirmados: SaidaPaleteDraft[],
+): number {
+  const saido = confirmados
+    .filter((p) => p.itemIndex === item.index)
+    .reduce((s, p) => s + p.quantidadeCaixas, 0)
+  return Math.max(0, item.quantidade - saido)
+}
+
 export function parseQuantidadeSaida(raw: string): number | null {
   const trimmed = raw.trim()
   if (!trimmed) return 0

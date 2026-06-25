@@ -34,8 +34,9 @@ import {
   aplicarSaidaPaletes,
   calcularSaidaPalete,
   enderecosALiberar,
-  paletesDisponiveisNf,
+  paletesDisponiveisItem,
   parseQuantidadeSaida,
+  sobraItem,
   type SaidaPaleteDraft,
 } from './lib/saidaParcial'
 import {
@@ -102,6 +103,7 @@ export default function App() {
   const [detailAddress, setDetailAddress] = useState<AddressId | null>(null)
 
   const [nfBuscaSaidaId, setNfBuscaSaidaId] = useState<string | null>(null)
+  const [saidaItemIndex, setSaidaItemIndex] = useState<number | null>(null)
   const [saidaModoPalete, setSaidaModoPalete] = useState(false)
   const [saidaQtdPaletesInput, setSaidaQtdPaletesInput] = useState('')
   const [saidaQtdPaletesAlvo, setSaidaQtdPaletesAlvo] = useState<number | null>(null)
@@ -216,8 +218,14 @@ export default function App() {
 
   const saidaAddresses = useMemo(() => {
     if (!nfBuscaSaida) return new Set<AddressId>()
+    if (saidaItemIndex != null) {
+      const item = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
+      if (item && item.allocatedAddresses.length > 0) {
+        return new Set(item.allocatedAddresses)
+      }
+    }
     return new Set(enderecosDaNf(nfBuscaSaida))
-  }, [nfBuscaSaida])
+  }, [nfBuscaSaida, saidaItemIndex])
 
   const saidaFlaggedAddresses = useMemo(() => {
     const flagged = new Set(saidaPaletesConfirmados.map((p) => p.addressId))
@@ -557,6 +565,12 @@ export default function App() {
       const enderecosNf = new Set(enderecosDaNf(nfBuscaSaida))
       if (!enderecosNf.has(addressId)) return
       if (saidaPaletesConfirmados.some((p) => p.addressId === addressId)) return
+
+      const itemAtivo =
+        saidaItemIndex != null
+          ? nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
+          : null
+      if (!itemAtivo?.allocatedAddresses.includes(addressId)) return
 
       if (!saidaSelecaoConcluida) {
         setSaidaPaletesSelecionados((prev) => {
@@ -940,6 +954,7 @@ export default function App() {
   }
 
   function limparEstadoSaida() {
+    setSaidaItemIndex(null)
     setSaidaModoPalete(false)
     setSaidaQtdPaletesInput('')
     setSaidaQtdPaletesAlvo(null)
@@ -966,16 +981,46 @@ export default function App() {
     limparEstadoSaida()
   }
 
-  function handleIniciarSelecaoSaida() {
+  function resetSelecaoPaletesSaida() {
+    setSaidaQtdPaletesInput('')
+    setSaidaQtdPaletesAlvo(null)
+    setSaidaPaletesSelecionados(new Set())
+    setSaidaPaletesNaFila([])
+    setSaidaSelecaoConcluida(false)
+    setSaidaPaleteAtivo(null)
+    setSaidaCaixasPalete('')
+    setSaidaModoPalete(false)
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleSelectItemSaida(index: number) {
     if (!nfBuscaSaida) return
+    const item = nfBuscaSaida.items.find((it) => it.index === index)
+    if (!item || item.allocatedAddresses.length === 0) return
+    if (paletesDisponiveisItem(item, saidaPaletesConfirmados) <= 0) return
+
+    if (saidaItemIndex !== index) {
+      resetSelecaoPaletesSaida()
+      setSaidaItemIndex(index)
+    }
+  }
+
+  function handleIniciarSelecaoSaida() {
+    if (!nfBuscaSaida || saidaItemIndex == null) {
+      setSaidaSelecaoErro('Selecione um item na tabela.')
+      return
+    }
+    const item = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
+    if (!item) return
+
     const qtd = parsePaletesInput(saidaQtdPaletesInput)
     if (qtd == null || qtd <= 0) {
       setSaidaSelecaoErro('Informe uma quantidade válida de paletes.')
       return
     }
-    const disponivel = paletesDisponiveisNf(nfBuscaSaida, saidaPaletesConfirmados)
+    const disponivel = paletesDisponiveisItem(item, saidaPaletesConfirmados)
     if (qtd > disponivel) {
-      setSaidaSelecaoErro(`Máximo de ${disponivel} palete(s) disponível(is) nesta NF.`)
+      setSaidaSelecaoErro(`Máximo de ${disponivel} palete(s) disponível(is) neste item.`)
       return
     }
     setSaidaQtdPaletesAlvo(qtd)
@@ -1055,6 +1100,15 @@ export default function App() {
         setSaidaPaletesSelecionados(new Set())
         setSaidaPaletesNaFila([])
         setSaidaQtdPaletesAlvo(null)
+        setSaidaModoPalete(false)
+        const itemAtual = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
+        if (
+          itemAtual &&
+          paletesDisponiveisItem(itemAtual, next) <= 0 &&
+          sobraItem(itemAtual, next) <= 1e-9
+        ) {
+          setSaidaItemIndex(null)
+        }
       }
       return next
     })
@@ -1435,18 +1489,24 @@ export default function App() {
         }}
         saida={{
           nfBusca: nfBuscaSaida,
+          itemIndex: saidaItemIndex,
           modoPalete: saidaModoPalete,
           qtdPaletesInput: saidaQtdPaletesInput,
           qtdPaletesAlvo: saidaQtdPaletesAlvo,
-          paletesDisponiveis: nfBuscaSaida
-            ? paletesDisponiveisNf(nfBuscaSaida, saidaPaletesConfirmados)
-            : 0,
+          paletesDisponiveis:
+            nfBuscaSaida && saidaItemIndex != null
+              ? (() => {
+                  const item = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
+                  return item ? paletesDisponiveisItem(item, saidaPaletesConfirmados) : 0
+                })()
+              : 0,
           paletesSelecionados: [...saidaPaletesSelecionados],
           selecaoConcluida: saidaSelecaoConcluida,
           paleteAtivo: saidaPaleteAtivo,
           caixasPalete: saidaCaixasPalete,
           paletesConfirmados: saidaPaletesConfirmados,
           onBuscar: handleBuscarSaida,
+          onSelectItem: handleSelectItemSaida,
           onQtdPaletesChange: handleQtdPaletesChange,
           onIniciarSelecao: handleIniciarSelecaoSaida,
           onConfirmarSelecaoPaletes: handleConfirmarSelecaoPaletes,

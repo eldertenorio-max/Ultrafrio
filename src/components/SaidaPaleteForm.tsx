@@ -105,7 +105,7 @@ export function SaidaPaleteForm({
           />
         </label>
         <p className="muted saida-paletes-disponiveis">
-          {paletesDisponiveis} palete(s) disponível(is) nesta NF
+          {paletesDisponiveis} palete(s) disponível(is) neste item
           {paletesConfirmados.length > 0 && (
             <> · {paletesConfirmados.length} já confirmado(s)</>
           )}
@@ -180,7 +180,7 @@ export function SaidaPaleteForm({
         <div className="consulta-enderecar-box saida-enderecar-box">
           <p className="consulta-enderecar-titulo">Selecione os paletes no painel</p>
           <p className="muted consulta-enderecar-texto">
-            Clique nas células <strong>ocupadas desta NF</strong> no mapa ao lado. Selecione{' '}
+            Clique nas células <strong>ocupadas deste item</strong> no mapa ao lado. Selecione{' '}
             <strong>{qtdPaletesAlvo ?? '—'}</strong> palete(s).
           </p>
           <p className="consulta-enderecar-contagem">

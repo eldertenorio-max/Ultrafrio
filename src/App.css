@@ -411,8 +411,12 @@
   background: var(--bg-inset, var(--bg-elevated));
 }
 
-.nf-itens-row--active + .nf-itens-row-campos td {
-  background: var(--item-active-bg);
+.nf-itens-row--active + .nf-itens-row-campos td,
+.nf-itens-row--active + .nf-itens-row-meta td,
+.nf-itens-row--active + .nf-itens-row-addr td,
+.nf-itens-row--active + .nf-itens-row-meta + .nf-itens-row-addr td {
+  background: color-mix(in srgb, var(--cell-destaque-verde) 32%, var(--bg-elevated));
+  box-shadow: inset 3px 0 0 var(--cell-sel);
 }
 
 .nf-itens-campos-row {
@@ -607,14 +611,19 @@
   transition: background 0.12s ease;
 }
 
-.nf-itens-row:hover {
+.nf-itens-row:hover:not(.nf-itens-row--active) {
   background: var(--item-active-bg, rgba(255, 255, 255, 0.03));
 }
 
 .nf-itens-row--active {
-  background: var(--item-active-bg);
-  outline: 1px solid var(--cell-sel);
-  outline-offset: -1px;
+  background: color-mix(in srgb, var(--cell-destaque-verde) 48%, var(--bg-elevated));
+  outline: 2px solid var(--cell-sel);
+  outline-offset: -2px;
+  box-shadow: inset 4px 0 0 var(--cell-sel);
+}
+
+.nf-itens-row--active td {
+  background: transparent;
 }
 
 .nf-itens-row--clickable {
@@ -662,6 +671,16 @@
   padding-bottom: 6px;
   border-top: 0;
   background: var(--bg-elevated);
+}
+
+.nf-itens-row-addr--active td {
+  background: color-mix(in srgb, var(--cell-destaque-verde) 32%, var(--bg-elevated));
+  box-shadow: inset 3px 0 0 var(--cell-sel);
+}
+
+.saida-selecione-item {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
 }
 
 .nf-itens-addr-list {
