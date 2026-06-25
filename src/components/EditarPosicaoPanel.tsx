@@ -72,7 +72,7 @@ export function EditarPosicaoPanel({
                   className="btn btn-danger btn-sm"
                   onClick={() => setConfirmarExcluir(true)}
                 >
-                  Excluir entrada
+                  Remover do histórico
                 </button>
               )}
               <button
@@ -150,7 +150,7 @@ export function EditarPosicaoPanel({
                   className="btn btn-danger btn-sm"
                   onClick={() => setConfirmarExcluir(true)}
                 >
-                  Excluir entrada
+                  Remover do histórico
                 </button>
               )}
               <button
@@ -169,12 +169,13 @@ export function EditarPosicaoPanel({
       {confirmarExcluir && nfBusca && movimentoEntradaId && (
         <div className="confirm-backdrop" onClick={() => setConfirmarExcluir(false)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h4>Excluir entrada?</h4>
+            <h4>Remover do histórico?</h4>
             <p>
               NF <strong>{nfBusca.numero}</strong>
             </p>
             <p className="confirm-warn">
-              As posições ocupadas serão liberadas e a NF será removida do sistema. O registro permanecerá no histórico.
+              O registro sai das abas Histórico e Movimentação. O estoque no painel permanece
+              inalterado.
             </p>
             <div className="confirm-actions">
               <button type="button" className="btn" onClick={() => setConfirmarExcluir(false)}>
@@ -189,7 +190,7 @@ export function EditarPosicaoPanel({
                   setNumero('')
                 }}
               >
-                Excluir entrada
+                Remover do histórico
               </button>
             </div>
           </div>

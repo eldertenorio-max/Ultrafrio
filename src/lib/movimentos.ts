@@ -59,32 +59,6 @@ export function snapshotItensNf(nf: NotaFiscal, itemIndexes?: number[]): Movimen
     }))
 }
 
-export function snapshotItensNfPorEnderecos(
-  nf: NotaFiscal,
-  addressIds: AddressId[],
-): MovimentoItemSnapshot[] {
-  const pick = new Set(addressIds)
-  const snapshots: MovimentoItemSnapshot[] = []
-  for (const it of nf.items) {
-    const ids = it.allocatedAddresses.filter((a) => pick.has(a))
-    if (ids.length === 0) continue
-    snapshots.push({
-      itemIndex: it.index,
-      codigo: it.codigo,
-      descricao: it.descricao,
-      quantidade: it.quantidade,
-      unidade: it.unidade,
-      addressIds: ids,
-      paletes: ids.length,
-      ...(it.up ? { up: it.up } : {}),
-      ...(it.lote ? { lote: it.lote } : {}),
-      ...(it.dataFabricacao ? { dataFabricacao: it.dataFabricacao } : {}),
-      ...(it.dataValidade ? { dataValidade: it.dataValidade } : {}),
-    })
-  }
-  return snapshots
-}
-
 export function criarMovimentoEntrada(nf: NotaFiscal): MovimentoRegistro {
   return {
     id: `mov-entrada-${nf.id}-${Date.now()}`,
@@ -177,7 +151,7 @@ export function sincronizarMovimentosEntrada(data: PersistedData): PersistedData
 
 export function criarMovimentoSaida(
   nf: NotaFiscal,
-  addressIds: AddressId[],
+  itemIndexes: number[],
   justificativaSaida: JustificativaSaidaId,
 ): MovimentoRegistro {
   return {
@@ -188,22 +162,10 @@ export function criarMovimentoSaida(
     emitente: nf.emitente,
     createdAt: new Date().toISOString(),
     justificativaSaida,
-    itens: snapshotItensNfPorEnderecos(nf, addressIds),
+    itens: snapshotItensNf(nf, itemIndexes),
   }
 }
 
-export function aplicarSaidaEnderecos(nf: NotaFiscal, addressIds: AddressId[]): NotaFiscal {
-  const pick = new Set(addressIds)
-  return {
-    ...nf,
-    items: nf.items.map((it) => ({
-      ...it,
-      allocatedAddresses: it.allocatedAddresses.filter((a) => !pick.has(a)),
-    })),
-  }
-}
-
-/** @deprecated Use aplicarSaidaEnderecos para saída parcial por posição. */
 export function aplicarSaidaItens(nf: NotaFiscal, itemIndexes: number[]): NotaFiscal {
   const pick = new Set(itemIndexes)
   return {
@@ -223,31 +185,42 @@ export function enderecosDosItens(nf: NotaFiscal, itemIndexes: number[]): Addres
   return nf.items.filter((it) => pick.has(it.index)).flatMap((it) => it.allocatedAddresses)
 }
 
-export function excluirMovimento(data: PersistedData, movId: string): PersistedData {
+export function marcarMovimentoExcluidoHistorico(
+  data: PersistedData,
+  movId: string,
+): PersistedData {
   const mov = data.movimentos.find((m) => m.id === movId)
   if (!mov || mov.excluido) return data
 
   const excluidoEm = new Date().toISOString()
-  const movimentos = data.movimentos.map((m) =>
-    m.id === movId ? { ...m, excluido: true, excluidoEm } : m,
-  )
-
-  if (mov.tipo === 'entrada') {
-    const notas = data.notas.filter((n) => n.id !== mov.nfId)
-    const notasCanceladas = data.notasCanceladas.map((c) =>
-      c.vinculoNfNovaId === mov.nfId
-        ? { ...c, vinculoNfNovaId: null, vinculoNfNovaNumero: null }
-        : c,
-    )
-    return syncVinculosNotas({ movimentos, notas, notasCanceladas, emitentes: data.emitentes })
-  }
-
   return {
-    movimentos,
-    notas: data.notas,
-    notasCanceladas: data.notasCanceladas,
-    emitentes: data.emitentes,
+    ...data,
+    movimentos: data.movimentos.map((m) =>
+      m.id === movId ? { ...m, excluido: true, excluidoEm } : m,
+    ),
   }
+}
+
+/** Remove a NF do estoque e marca a entrada no histórico como excluída. */
+export function removerNfDoEstoque(data: PersistedData, nfId: string): PersistedData {
+  const notas = data.notas.filter((n) => n.id !== nfId)
+  const excluidoEm = new Date().toISOString()
+  const movimentos = data.movimentos.map((m) =>
+    m.tipo === 'entrada' && m.nfId === nfId && !m.excluido
+      ? { ...m, excluido: true, excluidoEm }
+      : m,
+  )
+  const notasCanceladas = data.notasCanceladas.map((c) =>
+    c.vinculoNfNovaId === nfId
+      ? { ...c, vinculoNfNovaId: null, vinculoNfNovaNumero: null }
+      : c,
+  )
+  return syncVinculosNotas({ ...data, notas, movimentos, notasCanceladas })
+}
+
+/** Remove apenas o registro do histórico/movimentação — não altera o estoque. */
+export function excluirMovimento(data: PersistedData, movId: string): PersistedData {
+  return marcarMovimentoExcluidoHistorico(data, movId)
 }
 
 export function buscarNfPorNumero(notas: NotaFiscal[], numero: string): NotaFiscal | null {

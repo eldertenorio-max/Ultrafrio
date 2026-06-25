@@ -2950,46 +2950,6 @@ html.scroll-locked .sidebar.sidebar--fixed {
   flex: 1;
 }
 
-.saida-paletes-form {
-  margin-top: 12px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-}
-
-.saida-paletes-hint {
-  margin: 8px 0 12px;
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.saida-enderecar-box {
-  border-color: var(--cell-saida);
-  background: color-mix(in srgb, var(--cell-saida) 10%, var(--bg-elevated));
-}
-
-.saida-enderecar-box .consulta-enderecar-contagem {
-  color: var(--cell-saida);
-}
-
-.saida-enderecos-selecionados {
-  margin: 0 0 10px;
-}
-
-.item-row--readonly {
-  cursor: default;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 8px 0;
-}
-
-.saida-itens-info {
-  margin-bottom: 12px;
-}
-
 .saida-justificativa {
   margin: 12px 0;
   padding: 0;

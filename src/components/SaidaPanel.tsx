@@ -1,40 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
-import type { AddressId, JustificativaSaidaId, NotaFiscal } from '../types'
-import { enderecosDaNf, nfTemEnderecos } from '../lib/movimentos'
+import type { JustificativaSaidaId, NotaFiscal } from '../types'
+import { enderecosDosItens, nfTemEnderecos } from '../lib/movimentos'
 import { JUSTIFICATIVAS_SAIDA } from '../lib/justificativaSaida'
-import { parsePaletesInput } from '../lib/paletes'
 import { formatAddressLabel } from '../layout/camaras'
 
 type Props = {
   nfBusca: NotaFiscal | null
-  selecaoAtiva: boolean
-  paletesTotal: number | null
-  enderecosSelecionados: AddressId[]
+  itensFlagados: Set<number>
   onBuscar: (numero: string) => void
-  onIniciarSelecao: (paletes: number) => void
-  onCancelarSelecao: () => void
+  onToggleItem: (index: number) => void
   onFinalizarSaida: (justificativa: JustificativaSaidaId) => void
   onCancelarSaida: () => void
   buscaErro: string | null
-  selecaoErro: string | null
 }
 
 export function SaidaPanel({
   nfBusca,
-  selecaoAtiva,
-  paletesTotal,
-  enderecosSelecionados,
+  itensFlagados,
   onBuscar,
-  onIniciarSelecao,
-  onCancelarSelecao,
+  onToggleItem,
   onFinalizarSaida,
   onCancelarSaida,
   buscaErro,
-  selecaoErro,
 }: Props) {
   const [numero, setNumero] = useState('')
-  const [paletesInput, setPaletesInput] = useState('1')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
   const [justificativa, setJustificativa] = useState<JustificativaSaidaId | null>(null)
   useBodyScrollLock(confirmarCancelar)
@@ -43,36 +33,20 @@ export function SaidaPanel({
     setJustificativa(null)
   }, [nfBusca?.id])
 
-  useEffect(() => {
-    if (!selecaoAtiva) setPaletesInput('1')
-  }, [selecaoAtiva, nfBusca?.id])
-
   function handleBuscar() {
     onBuscar(numero.trim())
     setNumero('')
   }
 
-  function handleIniciarSelecao() {
-    const paletes = parsePaletesInput(paletesInput)
-    if (paletes == null || paletes <= 0) return
-    onIniciarSelecao(paletes)
-  }
-
   const itensComEndereco = nfBusca?.items.filter((it) => it.allocatedAddresses.length > 0) ?? []
-  const totalEnderecosNf = nfBusca ? enderecosDaNf(nfBusca).length : 0
-  const podeFinalizar =
-    selecaoAtiva &&
-    paletesTotal != null &&
-    enderecosSelecionados.length === paletesTotal &&
-    enderecosSelecionados.length > 0 &&
-    justificativa != null
+  const enderecosFlagados = nfBusca
+    ? enderecosDosItens(nfBusca, [...itensFlagados])
+    : []
 
   return (
     <>
       <div className="sidebar-block">
-        <p className="muted">
-          Digite o número da NF, informe quantos paletes vai retirar e clique nas posições no painel.
-        </p>
+        <p className="muted">Digite o número da NF para ver onde retirar os itens.</p>
         <div className="saida-busca">
           <input
             type="text"
@@ -81,9 +55,8 @@ export function SaidaPanel({
             value={numero}
             onChange={(e) => setNumero(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
-            disabled={selecaoAtiva}
           />
-          <button type="button" className="btn primary" onClick={handleBuscar} disabled={selecaoAtiva}>
+          <button type="button" className="btn primary" onClick={handleBuscar}>
             Buscar
           </button>
         </div>
@@ -103,90 +76,45 @@ export function SaidaPanel({
             </button>
           </div>
           <p className="muted">{nfBusca.emitente}</p>
-          <p className="muted">
-            {totalEnderecosNf} posição(ões) em estoque · saída parcial por palete e endereço
-          </p>
+          <p className="muted">Marque os itens que vai retirar:</p>
 
-          <ul className="item-list saida-itens-info">
-            {itensComEndereco.map((item) => (
-              <li key={item.index}>
-                <div className="item-row item-row--readonly">
-                  <span className="item-text">
-                    <strong>{item.codigo}</strong>
-                    <span>{item.descricao}</span>
-                    <span className="muted">
-                      {item.allocatedAddresses.length} endereço(s)
-                      {item.paletes != null ? ` · ${item.paletes} palete(s) cadastrado(s)` : ''}
+          <ul className="item-list">
+            {itensComEndereco.map((item) => {
+              const flagged = itensFlagados.has(item.index)
+              return (
+                <li key={item.index}>
+                  <button
+                    type="button"
+                    className={`item-row ${flagged ? 'item-row--active' : ''}`}
+                    onClick={() => onToggleItem(item.index)}
+                  >
+                    <span className="item-check">{flagged ? '✓' : '○'}</span>
+                    <span className="item-text">
+                      <strong>{item.codigo}</strong>
+                      <span>{item.descricao}</span>
+                      <span className="muted">
+                        Retirar de {item.allocatedAddresses.length} endereço(s)
+                      </span>
                     </span>
-                  </span>
-                </div>
-                <ul className="addr-mini addr-mini--saida">
-                  {item.allocatedAddresses.map((a) => (
-                    <li
-                      key={a}
-                      className={enderecosSelecionados.includes(a) ? 'addr-flagged' : ''}
-                    >
-                      {formatAddressLabel(a)}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
+                  </button>
+                  <ul className="addr-mini addr-mini--saida">
+                    {item.allocatedAddresses.map((a) => (
+                      <li key={a} className={flagged ? 'addr-flagged' : ''}>
+                        {formatAddressLabel(a)}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              )
+            })}
           </ul>
 
-          {!selecaoAtiva ? (
-            <div className="saida-paletes-form">
-              <label className="consulta-campo">
-                <span>Paletes nesta saída</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={totalEnderecosNf}
-                  step={1}
-                  className="input-nf"
-                  value={paletesInput}
-                  onChange={(e) => setPaletesInput(e.target.value)}
-                />
-              </label>
-              <p className="muted saida-paletes-hint">
-                Informe quantos paletes vai retirar e depois selecione as posições correspondentes no
-                mapa ao lado.
-              </p>
-              <button type="button" className="btn primary full" onClick={handleIniciarSelecao}>
-                Selecionar posições no painel
-              </button>
-            </div>
-          ) : (
-            <div className="consulta-enderecar-box saida-enderecar-box">
-              <p className="consulta-enderecar-titulo">Selecione as posições no painel</p>
-              <p className="muted consulta-enderecar-texto">
-                Clique nas células <strong>ocupadas desta NF</strong> (azul) no mapa ao lado para
-                indicar de onde vai retirar. Marque exatamente{' '}
-                <strong>
-                  {paletesTotal ?? 0} posição{paletesTotal === 1 ? '' : 'ões'}
-                </strong>{' '}
-                — uma para cada palete informado.
-              </p>
-              <p className="consulta-enderecar-contagem">
-                {enderecosSelecionados.length} de {paletesTotal ?? 0} selecionada(s)
-              </p>
-              {enderecosSelecionados.length > 0 && (
-                <ul className="consulta-enderecos saida-enderecos-selecionados">
-                  {enderecosSelecionados.map((addr) => (
-                    <li key={addr}>{formatAddressLabel(addr)}</li>
-                  ))}
-                </ul>
-              )}
-              <div className="consulta-enderecar-actions">
-                <button type="button" className="btn btn-ghost" onClick={onCancelarSelecao}>
-                  Voltar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {selecaoAtiva && enderecosSelecionados.length === paletesTotal && paletesTotal! > 0 && (
+          {itensFlagados.size > 0 && (
             <div className="item-actions">
+              <p className="muted">
+                {itensFlagados.size} item(ns) · {enderecosFlagados.length} endereço(s) serão liberados
+              </p>
+
               <fieldset className="saida-justificativa">
                 <legend className="saida-justificativa-title">Motivo da saída</legend>
                 <ul className="saida-justificativa-list">
@@ -207,17 +135,16 @@ export function SaidaPanel({
                 </ul>
               </fieldset>
 
-              {selecaoErro && <p className="error">{selecaoErro}</p>}
-
               <button
                 type="button"
                 className="btn warning full"
-                disabled={!podeFinalizar}
+                disabled={!justificativa}
                 onClick={() => {
                   if (justificativa) onFinalizarSaida(justificativa)
+                  setNumero('')
                 }}
               >
-                Finalizar saída — {enderecosSelecionados.length} palete(s)
+                Finalizar saída — NF {nfBusca.numero}
               </button>
             </div>
           )}
@@ -248,7 +175,7 @@ export function SaidaPanel({
               NF <strong>{nfBusca.numero}</strong>
             </p>
             <p className="confirm-warn">
-              A busca e as posições selecionadas serão descartadas. Nenhuma posição será liberada.
+              A busca e os itens marcados serão descartados. Nenhuma posição será liberada.
             </p>
             <div className="confirm-actions">
               <button type="button" className="btn" onClick={() => setConfirmarCancelar(false)}>
