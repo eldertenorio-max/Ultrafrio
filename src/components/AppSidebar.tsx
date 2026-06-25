@@ -1,4 +1,4 @@
-import { CollapsibleSidebarSection } from './CollapsibleSidebarSection'
+import { CollapsibleSidebarSection, type SidebarSectionId } from './CollapsibleSidebarSection'
 import { ConsultaEstoquePanel } from './ConsultaEstoquePanel'
 import { CanceladasPanel } from './CanceladasPanel'
 import { EditarPosicaoPanel } from './EditarPosicaoPanel'
@@ -10,7 +10,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { SidebarModeToggle } from './SidebarModeToggle'
 import { useSidebarExpand } from '../hooks/useSidebarExpand'
 import type { Theme } from '../lib/theme'
-import type { ComponentProps } from 'react'
+import { useState, type ComponentProps } from 'react'
 
 type Props = {
   saving: boolean
@@ -45,6 +45,12 @@ export function AppSidebar({
   imprimir,
   onBeforeLeaveEntrada,
 }: Props) {
+  const [openSection, setOpenSection] = useState<SidebarSectionId | null>(null)
+
+  function sectionOpenChange(id: SidebarSectionId, open: boolean) {
+    setOpenSection(open ? id : null)
+  }
+
   const guardOtherSection = (nextOpen: boolean, proceed: () => void) => {
     if (!nextOpen || !onBeforeLeaveEntrada) {
       proceed()
@@ -91,31 +97,73 @@ export function AppSidebar({
         {persistError && <p className="error">{persistError}</p>}
       </div>
 
-      <CollapsibleSidebarSection id="consulta" title="Consulta estoque" onBeforeToggle={guardOtherSection}>
+      <CollapsibleSidebarSection
+        id="consulta"
+        title="Consulta estoque"
+        open={openSection === 'consulta'}
+        onOpenChange={(open) => sectionOpenChange('consulta', open)}
+        onBeforeToggle={guardOtherSection}
+      >
         <ConsultaEstoquePanel {...consulta} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="entrada" title="Entrada" onBeforeToggle={guardEntradaSection}>
+      <CollapsibleSidebarSection
+        id="entrada"
+        title="Entrada"
+        open={openSection === 'entrada'}
+        onOpenChange={(open) => sectionOpenChange('entrada', open)}
+        onBeforeToggle={guardEntradaSection}
+      >
         <EntradaPanel {...entrada} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="saida" title="Saída" onBeforeToggle={guardOtherSection}>
+      <CollapsibleSidebarSection
+        id="saida"
+        title="Saída"
+        open={openSection === 'saida'}
+        onOpenChange={(open) => sectionOpenChange('saida', open)}
+        onBeforeToggle={guardOtherSection}
+      >
         <SaidaPanel {...saida} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="editar" title="Movimentação" onBeforeToggle={guardOtherSection}>
+      <CollapsibleSidebarSection
+        id="editar"
+        title="Movimentação"
+        open={openSection === 'editar'}
+        onOpenChange={(open) => sectionOpenChange('editar', open)}
+        onBeforeToggle={guardOtherSection}
+      >
         <EditarPosicaoPanel {...editar} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="canceladas" title="NF cancelada" onBeforeToggle={guardOtherSection}>
+      <CollapsibleSidebarSection
+        id="canceladas"
+        title="NF cancelada"
+        open={openSection === 'canceladas'}
+        onOpenChange={(open) => sectionOpenChange('canceladas', open)}
+        onBeforeToggle={guardOtherSection}
+      >
         <CanceladasPanel {...canceladas} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="historico" title="Histórico" onBeforeToggle={guardOtherSection}>
+      <CollapsibleSidebarSection
+        id="historico"
+        title="Histórico"
+        open={openSection === 'historico'}
+        onOpenChange={(open) => sectionOpenChange('historico', open)}
+        onBeforeToggle={guardOtherSection}
+      >
         <HistoricoPanel {...historico} />
       </CollapsibleSidebarSection>
 
-      <CollapsibleSidebarSection id="imprimir" title="Imprimir" onBeforeToggle={guardOtherSection}>
+      <CollapsibleSidebarSection
+        id="imprimir"
+        title="Imprimir"
+        open={openSection === 'imprimir'}
+        onOpenChange={(open) => sectionOpenChange('imprimir', open)}
+        onBeforeToggle={guardOtherSection}
+      >
         <ImprimirPanel {...imprimir} />
       </CollapsibleSidebarSection>
 

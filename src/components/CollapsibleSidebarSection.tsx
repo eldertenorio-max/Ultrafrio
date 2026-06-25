@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 
 export type SidebarSectionId =
   | 'entrada'
@@ -13,7 +13,8 @@ type Props = {
   id: SidebarSectionId
   title: string
   children: ReactNode
-  defaultOpen?: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onBeforeToggle?: (nextOpen: boolean, proceed: () => void) => void
 }
 
@@ -21,18 +22,18 @@ export function CollapsibleSidebarSection({
   id,
   title,
   children,
-  defaultOpen = false,
+  open,
+  onOpenChange,
   onBeforeToggle,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen)
-
   function handleToggle() {
     const nextOpen = !open
+    const apply = () => onOpenChange(nextOpen)
     if (onBeforeToggle) {
-      onBeforeToggle(nextOpen, () => setOpen(nextOpen))
+      onBeforeToggle(nextOpen, apply)
       return
     }
-    setOpen(nextOpen)
+    apply()
   }
 
   return (
