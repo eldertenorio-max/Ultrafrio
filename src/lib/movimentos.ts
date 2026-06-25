@@ -59,6 +59,32 @@ export function snapshotItensNf(nf: NotaFiscal, itemIndexes?: number[]): Movimen
     }))
 }
 
+export function snapshotItensNfPorEnderecos(
+  nf: NotaFiscal,
+  addressIds: AddressId[],
+): MovimentoItemSnapshot[] {
+  const pick = new Set(addressIds)
+  const snapshots: MovimentoItemSnapshot[] = []
+  for (const it of nf.items) {
+    const ids = it.allocatedAddresses.filter((a) => pick.has(a))
+    if (ids.length === 0) continue
+    snapshots.push({
+      itemIndex: it.index,
+      codigo: it.codigo,
+      descricao: it.descricao,
+      quantidade: it.quantidade,
+      unidade: it.unidade,
+      addressIds: ids,
+      paletes: ids.length,
+      ...(it.up ? { up: it.up } : {}),
+      ...(it.lote ? { lote: it.lote } : {}),
+      ...(it.dataFabricacao ? { dataFabricacao: it.dataFabricacao } : {}),
+      ...(it.dataValidade ? { dataValidade: it.dataValidade } : {}),
+    })
+  }
+  return snapshots
+}
+
 export function criarMovimentoEntrada(nf: NotaFiscal): MovimentoRegistro {
   return {
     id: `mov-entrada-${nf.id}-${Date.now()}`,
@@ -151,7 +177,7 @@ export function sincronizarMovimentosEntrada(data: PersistedData): PersistedData
 
 export function criarMovimentoSaida(
   nf: NotaFiscal,
-  itemIndexes: number[],
+  addressIds: AddressId[],
   justificativaSaida: JustificativaSaidaId,
 ): MovimentoRegistro {
   return {
@@ -162,10 +188,22 @@ export function criarMovimentoSaida(
     emitente: nf.emitente,
     createdAt: new Date().toISOString(),
     justificativaSaida,
-    itens: snapshotItensNf(nf, itemIndexes),
+    itens: snapshotItensNfPorEnderecos(nf, addressIds),
   }
 }
 
+export function aplicarSaidaEnderecos(nf: NotaFiscal, addressIds: AddressId[]): NotaFiscal {
+  const pick = new Set(addressIds)
+  return {
+    ...nf,
+    items: nf.items.map((it) => ({
+      ...it,
+      allocatedAddresses: it.allocatedAddresses.filter((a) => !pick.has(a)),
+    })),
+  }
+}
+
+/** @deprecated Use aplicarSaidaEnderecos para saída parcial por posição. */
 export function aplicarSaidaItens(nf: NotaFiscal, itemIndexes: number[]): NotaFiscal {
   const pick = new Set(itemIndexes)
   return {
