@@ -1,3 +1,4 @@
+import { enderecosDaNf } from './movimentos'
 import { patchNfeItemQuantidade } from './desmembrarItem'
 import type { AddressId, MovimentoItemSnapshot, NfeItem, NotaFiscal } from '../types'
 
@@ -28,6 +29,15 @@ export type SaidaPaleteCalculo = {
 function ratio(qtd: number, total: number): number {
   if (total <= 0) return 0
   return qtd / total
+}
+
+/** Paletes ainda não confirmados na saída em andamento. */
+export function paletesDisponiveisNf(
+  nf: NotaFiscal,
+  confirmados: SaidaPaleteDraft[],
+): number {
+  const confirmadosSet = new Set(confirmados.map((p) => p.addressId))
+  return enderecosDaNf(nf).filter((a) => !confirmadosSet.has(a)).length
 }
 
 export function parseQuantidadeSaida(raw: string): number | null {

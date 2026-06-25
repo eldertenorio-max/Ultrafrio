@@ -34,6 +34,7 @@ import {
   aplicarSaidaPaletes,
   calcularSaidaPalete,
   enderecosALiberar,
+  paletesDisponiveisNf,
   parseQuantidadeSaida,
   type SaidaPaleteDraft,
 } from './lib/saidaParcial'
@@ -102,6 +103,11 @@ export default function App() {
 
   const [nfBuscaSaidaId, setNfBuscaSaidaId] = useState<string | null>(null)
   const [saidaModoPalete, setSaidaModoPalete] = useState(false)
+  const [saidaQtdPaletesInput, setSaidaQtdPaletesInput] = useState('')
+  const [saidaQtdPaletesAlvo, setSaidaQtdPaletesAlvo] = useState<number | null>(null)
+  const [saidaPaletesSelecionados, setSaidaPaletesSelecionados] = useState<Set<AddressId>>(new Set())
+  const [saidaPaletesNaFila, setSaidaPaletesNaFila] = useState<AddressId[]>([])
+  const [saidaSelecaoConcluida, setSaidaSelecaoConcluida] = useState(false)
   const [saidaPaleteAtivo, setSaidaPaleteAtivo] = useState<AddressId | null>(null)
   const [saidaCaixasPalete, setSaidaCaixasPalete] = useState('')
   const [saidaPaletesConfirmados, setSaidaPaletesConfirmados] = useState<SaidaPaleteDraft[]>([])
@@ -216,8 +222,11 @@ export default function App() {
   const saidaFlaggedAddresses = useMemo(() => {
     const flagged = new Set(saidaPaletesConfirmados.map((p) => p.addressId))
     if (saidaPaleteAtivo) flagged.add(saidaPaleteAtivo)
+    if (!saidaSelecaoConcluida) {
+      for (const a of saidaPaletesSelecionados) flagged.add(a)
+    }
     return flagged
-  }, [saidaPaletesConfirmados, saidaPaleteAtivo])
+  }, [saidaPaletesConfirmados, saidaPaleteAtivo, saidaSelecaoConcluida, saidaPaletesSelecionados])
 
   const editNfAddresses = useMemo(() => {
     if (!nfEditar) return new Set<AddressId>()
@@ -235,10 +244,15 @@ export default function App() {
 
   const panelPendingSelection = editMode
     ? editPendingSelection
-    : saidaModoPalete && saidaPaleteAtivo
-      ? new Set([saidaPaleteAtivo])
-      : pendingSelection
-  const panelAllocateMode = allocateMode || editMode || saidaModoPalete
+    : saidaModoPalete && !saidaSelecaoConcluida
+      ? saidaPaletesSelecionados
+      : saidaModoPalete && saidaPaleteAtivo
+        ? new Set([saidaPaleteAtivo])
+        : pendingSelection
+  const panelAllocateMode =
+    allocateMode ||
+    editMode ||
+    (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
   const panelActiveNfNumero = editMode ? nfEditar?.numero ?? null : activeNf?.numero ?? null
 
   const activeAllocateItem = useMemo(() => {
@@ -503,7 +517,10 @@ export default function App() {
   }
 
   function handleCellClick(addressId: AddressId, canInteract: boolean) {
-    const saidaPending = saidaModoPalete && saidaPaleteAtivo === addressId
+    const saidaPending =
+      saidaModoPalete &&
+      (saidaPaletesSelecionados.has(addressId) ||
+        (saidaSelecaoConcluida && saidaPaleteAtivo === addressId))
     const editPending = editPendingSelection.has(addressId)
     const entradaPending = pendingSelection.has(addressId)
     handleCellPaint(
@@ -540,6 +557,27 @@ export default function App() {
       const enderecosNf = new Set(enderecosDaNf(nfBuscaSaida))
       if (!enderecosNf.has(addressId)) return
       if (saidaPaletesConfirmados.some((p) => p.addressId === addressId)) return
+
+      if (!saidaSelecaoConcluida) {
+        setSaidaPaletesSelecionados((prev) => {
+          const next = new Set(prev)
+          if (mode === 'add') {
+            if (next.has(addressId)) return prev
+            if (saidaQtdPaletesAlvo != null && next.size >= saidaQtdPaletesAlvo) {
+              setSaidaSelecaoErro(`Selecione no máximo ${saidaQtdPaletesAlvo} palete(s).`)
+              return prev
+            }
+            next.add(addressId)
+          } else {
+            next.delete(addressId)
+          }
+          return next
+        })
+        setSaidaSelecaoErro(null)
+        return
+      }
+
+      if (!saidaPaletesNaFila.includes(addressId)) return
 
       if (mode === 'add') {
         setSaidaPaleteAtivo(addressId)
@@ -903,6 +941,11 @@ export default function App() {
 
   function limparEstadoSaida() {
     setSaidaModoPalete(false)
+    setSaidaQtdPaletesInput('')
+    setSaidaQtdPaletesAlvo(null)
+    setSaidaPaletesSelecionados(new Set())
+    setSaidaPaletesNaFila([])
+    setSaidaSelecaoConcluida(false)
     setSaidaPaleteAtivo(null)
     setSaidaCaixasPalete('')
     setSaidaPaletesConfirmados([])
@@ -925,9 +968,42 @@ export default function App() {
 
   function handleIniciarSelecaoSaida() {
     if (!nfBuscaSaida) return
+    const qtd = parsePaletesInput(saidaQtdPaletesInput)
+    if (qtd == null || qtd <= 0) {
+      setSaidaSelecaoErro('Informe uma quantidade válida de paletes.')
+      return
+    }
+    const disponivel = paletesDisponiveisNf(nfBuscaSaida, saidaPaletesConfirmados)
+    if (qtd > disponivel) {
+      setSaidaSelecaoErro(`Máximo de ${disponivel} palete(s) disponível(is) nesta NF.`)
+      return
+    }
+    setSaidaQtdPaletesAlvo(qtd)
     setSaidaModoPalete(true)
+    setSaidaPaletesSelecionados(new Set())
+    setSaidaPaletesNaFila([])
+    setSaidaSelecaoConcluida(false)
     setSaidaPaleteAtivo(null)
     setSaidaCaixasPalete('')
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleConfirmarSelecaoPaletes() {
+    if (saidaQtdPaletesAlvo == null) return
+    if (saidaPaletesSelecionados.size !== saidaQtdPaletesAlvo) {
+      setSaidaSelecaoErro(`Selecione exatamente ${saidaQtdPaletesAlvo} palete(s) no painel.`)
+      return
+    }
+    const fila = [...saidaPaletesSelecionados]
+    setSaidaPaletesNaFila(fila)
+    setSaidaSelecaoConcluida(true)
+    setSaidaPaleteAtivo(fila[0] ?? null)
+    setSaidaCaixasPalete('')
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleQtdPaletesChange(value: string) {
+    setSaidaQtdPaletesInput(value)
     setSaidaSelecaoErro(null)
   }
 
@@ -959,15 +1035,29 @@ export default function App() {
       return
     }
 
-    setSaidaPaletesConfirmados((prev) => [
-      ...prev.filter((p) => p.addressId !== saidaPaleteAtivo),
-      {
-        addressId: saidaPaleteAtivo,
-        itemIndex: item.index,
-        quantidadeCaixas: caixas,
-      },
-    ])
-    setSaidaPaleteAtivo(null)
+    setSaidaPaletesConfirmados((prev) => {
+      const next = [
+        ...prev.filter((p) => p.addressId !== saidaPaleteAtivo),
+        {
+          addressId: saidaPaleteAtivo,
+          itemIndex: item.index,
+          quantidadeCaixas: caixas,
+        },
+      ]
+      const restantes = saidaPaletesNaFila.filter(
+        (a) => !next.some((p) => p.addressId === a),
+      )
+      if (restantes.length > 0) {
+        setSaidaPaleteAtivo(restantes[0])
+      } else {
+        setSaidaPaleteAtivo(null)
+        setSaidaSelecaoConcluida(false)
+        setSaidaPaletesSelecionados(new Set())
+        setSaidaPaletesNaFila([])
+        setSaidaQtdPaletesAlvo(null)
+      }
+      return next
+    })
     setSaidaCaixasPalete('')
     setSaidaSelecaoErro(null)
   }
@@ -1346,11 +1436,20 @@ export default function App() {
         saida={{
           nfBusca: nfBuscaSaida,
           modoPalete: saidaModoPalete,
+          qtdPaletesInput: saidaQtdPaletesInput,
+          qtdPaletesAlvo: saidaQtdPaletesAlvo,
+          paletesDisponiveis: nfBuscaSaida
+            ? paletesDisponiveisNf(nfBuscaSaida, saidaPaletesConfirmados)
+            : 0,
+          paletesSelecionados: [...saidaPaletesSelecionados],
+          selecaoConcluida: saidaSelecaoConcluida,
           paleteAtivo: saidaPaleteAtivo,
           caixasPalete: saidaCaixasPalete,
           paletesConfirmados: saidaPaletesConfirmados,
           onBuscar: handleBuscarSaida,
+          onQtdPaletesChange: handleQtdPaletesChange,
           onIniciarSelecao: handleIniciarSelecaoSaida,
+          onConfirmarSelecaoPaletes: handleConfirmarSelecaoPaletes,
           onCaixasPaleteChange: handleCaixasPaleteChange,
           onConfirmarPalete: handleConfirmarPaleteSaida,
           onRemoverPalete: handleRemoverPaleteSaida,
@@ -1433,7 +1532,11 @@ export default function App() {
           consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
           saidaAddresses={nfEditar ? undefined : saidaAddresses}
           saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
-          paintMode={editMode || allocateMode || saidaModoPalete}
+          paintMode={
+            editMode ||
+            allocateMode ||
+            (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
+          }
           onCellClick={handleCellClick}
           onCellPaint={handleCellPaint}
           paletesRestantes={paletesRestantesCount}

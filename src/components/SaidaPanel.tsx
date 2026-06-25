@@ -11,11 +11,18 @@ import { SaidaPaleteForm } from './SaidaPaleteForm'
 type Props = {
   nfBusca: NotaFiscal | null
   modoPalete: boolean
+  qtdPaletesInput: string
+  qtdPaletesAlvo: number | null
+  paletesDisponiveis: number
+  paletesSelecionados: AddressId[]
+  selecaoConcluida: boolean
   paleteAtivo: AddressId | null
   caixasPalete: string
   paletesConfirmados: SaidaPaleteDraft[]
   onBuscar: (numero: string) => void
+  onQtdPaletesChange: (value: string) => void
   onIniciarSelecao: () => void
+  onConfirmarSelecaoPaletes: () => void
   onCaixasPaleteChange: (value: string) => void
   onConfirmarPalete: () => void
   onRemoverPalete: (addressId: AddressId) => void
@@ -28,11 +35,18 @@ type Props = {
 export function SaidaPanel({
   nfBusca,
   modoPalete,
+  qtdPaletesInput,
+  qtdPaletesAlvo,
+  paletesDisponiveis,
+  paletesSelecionados,
+  selecaoConcluida,
   paleteAtivo,
   caixasPalete,
   paletesConfirmados,
   onBuscar,
+  onQtdPaletesChange,
   onIniciarSelecao,
+  onConfirmarSelecaoPaletes,
   onCaixasPaleteChange,
   onConfirmarPalete,
   onRemoverPalete,
@@ -61,7 +75,8 @@ export function SaidaPanel({
     <>
       <div className="sidebar-block">
         <p className="muted">
-          Busque a NF, selecione o palete no painel, informe as caixas e confirme cada retirada.
+          Busque a NF, informe quantos paletes vai retirar, selecione no painel e confirme as
+          caixas de cada um.
         </p>
         <div className="saida-busca">
           <input
@@ -124,16 +139,24 @@ export function SaidaPanel({
             paletesConfirmados={paletesConfirmados}
             paleteAtivo={paleteAtivo}
             paletesConfirmadosIds={paletesConfirmados.map((p) => p.addressId)}
+            paletesSelecionadosIds={paletesSelecionados}
           />
 
           <SaidaPaleteForm
             nf={nfBusca}
             modoPalete={modoPalete}
+            qtdPaletesInput={qtdPaletesInput}
+            qtdPaletesAlvo={qtdPaletesAlvo}
+            paletesDisponiveis={paletesDisponiveis}
+            paletesSelecionados={paletesSelecionados}
+            selecaoConcluida={selecaoConcluida}
             paleteAtivo={paleteAtivo}
             caixasInput={caixasPalete}
             paletesConfirmados={paletesConfirmados}
-            onCaixasChange={onCaixasPaleteChange}
+            onQtdPaletesChange={onQtdPaletesChange}
             onIniciarSelecao={onIniciarSelecao}
+            onConfirmarSelecaoPaletes={onConfirmarSelecaoPaletes}
+            onCaixasChange={onCaixasPaleteChange}
             onConfirmarPalete={onConfirmarPalete}
             onRemoverPalete={onRemoverPalete}
             selecaoErro={selecaoErro}

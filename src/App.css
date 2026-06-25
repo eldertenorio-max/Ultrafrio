@@ -3108,6 +3108,11 @@ html.scroll-locked .sidebar.sidebar--fixed {
   opacity: 0.85;
 }
 
+.addr-mini--saida .addr-selecionado {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .input-nf--error {
   border-color: var(--cell-saida-flag);
 }

@@ -15,6 +15,7 @@ type Props = {
   paletesConfirmados: SaidaPaleteDraft[]
   paleteAtivo: string | null
   paletesConfirmadosIds: string[]
+  paletesSelecionadosIds?: string[]
 }
 
 export function SaidaItensTable({
@@ -23,6 +24,7 @@ export function SaidaItensTable({
   paletesConfirmados,
   paleteAtivo,
   paletesConfirmadosIds,
+  paletesSelecionadosIds = [],
 }: Props) {
   const itensEstoque = items.filter((it) => it.allocatedAddresses.length > 0)
   const sobras = sobrasPorItem(items, paletesConfirmados)
@@ -88,7 +90,9 @@ export function SaidaItensTable({
                               ? 'addr-flagged addr-ativo'
                               : paletesConfirmadosIds.includes(a)
                                 ? 'addr-confirmado'
-                                : ''
+                                : paletesSelecionadosIds.includes(a)
+                                  ? 'addr-selecionado'
+                                  : ''
                           }
                         >
                           {formatAddressLabel(a)}
