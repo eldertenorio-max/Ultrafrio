@@ -91,7 +91,10 @@ export function AppSidebar({
           alt="Ultrafrio"
           className="sidebar-logo sidebar-logo--full"
         />
-        <h1>Endereçamento</h1>
+        <h1 className="app-brand-title" aria-label="Stock System Lite">
+          <span className="app-brand-title__main">Stock System</span>
+          <span className="app-brand-title__lite">Lite</span>
+        </h1>
         <p className="muted">Ultrafrio · entrada e saída por NF-e</p>
         {saving && <p className="saving-hint">Salvando…</p>}
         {persistError && <p className="error">{persistError}</p>}

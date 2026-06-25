@@ -218,14 +218,15 @@ export default function App() {
   ])
 
   const saidaAddresses = useMemo(() => {
-    if (!nfBuscaSaida) return new Set<AddressId>()
-    if (saidaItemIndex != null) {
-      const item = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
-      if (item && item.allocatedAddresses.length > 0) {
-        return new Set(item.allocatedAddresses)
-      }
-    }
+    if (!nfBuscaSaida || saidaItemIndex != null) return new Set<AddressId>()
     return new Set(enderecosDaNf(nfBuscaSaida))
+  }, [nfBuscaSaida, saidaItemIndex])
+
+  const saidaItemDestaqueAddresses = useMemo(() => {
+    if (!nfBuscaSaida || saidaItemIndex == null) return new Set<AddressId>()
+    const item = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
+    if (!item || item.allocatedAddresses.length === 0) return new Set<AddressId>()
+    return new Set(item.allocatedAddresses)
   }, [nfBuscaSaida, saidaItemIndex])
 
   const saidaFlaggedAddresses = useMemo(() => {
@@ -1588,7 +1589,12 @@ export default function App() {
           editMode={editMode}
           editAddresses={nfEditar ? editNfAddresses : undefined}
           consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
-          saidaAddresses={nfEditar ? undefined : saidaAddresses}
+          saidaAddresses={nfEditar ? undefined : saidaAddresses.size > 0 ? saidaAddresses : undefined}
+          saidaItemDestaqueAddresses={
+            nfEditar || saidaItemDestaqueAddresses.size === 0
+              ? undefined
+              : saidaItemDestaqueAddresses
+          }
           saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
           paintMode={
             editMode ||

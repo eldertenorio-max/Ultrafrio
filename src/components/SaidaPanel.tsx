@@ -131,9 +131,9 @@ export function SaidaPanel({
 
           <h4 className="nf-section-title nf-section-title--sm">Itens da nota</h4>
           <p className="muted nf-itens-intro saida-itens-intro">
-            Clique no <strong>item</strong> que vai sair (linha fica verde). Informe os paletes e
-            acompanhe os cálculos <strong>abaixo de cada item</strong>. A coluna{' '}
-            <strong>Sobra</strong> é atualizada conforme você confirma cada palete.
+            Clique no <strong>item</strong> que vai sair (linha fica verde). Os endereços de retirada
+            aparecem em <strong>verde no painel</strong>, como na consulta. Informe os paletes e
+            acompanhe os cálculos abaixo de cada item.
           </p>
 
           <SaidaItensTable

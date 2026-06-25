@@ -65,8 +65,44 @@
 .sidebar.sidebar--expanded h1,
 .sidebar.sidebar--fixed h1 {
   opacity: 1;
-  max-height: 2rem;
-  margin: 0 0 4px;
+  max-height: 3.5rem;
+  margin: 0 0 6px;
+}
+
+.app-brand-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em 0.5em;
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.app-brand-title__main {
+  background: linear-gradient(120deg, var(--accent-hover) 0%, var(--accent) 55%, #4a9eff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-brand-title__lite {
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.2em 0.55em;
+  border-radius: 6px;
+  color: var(--accent-hover);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
+}
+
+[data-theme='light'] .app-brand-title__lite {
+  background: color-mix(in srgb, var(--accent) 8%, #fff);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .sidebar h3,
