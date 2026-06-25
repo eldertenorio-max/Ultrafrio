@@ -50,6 +50,16 @@ export function formatPesoKg(value: number | undefined): string {
   return `${formatPesoBruto(value)} kg`
 }
 
+/** Extrai a quantidade numérica do campo qtd./vol. do XML (ex.: "3 CX" → 3). */
+export function parseQuantidadeVolumeNumero(quantidadeVolume: string | undefined): number | null {
+  if (!quantidadeVolume?.trim()) return null
+  const match = quantidadeVolume.trim().match(/^([\d.,]+)/)
+  if (!match) return null
+  const n = Number(match[1].replace(',', '.'))
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.floor(n)
+}
+
 export function formatNfResumoLinha(resumo: NfResumo): string {
   return [
     `P. bruto: ${formatPesoKg(resumo.pesoBruto)}`,
