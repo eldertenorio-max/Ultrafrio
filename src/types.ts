@@ -84,6 +84,10 @@ export type MovimentoItemSnapshot = {
   dataFabricacao?: string
   dataValidade?: string
   paletes?: number
+  /** Quantidade retirada nesta saída parcial. */
+  quantidadeSaida?: number
+  /** Quantidade que permanece no estoque após a saída. */
+  quantidadeSobra?: number
 }
 
 export type MovimentoRegistro = {

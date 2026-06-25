@@ -8,6 +8,8 @@ import type {
 } from '../types'
 import { remapLegacyAddressId } from '../layout/camaras'
 import { syncVinculosNotas } from './nfCanceladas'
+import type { SaidaItemDraft, SaidaPaleteDraft } from './saidaParcial'
+import { snapshotSaidaItens, snapshotSaidaPaletes } from './saidaParcial'
 
 /** Atualiza IDs de endereço salvos antes da troca de numeração das ruas. */
 export function migrarRuasNosDados(data: PersistedData): PersistedData {
@@ -179,6 +181,8 @@ export function criarMovimentoSaida(
   nf: NotaFiscal,
   addressIds: AddressId[],
   justificativaSaida: JustificativaSaidaId,
+  saidas?: SaidaItemDraft[],
+  paletes?: SaidaPaleteDraft[],
 ): MovimentoRegistro {
   return {
     id: `mov-saida-${nf.id}-${Date.now()}`,
@@ -188,7 +192,12 @@ export function criarMovimentoSaida(
     emitente: nf.emitente,
     createdAt: new Date().toISOString(),
     justificativaSaida,
-    itens: snapshotItensNfPorEnderecos(nf, addressIds),
+    itens:
+      paletes && paletes.length > 0
+        ? snapshotSaidaPaletes(nf, paletes)
+        : saidas && saidas.length > 0
+          ? snapshotSaidaItens(nf, saidas, addressIds)
+          : snapshotItensNfPorEnderecos(nf, addressIds),
   }
 }
 

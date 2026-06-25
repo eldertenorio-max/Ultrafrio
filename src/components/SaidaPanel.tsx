@@ -1,21 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { AddressId, JustificativaSaidaId, NotaFiscal } from '../types'
-import { enderecosDaNf, nfTemEnderecos } from '../lib/movimentos'
+import type { SaidaPaleteDraft } from '../lib/saidaParcial'
+import { nfTemEnderecos } from '../lib/movimentos'
 import { JUSTIFICATIVAS_SAIDA } from '../lib/justificativaSaida'
-import { parsePaletesInput } from '../lib/paletes'
-import { buildNfResumo, parseQuantidadeVolumeNumero } from '../lib/nfResumo'
-import { formatAddressLabel } from '../layout/camaras'
 import { NfResumoGrid } from './NfResumoGrid'
+import { SaidaItensTable } from './SaidaItensTable'
+import { SaidaPaleteForm } from './SaidaPaleteForm'
 
 type Props = {
   nfBusca: NotaFiscal | null
-  selecaoAtiva: boolean
-  caixasTotal: number | null
-  enderecosSelecionados: AddressId[]
+  modoPalete: boolean
+  paleteAtivo: AddressId | null
+  caixasPalete: string
+  paletesConfirmados: SaidaPaleteDraft[]
   onBuscar: (numero: string) => void
-  onIniciarSelecao: (caixas: number) => void
-  onCancelarSelecao: () => void
+  onIniciarSelecao: () => void
+  onCaixasPaleteChange: (value: string) => void
+  onConfirmarPalete: () => void
+  onRemoverPalete: (addressId: AddressId) => void
   onFinalizarSaida: (justificativa: JustificativaSaidaId) => void
   onCancelarSaida: () => void
   buscaErro: string | null
@@ -24,19 +27,21 @@ type Props = {
 
 export function SaidaPanel({
   nfBusca,
-  selecaoAtiva,
-  caixasTotal,
-  enderecosSelecionados,
+  modoPalete,
+  paleteAtivo,
+  caixasPalete,
+  paletesConfirmados,
   onBuscar,
   onIniciarSelecao,
-  onCancelarSelecao,
+  onCaixasPaleteChange,
+  onConfirmarPalete,
+  onRemoverPalete,
   onFinalizarSaida,
   onCancelarSaida,
   buscaErro,
   selecaoErro,
 }: Props) {
   const [numero, setNumero] = useState('')
-  const [caixasInput, setCaixasInput] = useState('1')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
   const [justificativa, setJustificativa] = useState<JustificativaSaidaId | null>(null)
   useBodyScrollLock(confirmarCancelar)
@@ -45,47 +50,18 @@ export function SaidaPanel({
     setJustificativa(null)
   }, [nfBusca?.id])
 
-  useEffect(() => {
-    if (!selecaoAtiva && nfBusca) {
-      const totalEnderecos = enderecosDaNf(nfBusca).length
-      const docCaixas = parseQuantidadeVolumeNumero(buildNfResumo(nfBusca).quantidadeVolume)
-      const sugestao = docCaixas != null ? Math.min(docCaixas, totalEnderecos) : 1
-      setCaixasInput(String(Math.max(1, sugestao)))
-    }
-  }, [selecaoAtiva, nfBusca])
-
   function handleBuscar() {
     onBuscar(numero.trim())
     setNumero('')
   }
 
-  function handleIniciarSelecao() {
-    const caixas = parsePaletesInput(caixasInput)
-    if (caixas == null || caixas <= 0) return
-    onIniciarSelecao(caixas)
-  }
-
-  const itensComEndereco = nfBusca?.items.filter((it) => it.allocatedAddresses.length > 0) ?? []
-  const totalEnderecosNf = nfBusca ? enderecosDaNf(nfBusca).length : 0
-  const resumoNf = nfBusca ? buildNfResumo(nfBusca) : null
-  const docCaixas = useMemo(
-    () => (resumoNf ? parseQuantidadeVolumeNumero(resumoNf.quantidadeVolume) : null),
-    [resumoNf],
-  )
-
-  const podeFinalizar =
-    selecaoAtiva &&
-    caixasTotal != null &&
-    enderecosSelecionados.length === caixasTotal &&
-    enderecosSelecionados.length > 0 &&
-    justificativa != null
+  const podeFinalizar = paletesConfirmados.length > 0 && justificativa != null
 
   return (
     <>
       <div className="sidebar-block">
         <p className="muted">
-          Busque a NF, informe quantas caixas vai retirar e marque as posições correspondentes no
-          painel.
+          Busque a NF, selecione o palete no painel, informe as caixas e confirme cada retirada.
         </p>
         <div className="saida-busca">
           <input
@@ -95,9 +71,9 @@ export function SaidaPanel({
             value={numero}
             onChange={(e) => setNumero(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
-            disabled={selecaoAtiva}
+            disabled={modoPalete}
           />
-          <button type="button" className="btn primary" onClick={handleBuscar} disabled={selecaoAtiva}>
+          <button type="button" className="btn primary" onClick={handleBuscar} disabled={modoPalete}>
             Buscar
           </button>
         </div>
@@ -137,98 +113,32 @@ export function SaidaPanel({
           <p className="nf-leitura-subtitle">Totais do documento</p>
           <NfResumoGrid nf={nfBusca} compact />
 
-          <p className="muted saida-estoque-resumo">
-            <strong>{totalEnderecosNf}</strong> posição{totalEnderecosNf === 1 ? '' : 'ões'} em
-            estoque
-            {docCaixas != null && (
-              <>
-                {' '}
-                · documento: <strong>{resumoNf?.quantidadeVolume}</strong>
-              </>
-            )}
+          <h4 className="nf-section-title nf-section-title--sm">Itens da nota</h4>
+          <p className="muted nf-itens-intro saida-itens-intro">
+            A coluna <strong>Sobra</strong> é atualizada conforme você confirma cada palete na saída.
           </p>
 
-          <h4 className="nf-section-title nf-section-title--sm">Itens em estoque</h4>
-          <ul className="item-list saida-itens-info">
-            {itensComEndereco.map((item) => (
-              <li key={item.index}>
-                <div className="item-row item-row--readonly">
-                  <span className="item-text">
-                    <strong>{item.codigo}</strong>
-                    <span>{item.descricao}</span>
-                    <span className="muted">
-                      {item.allocatedAddresses.length} posição(ões)
-                      {item.paletes != null ? ` · ${item.paletes} palete(s) cadastrado(s)` : ''}
-                    </span>
-                  </span>
-                </div>
-                <ul className="addr-mini addr-mini--saida">
-                  {item.allocatedAddresses.map((a) => (
-                    <li
-                      key={a}
-                      className={enderecosSelecionados.includes(a) ? 'addr-flagged' : ''}
-                    >
-                      {formatAddressLabel(a)}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+          <SaidaItensTable
+            items={nfBusca.items}
+            paletesConfirmados={paletesConfirmados}
+            paleteAtivo={paleteAtivo}
+            paletesConfirmadosIds={paletesConfirmados.map((p) => p.addressId)}
+          />
 
-          {!selecaoAtiva ? (
-            <div className="saida-paletes-form">
-              <label className="consulta-campo">
-                <span>Caixas nesta saída</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={totalEnderecosNf}
-                  step={1}
-                  className="input-nf"
-                  value={caixasInput}
-                  onChange={(e) => setCaixasInput(e.target.value)}
-                />
-              </label>
-              <p className="muted saida-paletes-hint">
-                Informe quantas caixas vai retirar (máx. {totalEnderecosNf}) e depois selecione uma
-                posição no painel para cada caixa.
-              </p>
-              {selecaoErro && <p className="error">{selecaoErro}</p>}
-              <button type="button" className="btn primary full" onClick={handleIniciarSelecao}>
-                Selecionar posições no painel
-              </button>
-            </div>
-          ) : (
-            <div className="consulta-enderecar-box saida-enderecar-box">
-              <p className="consulta-enderecar-titulo">Selecione as posições no painel</p>
-              <p className="muted consulta-enderecar-texto">
-                Clique nas células <strong>ocupadas desta NF</strong> no mapa ao lado para indicar de
-                onde vai retirar. Marque exatamente{' '}
-                <strong>
-                  {caixasTotal ?? 0} posição{caixasTotal === 1 ? '' : 'ões'}
-                </strong>{' '}
-                — uma para cada caixa informada.
-              </p>
-              <p className="consulta-enderecar-contagem">
-                {enderecosSelecionados.length} de {caixasTotal ?? 0} selecionada(s)
-              </p>
-              {enderecosSelecionados.length > 0 && (
-                <ul className="consulta-enderecos saida-enderecos-selecionados">
-                  {enderecosSelecionados.map((addr) => (
-                    <li key={addr}>{formatAddressLabel(addr)}</li>
-                  ))}
-                </ul>
-              )}
-              <div className="consulta-enderecar-actions">
-                <button type="button" className="btn btn-ghost" onClick={onCancelarSelecao}>
-                  Voltar
-                </button>
-              </div>
-            </div>
-          )}
+          <SaidaPaleteForm
+            nf={nfBusca}
+            modoPalete={modoPalete}
+            paleteAtivo={paleteAtivo}
+            caixasInput={caixasPalete}
+            paletesConfirmados={paletesConfirmados}
+            onCaixasChange={onCaixasPaleteChange}
+            onIniciarSelecao={onIniciarSelecao}
+            onConfirmarPalete={onConfirmarPalete}
+            onRemoverPalete={onRemoverPalete}
+            selecaoErro={selecaoErro}
+          />
 
-          {selecaoAtiva && enderecosSelecionados.length === caixasTotal && caixasTotal! > 0 && (
+          {paletesConfirmados.length > 0 && (
             <div className="item-actions">
               <fieldset className="saida-justificativa">
                 <legend className="saida-justificativa-title">Motivo da saída</legend>
@@ -260,7 +170,7 @@ export function SaidaPanel({
                   if (justificativa) onFinalizarSaida(justificativa)
                 }}
               >
-                Finalizar saída — {enderecosSelecionados.length} caixa(s)
+                Finalizar saída
               </button>
             </div>
           )}
@@ -305,7 +215,7 @@ export function SaidaPanel({
               NF <strong>{nfBusca.numero}</strong>
             </p>
             <p className="confirm-warn">
-              A busca e as posições selecionadas serão descartadas. Nenhuma posição será liberada.
+              A busca e os paletes confirmados serão descartados. Nenhuma posição será liberada.
             </p>
             <div className="confirm-actions">
               <button type="button" className="btn" onClick={() => setConfirmarCancelar(false)}>

@@ -31,7 +31,13 @@ import {
 import { contarItensSemEndereco, nfEntradaIncompleta } from './lib/entradaPendente'
 import { mesclarEmitentesSugeridos } from './lib/emitentesRegistry'
 import {
-  aplicarSaidaEnderecos,
+  aplicarSaidaPaletes,
+  calcularSaidaPalete,
+  enderecosALiberar,
+  parseQuantidadeSaida,
+  type SaidaPaleteDraft,
+} from './lib/saidaParcial'
+import {
   buscarNfPorNumero,
   criarMovimentoSaida,
   enderecosDaNf,
@@ -95,8 +101,10 @@ export default function App() {
   const [detailAddress, setDetailAddress] = useState<AddressId | null>(null)
 
   const [nfBuscaSaidaId, setNfBuscaSaidaId] = useState<string | null>(null)
-  const [saidaEnderecosSelecionados, setSaidaEnderecosSelecionados] = useState<Set<AddressId>>(new Set())
-  const [saidaCaixasTotal, setSaidaCaixasTotal] = useState<number | null>(null)
+  const [saidaModoPalete, setSaidaModoPalete] = useState(false)
+  const [saidaPaleteAtivo, setSaidaPaleteAtivo] = useState<AddressId | null>(null)
+  const [saidaCaixasPalete, setSaidaCaixasPalete] = useState('')
+  const [saidaPaletesConfirmados, setSaidaPaletesConfirmados] = useState<SaidaPaleteDraft[]>([])
   const [saidaSelecaoErro, setSaidaSelecaoErro] = useState<string | null>(null)
   const [buscaErro, setBuscaErro] = useState<string | null>(null)
   const [nfEditarId, setNfEditarId] = useState<string | null>(null)
@@ -205,12 +213,11 @@ export default function App() {
     return new Set(enderecosDaNf(nfBuscaSaida))
   }, [nfBuscaSaida])
 
-  const saidaSelecaoAtiva = nfBuscaSaida != null && saidaCaixasTotal != null
-
   const saidaFlaggedAddresses = useMemo(() => {
-    if (!saidaSelecaoAtiva) return new Set<AddressId>()
-    return new Set(saidaEnderecosSelecionados)
-  }, [saidaSelecaoAtiva, saidaEnderecosSelecionados])
+    const flagged = new Set(saidaPaletesConfirmados.map((p) => p.addressId))
+    if (saidaPaleteAtivo) flagged.add(saidaPaleteAtivo)
+    return flagged
+  }, [saidaPaletesConfirmados, saidaPaleteAtivo])
 
   const editNfAddresses = useMemo(() => {
     if (!nfEditar) return new Set<AddressId>()
@@ -228,10 +235,10 @@ export default function App() {
 
   const panelPendingSelection = editMode
     ? editPendingSelection
-    : saidaSelecaoAtiva
-      ? saidaEnderecosSelecionados
+    : saidaModoPalete && saidaPaleteAtivo
+      ? new Set([saidaPaleteAtivo])
       : pendingSelection
-  const panelAllocateMode = allocateMode || editMode || saidaSelecaoAtiva
+  const panelAllocateMode = allocateMode || editMode || saidaModoPalete
   const panelActiveNfNumero = editMode ? nfEditar?.numero ?? null : activeNf?.numero ?? null
 
   const activeAllocateItem = useMemo(() => {
@@ -244,13 +251,9 @@ export default function App() {
       ? activeAllocateItem.paletes
       : null
   const paletesRestantesCount =
-    paletesTotal != null
-      ? Math.max(0, paletesTotal - pendingSelection.size)
-      : saidaSelecaoAtiva && saidaCaixasTotal != null
-        ? Math.max(0, saidaCaixasTotal - saidaEnderecosSelecionados.size)
-        : null
+    paletesTotal != null ? Math.max(0, paletesTotal - pendingSelection.size) : null
 
-  const panelPaletesTotal = paletesTotal ?? (saidaSelecaoAtiva ? saidaCaixasTotal : null)
+  const panelPaletesTotal = paletesTotal
 
   const movimentosOrdenados = useMemo(
     () =>
@@ -500,7 +503,7 @@ export default function App() {
   }
 
   function handleCellClick(addressId: AddressId, canInteract: boolean) {
-    const saidaPending = saidaSelecaoAtiva && saidaEnderecosSelecionados.has(addressId)
+    const saidaPending = saidaModoPalete && saidaPaleteAtivo === addressId
     const editPending = editPendingSelection.has(addressId)
     const entradaPending = pendingSelection.has(addressId)
     handleCellPaint(
@@ -533,25 +536,19 @@ export default function App() {
       return
     }
 
-    if (saidaSelecaoAtiva && nfBuscaSaida) {
+    if (saidaModoPalete && nfBuscaSaida) {
       const enderecosNf = new Set(enderecosDaNf(nfBuscaSaida))
       if (!enderecosNf.has(addressId)) return
+      if (saidaPaletesConfirmados.some((p) => p.addressId === addressId)) return
 
-      setSaidaEnderecosSelecionados((prev) => {
-        const next = new Set(prev)
-        if (mode === 'add') {
-          if (next.has(addressId)) return prev
-          if (saidaCaixasTotal != null && next.size >= saidaCaixasTotal) {
-            setPaletesLimiteAlert('maximo')
-            return prev
-          }
-          next.add(addressId)
-        } else {
-          next.delete(addressId)
-        }
-        setSaidaSelecaoErro(null)
-        return next
-      })
+      if (mode === 'add') {
+        setSaidaPaleteAtivo(addressId)
+        setSaidaCaixasPalete('')
+      } else if (saidaPaleteAtivo === addressId) {
+        setSaidaPaleteAtivo(null)
+        setSaidaCaixasPalete('')
+      }
+      setSaidaSelecaoErro(null)
       return
     }
 
@@ -607,7 +604,7 @@ export default function App() {
     }
 
     if (occ) {
-      if (allocateMode || editMode || saidaSelecaoAtiva) {
+      if (allocateMode || editMode || saidaModoPalete) {
         setOcupadoAlert({ addressId, occ })
         return
       }
@@ -904,6 +901,14 @@ export default function App() {
     await saveNow(nextState)
   }
 
+  function limparEstadoSaida() {
+    setSaidaModoPalete(false)
+    setSaidaPaleteAtivo(null)
+    setSaidaCaixasPalete('')
+    setSaidaPaletesConfirmados([])
+    setSaidaSelecaoErro(null)
+  }
+
   function handleBuscarSaida(numero: string) {
     setBuscaErro(null)
     setSaidaSelecaoErro(null)
@@ -911,72 +916,98 @@ export default function App() {
     if (!nf) {
       setBuscaErro('NF não encontrada.')
       setNfBuscaSaidaId(null)
-      setSaidaEnderecosSelecionados(new Set())
-      setSaidaCaixasTotal(null)
+      limparEstadoSaida()
       return
     }
     setNfBuscaSaidaId(nf.id)
-    setSaidaEnderecosSelecionados(new Set())
-    setSaidaCaixasTotal(null)
+    limparEstadoSaida()
   }
 
-  function handleIniciarSelecaoSaida(caixas: number) {
+  function handleIniciarSelecaoSaida() {
     if (!nfBuscaSaida) return
-    const disponiveis = enderecosDaNf(nfBuscaSaida).length
-    if (caixas <= 0) {
+    setSaidaModoPalete(true)
+    setSaidaPaleteAtivo(null)
+    setSaidaCaixasPalete('')
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleCaixasPaleteChange(value: string) {
+    setSaidaCaixasPalete(value)
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleConfirmarPaleteSaida() {
+    if (!nfBuscaSaida || !saidaPaleteAtivo) return
+    const item = nfBuscaSaida.items.find((it) => it.allocatedAddresses.includes(saidaPaleteAtivo))
+    if (!item) return
+
+    const caixas = parseQuantidadeSaida(saidaCaixasPalete)
+    if (caixas == null || caixas <= 0) {
       setSaidaSelecaoErro('Informe uma quantidade válida de caixas.')
       return
     }
-    if (caixas > disponiveis) {
-      setSaidaSelecaoErro(`Esta NF tem apenas ${disponiveis} posição(ões) em estoque.`)
+
+    const calc = calcularSaidaPalete(
+      nfBuscaSaida,
+      item,
+      saidaPaleteAtivo,
+      caixas,
+      saidaPaletesConfirmados,
+    )
+    if (!calc) {
+      setSaidaSelecaoErro('Quantidade de caixas excede o disponível neste item.')
       return
     }
+
+    setSaidaPaletesConfirmados((prev) => [
+      ...prev.filter((p) => p.addressId !== saidaPaleteAtivo),
+      {
+        addressId: saidaPaleteAtivo,
+        itemIndex: item.index,
+        quantidadeCaixas: caixas,
+      },
+    ])
+    setSaidaPaleteAtivo(null)
+    setSaidaCaixasPalete('')
     setSaidaSelecaoErro(null)
-    setSaidaCaixasTotal(caixas)
-    setSaidaEnderecosSelecionados(new Set())
   }
 
-  function handleCancelarSelecaoSaida() {
-    setSaidaCaixasTotal(null)
-    setSaidaEnderecosSelecionados(new Set())
+  function handleRemoverPaleteSaida(addressId: AddressId) {
+    setSaidaPaletesConfirmados((prev) => prev.filter((p) => p.addressId !== addressId))
+    if (saidaPaleteAtivo === addressId) {
+      setSaidaPaleteAtivo(null)
+      setSaidaCaixasPalete('')
+    }
     setSaidaSelecaoErro(null)
   }
 
   async function handleFinalizarSaida(justificativaSaida: JustificativaSaidaId) {
-    if (!nfBuscaSaida || saidaCaixasTotal == null) return
-    const addresses = [...saidaEnderecosSelecionados]
-    if (addresses.length === 0) {
-      setSaidaSelecaoErro('Selecione ao menos uma posição no painel.')
-      return
-    }
-    if (addresses.length !== saidaCaixasTotal) {
-      setPaletesLimiteAlert('incompleto')
-      setSaidaSelecaoErro(
-        `Selecione exatamente ${saidaCaixasTotal} posição(ões) — uma para cada caixa.`,
-      )
-      return
-    }
-    const mov = criarMovimentoSaida(nfBuscaSaida, addresses, justificativaSaida)
+    if (!nfBuscaSaida || saidaPaletesConfirmados.length === 0) return
+
+    const liberar = enderecosALiberar(nfBuscaSaida, saidaPaletesConfirmados)
+    const mov = criarMovimentoSaida(
+      nfBuscaSaida,
+      liberar,
+      justificativaSaida,
+      undefined,
+      saidaPaletesConfirmados,
+    )
     const nextState = {
       ...state,
       notas: state.notas.map((n) =>
-        n.id === nfBuscaSaida.id ? aplicarSaidaEnderecos(n, addresses) : n,
+        n.id === nfBuscaSaida.id ? aplicarSaidaPaletes(n, saidaPaletesConfirmados) : n,
       ),
       movimentos: [mov, ...state.movimentos],
     }
     setState(nextState)
     await saveNow(nextState)
     setNfBuscaSaidaId(null)
-    setSaidaEnderecosSelecionados(new Set())
-    setSaidaCaixasTotal(null)
-    setSaidaSelecaoErro(null)
+    limparEstadoSaida()
   }
 
   function handleCancelarSaida() {
     setNfBuscaSaidaId(null)
-    setSaidaEnderecosSelecionados(new Set())
-    setSaidaCaixasTotal(null)
-    setSaidaSelecaoErro(null)
+    limparEstadoSaida()
     setBuscaErro(null)
   }
 
@@ -1262,9 +1293,7 @@ export default function App() {
     if (nfBuscaSaidaId) {
       if (mov?.nfId === nfBuscaSaidaId && mov.tipo === 'entrada') {
         setNfBuscaSaidaId(null)
-        setSaidaEnderecosSelecionados(new Set())
-        setSaidaCaixasTotal(null)
-        setSaidaSelecaoErro(null)
+        limparEstadoSaida()
       }
     }
     setPendingSelection(new Set())
@@ -1316,12 +1345,15 @@ export default function App() {
         }}
         saida={{
           nfBusca: nfBuscaSaida,
-          selecaoAtiva: saidaSelecaoAtiva,
-          caixasTotal: saidaCaixasTotal,
-          enderecosSelecionados: [...saidaEnderecosSelecionados],
+          modoPalete: saidaModoPalete,
+          paleteAtivo: saidaPaleteAtivo,
+          caixasPalete: saidaCaixasPalete,
+          paletesConfirmados: saidaPaletesConfirmados,
           onBuscar: handleBuscarSaida,
           onIniciarSelecao: handleIniciarSelecaoSaida,
-          onCancelarSelecao: handleCancelarSelecaoSaida,
+          onCaixasPaleteChange: handleCaixasPaleteChange,
+          onConfirmarPalete: handleConfirmarPaleteSaida,
+          onRemoverPalete: handleRemoverPaleteSaida,
           onFinalizarSaida: handleFinalizarSaida,
           onCancelarSaida: handleCancelarSaida,
           buscaErro,
@@ -1401,12 +1433,12 @@ export default function App() {
           consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
           saidaAddresses={nfEditar ? undefined : saidaAddresses}
           saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
-          paintMode={editMode || allocateMode || saidaSelecaoAtiva}
+          paintMode={editMode || allocateMode || saidaModoPalete}
           onCellClick={handleCellClick}
           onCellPaint={handleCellPaint}
           paletesRestantes={paletesRestantesCount}
           paletesTotal={panelPaletesTotal}
-          saidaMode={saidaSelecaoAtiva}
+          saidaMode={saidaModoPalete}
         />
       </main>
 

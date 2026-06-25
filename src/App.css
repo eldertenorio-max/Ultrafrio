@@ -2996,6 +2996,122 @@ html.scroll-locked .sidebar.sidebar--fixed {
   margin-bottom: 12px;
 }
 
+.saida-itens-intro {
+  margin-bottom: 10px;
+}
+
+.saida-itens-table-wrap {
+  margin-bottom: 12px;
+}
+
+.saida-item-calculo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px 10px;
+  align-items: end;
+}
+
+.saida-item-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.76rem;
+}
+
+.saida-item-campo--calc strong {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.saida-item-erro {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+}
+
+.saida-valor--saindo {
+  color: var(--cell-saida);
+}
+
+.saida-valor--sobra {
+  color: #3fb950;
+}
+
+.saida-totais-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-inset);
+  font-size: 0.82rem;
+}
+
+.saida-totais-resumo div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.saida-palete-calculo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-inset);
+  font-size: 0.82rem;
+}
+
+.saida-palete-calculo-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.saida-paletes-confirmados {
+  margin-top: 12px;
+}
+
+.saida-paletes-lista {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saida-palete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  font-size: 0.84rem;
+}
+
+.addr-mini--saida .addr-ativo {
+  color: var(--cell-saida-flag);
+  font-weight: 700;
+}
+
+.addr-mini--saida .addr-confirmado {
+  color: var(--cell-saida);
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.input-nf--error {
+  border-color: var(--cell-saida-flag);
+}
+
 .nf-section-title--sm {
   margin: 0 0 8px;
   font-size: 0.88rem;
