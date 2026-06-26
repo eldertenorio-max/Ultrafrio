@@ -162,7 +162,7 @@ export function AppSidebar({
 
       <CollapsibleSidebarSection
         id="imprimir"
-        title="Imprimir"
+        title="Mapa"
         open={openSection === 'imprimir'}
         onOpenChange={(open) => sectionOpenChange('imprimir', open)}
         onBeforeToggle={guardOtherSection}

@@ -3,12 +3,16 @@ import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { MOTIVOS_REMOCAO_ESTOQUE } from '../lib/motivoRemocaoEstoque'
 import type { MotivoRemocaoEstoqueId, NotaFiscal } from '../types'
 import { nfTemEnderecos } from '../lib/movimentos'
+import { itemNoStage } from '../layout/stage'
 import { NfDetalheLeitura } from './NfDetalheLeitura'
+
+export type MovimentacaoModo = 'armazem' | 'stage_armazem'
 
 type Props = {
   nfBusca: NotaFiscal | null
   itemIndex: number | null
   pendingCount: number
+  modoMovimentacao: MovimentacaoModo
   onBuscar: (numero: string) => void
   onSelectItem: (index: number) => void
   onSalvar: () => void
@@ -21,6 +25,7 @@ export function EditarPosicaoPanel({
   nfBusca,
   itemIndex,
   pendingCount,
+  modoMovimentacao,
   onBuscar,
   onSelectItem,
   onSalvar,
@@ -63,10 +68,20 @@ export function EditarPosicaoPanel({
     </div>
   ) : null
 
+  const nfTemConteudo =
+    nfBusca &&
+    (modoMovimentacao === 'stage_armazem'
+      ? nfBusca.items.some(itemNoStage)
+      : nfTemEnderecos(nfBusca))
+
   return (
     <>
       <div className="sidebar-block">
-        <p className="muted">Busque a NF e escolha o item para alterar as posições no painel.</p>
+        <p className="muted">
+          {modoMovimentacao === 'stage_armazem'
+            ? 'Busque a NF e escolha um item do stage para endereçar no armazém.'
+            : 'Busque a NF e escolha o item para alterar as posições no painel.'}
+        </p>
         <div className="saida-busca">
           <input
             type="text"
@@ -83,22 +98,34 @@ export function EditarPosicaoPanel({
         {buscaErro && <p className="error">{buscaErro}</p>}
       </div>
 
-      {nfBusca && nfTemEnderecos(nfBusca) && (
+      {nfBusca && nfTemConteudo && (
         <div className="sidebar-block nf-detail">
+          {modoMovimentacao === 'stage_armazem' && (
+            <p className="stage-modo-badge">Stage → Armazém</p>
+          )}
           <NfDetalheLeitura
             nf={nfBusca}
             actions={nfActions}
             activeItemIndex={itemIndex}
             onSelectItem={onSelectItem}
-            selectablePredicate={(item) => item.allocatedAddresses.length > 0}
-            itensIntro="Selecione um item com endereço para alterar as posições no painel."
+            selectablePredicate={(item) =>
+              modoMovimentacao === 'stage_armazem'
+                ? itemNoStage(item)
+                : item.allocatedAddresses.length > 0
+            }
+            itensIntro={
+              modoMovimentacao === 'stage_armazem'
+                ? 'Selecione um item no stage para endereçar no armazém físico.'
+                : 'Selecione um item com endereço para alterar as posições no painel.'
+            }
           />
 
           {itemIndex != null && (
             <div className="item-actions">
               <p className="muted">
-                {pendingCount} endereço(s) selecionado(s) — clique em uma célula vazia no painel
-                para transferir o palete (a origem é liberada automaticamente).
+                {modoMovimentacao === 'stage_armazem'
+                  ? `${pendingCount} endereço(s) selecionado(s) — marque posições no painel para mover do stage.`
+                  : `${pendingCount} endereço(s) selecionado(s) — clique em uma célula vazia no painel para transferir o palete (a origem é liberada automaticamente).`}
               </p>
               <button
                 type="button"
@@ -109,14 +136,16 @@ export function EditarPosicaoPanel({
                 }}
                 disabled={pendingCount === 0}
               >
-                Salvar novas posições
+                {modoMovimentacao === 'stage_armazem'
+                  ? 'Mover para o armazém'
+                  : 'Salvar novas posições'}
               </button>
             </div>
           )}
         </div>
       )}
 
-      {nfBusca && !nfTemEnderecos(nfBusca) && (
+      {nfBusca && !nfTemConteudo && (
         <div className="sidebar-block nf-detail">
           <NfDetalheLeitura nf={nfBusca} actions={nfActions} />
           <p className="muted sidebar-block">Esta NF não possui endereços alocados.</p>

@@ -3,6 +3,10 @@ import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { AddressId, JustificativaSaidaId, NfeItem, NotaFiscal, SaidaXmlDocumento } from '../types'
 import type { SaidaLimitesPorItem, SaidaPaleteDraft } from '../lib/saidaParcial'
 import { nfTemEnderecos } from '../lib/movimentos'
+import { itemNoStage } from '../layout/stage'
+import { quantidadeEstoqueItem } from '../lib/nfeUnidades'
+import { formatQuantidadeNfe } from '../lib/formatNfeItem'
+import type { SaidaItemDraft } from '../lib/saidaParcial'
 import { JUSTIFICATIVAS_SAIDA } from '../lib/justificativaSaida'
 import { NfResumoGrid } from './NfResumoGrid'
 import { SaidaItensTable } from './SaidaItensTable'
@@ -10,7 +14,10 @@ import { SaidaResumoTotal } from './SaidaResumoTotal'
 
 export type SaidaModoBusca = 'numero' | 'xml'
 
+export type SaidaOrigemEstoque = 'armazem' | 'stage'
+
 type Props = {
+  origemEstoque: SaidaOrigemEstoque
   modoBusca: SaidaModoBusca
   onModoBuscaChange: (modo: SaidaModoBusca) => void
   nfBusca: NotaFiscal | null
@@ -45,9 +52,19 @@ type Props = {
   buscaErro: string | null
   uploadXmlErro: string | null
   selecaoErro: string | null
+  /** Saída do stage (sem paletes/endereços). */
+  stageItemIndex: number | null
+  stageQtdInput: string
+  stageConfirmados: SaidaItemDraft[]
+  onSelectItemStage: (index: number) => void
+  onStageQtdChange: (value: string) => void
+  onConfirmarItemStage: () => void
+  onRemoverItemStage: (itemIndex: number) => void
+  onFinalizarSaidaStage: (justificativa: JustificativaSaidaId) => void
 }
 
 export function SaidaPanel({
+  origemEstoque,
   modoBusca,
   onModoBuscaChange,
   nfBusca,
@@ -82,6 +99,14 @@ export function SaidaPanel({
   buscaErro,
   uploadXmlErro,
   selecaoErro,
+  stageItemIndex,
+  stageQtdInput,
+  stageConfirmados,
+  onSelectItemStage,
+  onStageQtdChange,
+  onConfirmarItemStage,
+  onRemoverItemStage,
+  onFinalizarSaidaStage,
 }: Props) {
   const [numero, setNumero] = useState('')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
@@ -103,9 +128,20 @@ export function SaidaPanel({
     e.target.value = ''
   }
 
-  const podeFinalizar = paletesConfirmados.length > 0 && justificativa != null
+  const podeFinalizar =
+    origemEstoque === 'stage'
+      ? stageConfirmados.length > 0 && justificativa != null
+      : paletesConfirmados.length > 0 && justificativa != null
   const aguardandoVinculo = modoBusca === 'xml' && saidaXml != null && nfBusca == null
-  const itensComEstoque = itensSaida.filter((it) => it.allocatedAddresses.length > 0)
+  const itensComEstoque =
+    origemEstoque === 'stage'
+      ? itensSaida.filter(itemNoStage)
+      : itensSaida.filter((it) => it.allocatedAddresses.length > 0)
+  const nfTemEstoqueSaida =
+    nfBusca &&
+    (origemEstoque === 'stage'
+      ? nfBusca.items.some(itemNoStage)
+      : nfTemEnderecos(nfBusca))
 
   return (
     <>
@@ -136,7 +172,9 @@ export function SaidaPanel({
         {modoBusca === 'numero' ? (
           <>
             <p className="muted">
-              Busque a NF de origem no estoque, selecione o item na tabela e informe os paletes.
+              {origemEstoque === 'stage'
+                ? 'Busque a NF e selecione itens que estão no stage para dar saída.'
+                : 'Busque a NF de origem no estoque, selecione o item na tabela e informe os paletes.'}
             </p>
             <div className="saida-busca">
               <input
@@ -233,8 +271,11 @@ export function SaidaPanel({
         </div>
       )}
 
-      {nfBusca && nfTemEnderecos(nfBusca) && itensComEstoque.length > 0 && (
+      {nfBusca && nfTemEstoqueSaida && itensComEstoque.length > 0 && (
         <div className="sidebar-block nf-detail">
+          {origemEstoque === 'stage' && (
+            <p className="stage-modo-badge">Saída do stage</p>
+          )}
           <div className="nf-detail-head">
             <div>
               <h3>
@@ -309,11 +350,80 @@ export function SaidaPanel({
 
           <h4 className="nf-section-title nf-section-title--sm">Itens da saída</h4>
           <p className="muted nf-itens-intro saida-itens-intro">
-            {saidaXml
-              ? 'Itens do XML de saída vinculados ao estoque da NF de origem. A quantidade máxima por item segue o XML.'
-              : 'Clique no item que vai sair (linha fica verde). Informe os paletes abaixo de cada item.'}
+            {origemEstoque === 'stage'
+              ? 'Clique no item no stage, informe a quantidade e confirme.'
+              : saidaXml
+                ? 'Itens do XML de saída vinculados ao estoque da NF de origem. A quantidade máxima por item segue o XML.'
+                : 'Clique no item que vai sair (linha fica verde). Informe os paletes abaixo de cada item.'}
           </p>
 
+          {origemEstoque === 'stage' ? (
+            <>
+              <ul className="saida-stage-itens">
+                {itensComEstoque.map((item) => {
+                  const ativo = stageItemIndex === item.index
+                  const confirmado = stageConfirmados.some((s) => s.itemIndex === item.index)
+                  return (
+                    <li key={item.index}>
+                      <button
+                        type="button"
+                        className={`saida-stage-item${ativo ? ' saida-stage-item--active' : ''}${confirmado ? ' saida-stage-item--done' : ''}`}
+                        onClick={() => onSelectItemStage(item.index)}
+                        disabled={confirmado}
+                      >
+                        <strong>{item.codigo}</strong>
+                        <span className="muted"> — {item.descricao}</span>
+                        <span className="saida-stage-qtd">
+                          {formatQuantidadeNfe(quantidadeEstoqueItem(item))} {item.unidade}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+
+              {stageItemIndex != null && (
+                <div className="item-actions saida-stage-form">
+                  <label className="nf-itens-campo">
+                    <span>Quantidade de saída</span>
+                    <input
+                      type="text"
+                      className="input-nf"
+                      value={stageQtdInput}
+                      onChange={(e) => onStageQtdChange(e.target.value)}
+                    />
+                  </label>
+                  {selecaoErro && <p className="error">{selecaoErro}</p>}
+                  <button type="button" className="btn primary full" onClick={onConfirmarItemStage}>
+                    Confirmar item
+                  </button>
+                </div>
+              )}
+
+              {stageConfirmados.length > 0 && (
+                <ul className="saida-stage-confirmados">
+                  {stageConfirmados.map((s) => {
+                    const item = nfBusca.items.find((it) => it.index === s.itemIndex)
+                    if (!item) return null
+                    return (
+                      <li key={s.itemIndex}>
+                        <span>
+                          {item.codigo} — {formatQuantidadeNfe(s.quantidadeSaida)} {item.unidade}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => onRemoverItemStage(s.itemIndex)}
+                        >
+                          Remover
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </>
+          ) : (
           <SaidaItensTable
             nf={nfBusca}
             items={itensComEstoque}
@@ -337,8 +447,9 @@ export function SaidaPanel({
             onRemoverPalete={onRemoverPalete}
             selecaoErro={selecaoErro}
           />
+          )}
 
-          {paletesConfirmados.length > 0 && (
+          {origemEstoque !== 'stage' && paletesConfirmados.length > 0 && (
             <SaidaResumoTotal
               nf={nfBusca}
               paletesConfirmados={paletesConfirmados}
@@ -346,7 +457,7 @@ export function SaidaPanel({
             />
           )}
 
-          {paletesConfirmados.length > 0 && (
+          {(origemEstoque === 'stage' ? stageConfirmados.length > 0 : paletesConfirmados.length > 0) && (
             <div className="item-actions">
               <fieldset className="saida-justificativa">
                 <legend className="saida-justificativa-title">Motivo da saída</legend>
@@ -375,7 +486,9 @@ export function SaidaPanel({
                 className="btn warning full"
                 disabled={!podeFinalizar}
                 onClick={() => {
-                  if (justificativa) onFinalizarSaida(justificativa)
+                  if (!justificativa) return
+                  if (origemEstoque === 'stage') onFinalizarSaidaStage(justificativa)
+                  else onFinalizarSaida(justificativa)
                 }}
               >
                 Finalizar saída
@@ -385,7 +498,7 @@ export function SaidaPanel({
         </div>
       )}
 
-      {nfBusca && (!nfTemEnderecos(nfBusca) || itensComEstoque.length === 0) && (
+      {nfBusca && (!nfTemEstoqueSaida || itensComEstoque.length === 0) && (
         <div className="sidebar-block nf-detail">
           <div className="nf-detail-head">
             <h3>NF {nfBusca.numero}</h3>
@@ -407,9 +520,11 @@ export function SaidaPanel({
             </ul>
           )}
           <p className="muted sidebar-block">
-            {saidaXml
-              ? 'Nenhum item do XML foi encontrado com estoque na NF de origem vinculada.'
-              : 'Esta NF não possui itens em estoque (posições já liberadas).'}
+            {origemEstoque === 'stage'
+              ? 'Esta NF não possui itens no stage.'
+              : saidaXml
+                ? 'Nenhum item do XML foi encontrado com estoque na NF de origem vinculada.'
+                : 'Esta NF não possui itens em estoque (posições já liberadas).'}
           </p>
         </div>
       )}

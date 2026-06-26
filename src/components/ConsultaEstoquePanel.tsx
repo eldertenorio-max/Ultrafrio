@@ -5,7 +5,9 @@ import {
   CONSULTA_FILTROS_VAZIOS,
   type ConsultaEstoqueFiltros,
   type ConsultaEstoqueResultado,
+  type ConsultaOrigemEstoque,
 } from '../lib/consultaEstoque'
+import { STAGE_LABEL } from '../layout/stage'
 import type { ItemManualInput } from '../lib/adicionarItemNf'
 import type { NotaFiscal } from '../types'
 import { ConsultaEstoqueInventario } from './ConsultaEstoqueInventario'
@@ -201,6 +203,29 @@ export function ConsultaEstoquePanel({
               onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
             />
           </label>
+
+          <fieldset className="consulta-origem-fieldset">
+            <legend className="consulta-campo-label">Onde pesquisar</legend>
+            <div className="consulta-origem-opcoes">
+              {(
+                [
+                  ['armazem', 'Armazém físico'],
+                  ['stage', 'Stage (separação)'],
+                  ['ambos', 'Ambos'],
+                ] as const
+              ).map(([id, label]) => (
+                <label key={id} className="consulta-origem-option">
+                  <input
+                    type="radio"
+                    name="consulta-origem"
+                    checked={filtros.origem === id}
+                    onChange={() => patch({ origem: id as ConsultaOrigemEstoque })}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </div>
 
         <div className="consulta-actions">
@@ -219,7 +244,13 @@ export function ConsultaEstoquePanel({
         <div className="sidebar-block consulta-resultados-block">
           <h3>
             {resultados.length}{' '}
-            {resultados.length === 1 ? 'endereço encontrado' : 'endereços encontrados'}
+            {resultados.some((r) => r.isStage) && !resultados.some((r) => !r.isStage)
+              ? resultados.length === 1
+                ? 'item no stage'
+                : 'itens no stage'
+              : resultados.length === 1
+                ? 'endereço encontrado'
+                : 'endereços encontrados'}
           </h3>
           <ul className="consulta-resultados">
             {agrupados.map((grupo) => {
@@ -258,7 +289,7 @@ export function ConsultaEstoquePanel({
                         <ul className="consulta-enderecos">
                           {item.enderecos.map((addr) => (
                             <li key={addr} className={enderecosGrupo.has(addr) ? 'addr-flagged' : ''}>
-                              {formatAddressLabel(addr)}
+                              {item.isStage ? STAGE_LABEL : formatAddressLabel(addr)}
                             </li>
                           ))}
                         </ul>
@@ -494,6 +525,7 @@ type GrupoNf = {
     lote?: string
     up?: string
     enderecos: string[]
+    isStage?: boolean
   }>
 }
 
@@ -515,6 +547,7 @@ function agruparPorNf(resultados: ConsultaEstoqueResultado[]): GrupoNf[] {
         descricao: r.descricao,
         ...(r.lote ? { lote: r.lote } : {}),
         ...(r.up ? { up: r.up } : {}),
+        ...(r.isStage ? { isStage: true } : {}),
         enderecos: [],
       }
       grupo.itens.push(item)

@@ -24,8 +24,9 @@ export function podeAdicionarEndereco(limite: number, selecionados: number): boo
   return selecionados < limite
 }
 
-/** Item endereçado: ao menos 1 endereço; se há paletes, todos devem estar alocados. */
+/** Item endereçado: stage conta como completo; armazém exige endereços/paletes. */
 export function itemEnderecamentoCompleto(item: NfeItem): boolean {
+  if (item.localizacao === 'stage') return true
   const count = item.allocatedAddresses.length
   if (count === 0) return false
   const limite = paletesLimiteItem(item)

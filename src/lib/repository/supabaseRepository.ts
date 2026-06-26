@@ -13,6 +13,7 @@ const uiPrefsMemory: Pick<AppState, 'activeNfId' | 'activeItemIndex'> = {
 /** Quando o Supabase ainda não tem as colunas comerciais/entrada, salva só o básico. */
 let omitNfCommercialFields = false
 let omitItemExtendedFields = false
+let omitItemLocalizacaoField = false
 
 function missingColumnError(message: string): boolean {
   return message.includes('schema cache') || /Could not find the '[^']+' column/.test(message)
@@ -48,7 +49,7 @@ function itemInsertRow(nfId: string, it: NotaFiscal['items'][number]) {
     unidade: it.unidade,
   }
   if (omitItemExtendedFields) return row
-  return {
+  const extended = {
     ...row,
     peso_bruto: it.pesoBruto ?? null,
     valor_unitario: it.valorUnitario ?? null,
@@ -58,6 +59,11 @@ function itemInsertRow(nfId: string, it: NotaFiscal['items'][number]) {
     data_fabricacao: it.dataFabricacao || null,
     data_validade: it.dataValidade || null,
     paletes: it.paletes ?? null,
+  }
+  if (omitItemLocalizacaoField) return extended
+  return {
+    ...extended,
+    localizacao: it.localizacao === 'stage' ? 'stage' : 'armazem',
   }
 }
 
@@ -82,6 +88,10 @@ async function insertItens(
   let result = await sb.from('ultrafrio_nf_itens').insert(items.map((it) => itemInsertRow(nfId, it)))
   if (result.error && missingColumnError(result.error.message) && !omitItemExtendedFields) {
     omitItemExtendedFields = true
+    result = await sb.from('ultrafrio_nf_itens').insert(items.map((it) => itemInsertRow(nfId, it)))
+  }
+  if (result.error && missingColumnError(result.error.message) && !omitItemLocalizacaoField) {
+    omitItemLocalizacaoField = true
     result = await sb.from('ultrafrio_nf_itens').insert(items.map((it) => itemInsertRow(nfId, it)))
   }
   return result
@@ -135,6 +145,7 @@ function mapNotas(
       ...(it.data_fabricacao ? { dataFabricacao: it.data_fabricacao } : {}),
       ...(it.data_validade ? { dataValidade: it.data_validade } : {}),
       ...(it.paletes != null ? { paletes: Number(it.paletes) } : {}),
+      ...(it.localizacao === 'stage' ? { localizacao: 'stage' as const } : {}),
     })),
   }))
 }

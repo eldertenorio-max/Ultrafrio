@@ -19,6 +19,7 @@ function preserveOptionalItemFields(item: NfeItem, fallback: NfeItem): NfeItem {
     dataFabricacao: item.dataFabricacao || fallback.dataFabricacao,
     dataValidade: item.dataValidade || fallback.dataValidade,
     paletes: item.paletes ?? fallback.paletes,
+    localizacao: item.localizacao ?? fallback.localizacao,
   }
 }
 

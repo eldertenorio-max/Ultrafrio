@@ -1,11 +1,15 @@
 import type { AddressId, NotaFiscal } from '../types'
+import { STAGE_AREA_ID, itemNoStage } from '../layout/stage'
 import { normNumero } from './nfDuplicate'
+
+export type ConsultaOrigemEstoque = 'armazem' | 'stage' | 'ambos'
 
 export type ConsultaEstoqueFiltros = {
   nfNumero: string
   item: string
   remetente: string
   lote: string
+  origem: ConsultaOrigemEstoque
 }
 
 export type ConsultaEstoqueResultado = {
@@ -18,6 +22,8 @@ export type ConsultaEstoqueResultado = {
   descricao: string
   lote?: string
   up?: string
+  /** Item localizado no stage (sem endereço físico). */
+  isStage?: boolean
 }
 
 export const CONSULTA_FILTROS_VAZIOS: ConsultaEstoqueFiltros = {
@@ -25,6 +31,7 @@ export const CONSULTA_FILTROS_VAZIOS: ConsultaEstoqueFiltros = {
   item: '',
   remetente: '',
   lote: '',
+  origem: 'armazem',
 }
 
 function norm(value: string): string {
@@ -51,6 +58,7 @@ export function buscarEstoque(
   const itemQ = norm(filtros.item)
   const remQ = norm(filtros.remetente)
   const loteQ = norm(filtros.lote)
+  const origem = filtros.origem ?? 'armazem'
 
   if (!nfQ && !itemQ && !remQ && !loteQ) return []
 
@@ -61,7 +69,6 @@ export function buscarEstoque(
     if (nfQ && !nfNumeroCoincide(nf.numero, filtros.nfNumero)) continue
 
     for (const item of nf.items) {
-      if (item.allocatedAddresses.length === 0) continue
       if (itemQ) {
         const codigo = item.codigo.toLowerCase()
         const descricao = item.descricao.toLowerCase()
@@ -69,18 +76,38 @@ export function buscarEstoque(
       }
       if (loteQ && !(item.lote ?? '').toLowerCase().includes(loteQ)) continue
 
-      for (const addressId of item.allocatedAddresses) {
+      const noStage = itemNoStage(item)
+      const noArmazem = item.allocatedAddresses.length > 0
+
+      if (noStage && (origem === 'stage' || origem === 'ambos')) {
         results.push({
-          addressId,
+          addressId: STAGE_AREA_ID,
           nfId: nf.id,
           nfNumero: nf.numero,
           emitente: nf.emitente,
           itemIndex: item.index,
           codigo: item.codigo,
           descricao: item.descricao,
+          isStage: true,
           ...(item.lote ? { lote: item.lote } : {}),
           ...(item.up ? { up: item.up } : {}),
         })
+      }
+
+      if (noArmazem && (origem === 'armazem' || origem === 'ambos')) {
+        for (const addressId of item.allocatedAddresses) {
+          results.push({
+            addressId,
+            nfId: nf.id,
+            nfNumero: nf.numero,
+            emitente: nf.emitente,
+            itemIndex: item.index,
+            codigo: item.codigo,
+            descricao: item.descricao,
+            ...(item.lote ? { lote: item.lote } : {}),
+            ...(item.up ? { up: item.up } : {}),
+          })
+        }
       }
     }
   }

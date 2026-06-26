@@ -1,8 +1,9 @@
 import { useState, type ChangeEvent, type MouseEvent } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
-import type { NotaFiscal } from '../types'
+import type { LocalizacaoEstoque, NotaFiscal } from '../types'
 import { itemEnderecamentoCompleto } from '../lib/paletes'
+import { localizacaoItem } from '../layout/stage'
 import { NfItensTable } from './NfItensTable'
 import { NfResumoGrid } from './NfResumoGrid'
 
@@ -19,6 +20,7 @@ type Props = {
   onUpdateItemCampos: (itemIndex: number, patch: EntradaItemCampos) => void
   onUpdateItemQuantidade: (itemIndex: number, quantidade: string) => void
   onUpdateItemPaletes: (itemIndex: number, paletes: string) => void
+  onUpdateItemLocalizacao: (itemIndex: number, localizacao: LocalizacaoEstoque) => void
   onDesmembrarItem: (itemIndex: number) => void
   paletesRestantes: number | null
   onConfirmItem: () => void
@@ -41,6 +43,7 @@ export function EntradaPanel({
   onUpdateItemCampos,
   onUpdateItemQuantidade,
   onUpdateItemPaletes,
+  onUpdateItemLocalizacao,
   onDesmembrarItem,
   paletesRestantes,
   onConfirmItem,
@@ -54,6 +57,11 @@ export function EntradaPanel({
   const emAndamento = notas.filter((n) => n.status === 'em_andamento')
   const selectedSet = new Set(selectedNfIds)
   const activeNf = notas.find((n) => n.id === activeNfId) ?? null
+  const activeItem =
+    activeNf && activeItemIndex != null
+      ? activeNf.items.find((it) => it.index === activeItemIndex) ?? null
+      : null
+  const activeItemStage = activeItem != null && localizacaoItem(activeItem) === 'stage'
 
   function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files ? Array.from(e.target.files) : []
@@ -153,9 +161,9 @@ export function EntradaPanel({
           <div className="sidebar-block nf-itens-panel">
             <h3 className="nf-section-title">Itens da nota</h3>
             <p className="muted nf-itens-intro">
-              Informe os <strong>paletes</strong> do item — cada palete corresponde a um endereço no
-              painel. Preencha UP, lote, datas e quantidade abaixo. Use <strong>Desmembrar</strong>{' '}
-              quando o mesmo produto vier com mais de uma data.
+              Escolha o <strong>destino</strong> de cada item (armazém ou stage). No armazém, informe
+              os <strong>paletes</strong> — cada palete corresponde a um endereço no painel. No stage,
+              não é necessário endereçar.
             </p>
             <NfItensTable
               nf={activeNf}
@@ -165,11 +173,12 @@ export function EntradaPanel({
               onUpdateItemCampos={onUpdateItemCampos}
               onUpdateItemQuantidade={onUpdateItemQuantidade}
               onUpdateItemPaletes={onUpdateItemPaletes}
+              onUpdateItemLocalizacao={onUpdateItemLocalizacao}
               onDesmembrarItem={onDesmembrarItem}
               canEdit={activeNf.status === 'em_andamento'}
             />
 
-          {activeItemIndex != null && (
+          {activeItemIndex != null && !activeItemStage && (
             <div className="item-actions">
               {paletesRestantes != null && (
                 <p className="item-paletes-counter">
@@ -200,6 +209,10 @@ export function EntradaPanel({
                 </button>
               </div>
             </div>
+          )}
+
+          {activeItemIndex != null && activeItemStage && (
+            <p className="muted item-actions">Item no stage — pronto sem endereço físico.</p>
           )}
 
           {activeNf && activeNf.status === 'em_andamento' && (

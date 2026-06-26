@@ -1,4 +1,5 @@
 import { nfTemEnderecos } from './movimentos'
+import { nfTemEstoqueStage } from './stageEstoque'
 import { quantidadeEstoqueItem, unidadeEstoqueItem } from './nfeUnidades'
 import type { NfeItem, NotaFiscal, SaidaXmlDocumento } from '../types'
 
@@ -39,7 +40,9 @@ export function documentoSaidaFromNota(nf: NotaFiscal): SaidaXmlDocumento {
 }
 
 export function notasDisponiveisParaSaida(notas: NotaFiscal[]): NotaFiscal[] {
-  return notas.filter((n) => nfTemEnderecos(n)).sort((a, b) => b.numero.localeCompare(a.numero))
+  return notas
+    .filter((n) => nfTemEnderecos(n) || nfTemEstoqueStage(n))
+    .sort((a, b) => b.numero.localeCompare(a.numero))
 }
 
 export function sugerirOrigemSaida(

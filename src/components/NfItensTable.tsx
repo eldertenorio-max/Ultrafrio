@@ -3,9 +3,10 @@ import type { EntradaItemCampos } from '../lib/entradaCampos'
 import { normalizeDataFabricacao, todayDateInputMax } from '../lib/entradaCampos'
 import { canDesmembrarNfeItem } from '../lib/desmembrarItem'
 import { itemEnderecamentoCompleto, paletesLimiteItem } from '../lib/paletes'
+import { localizacaoItem } from '../layout/stage'
 import { pesoBrutoTotalItem, pesoLiquidoTotalItem } from '../lib/saidaParcial'
 import { quantidadeEstoqueItem, unidadeEstoqueItem } from '../lib/nfeUnidades'
-import type { NfeItem, NotaFiscal } from '../types'
+import type { LocalizacaoEstoque, NfeItem, NotaFiscal } from '../types'
 import { formatAddressLabel } from '../layout/camaras'
 import {
   formatPesoBruto,
@@ -21,6 +22,7 @@ type Props = {
   onUpdateItemCampos: (itemIndex: number, patch: EntradaItemCampos) => void
   onUpdateItemQuantidade: (itemIndex: number, quantidade: string) => void
   onUpdateItemPaletes: (itemIndex: number, paletes: string) => void
+  onUpdateItemLocalizacao?: (itemIndex: number, localizacao: LocalizacaoEstoque) => void
   onDesmembrarItem: (itemIndex: number) => void
   canEdit?: boolean
 }
@@ -80,6 +82,7 @@ export function NfItensTable({
   onUpdateItemCampos,
   onUpdateItemQuantidade,
   onUpdateItemPaletes,
+  onUpdateItemLocalizacao,
   onDesmembrarItem,
   canEdit = true,
 }: Props) {
@@ -103,6 +106,7 @@ export function NfItensTable({
           {items.map((item) => {
             const st = itemStatus(item)
             const isActive = activeItemIndex === item.index
+            const isStage = localizacaoItem(item) === 'stage'
             const showEnderecos = item.allocatedAddresses.length > 0
             const podeDesmembrar = canEdit && canDesmembrarNfeItem(item)
 
@@ -195,15 +199,38 @@ export function NfItensTable({
                           onClick={stopRowActivate}
                         />
                       </label>
-                      <label className="nf-itens-campo">
-                        <span>Paletes</span>
-                        <PaletesItemInput
-                          itemIndex={item.index}
-                          value={item.paletes}
-                          disabled={!canEdit}
-                          onCommit={onUpdateItemPaletes}
-                        />
+                      <label className="nf-itens-campo nf-itens-campo--destino">
+                        <span>Destino</span>
+                        <select
+                          className="input-select input-nf--compact"
+                          value={localizacaoItem(item)}
+                          disabled={!canEdit || !onUpdateItemLocalizacao}
+                          onChange={(e) =>
+                            onUpdateItemLocalizacao?.(
+                              item.index,
+                              e.target.value as LocalizacaoEstoque,
+                            )
+                          }
+                          onClick={stopRowActivate}
+                        >
+                          <option value="armazem">Armazém</option>
+                          <option value="stage">Stage</option>
+                        </select>
                       </label>
+                      {!isStage && (
+                        <label className="nf-itens-campo">
+                          <span>Paletes</span>
+                          <PaletesItemInput
+                            itemIndex={item.index}
+                            value={item.paletes}
+                            disabled={!canEdit}
+                            onCommit={onUpdateItemPaletes}
+                          />
+                        </label>
+                      )}
+                      {isStage && (
+                        <span className="nf-itens-stage-badge muted">No stage — sem endereço</span>
+                      )}
                       <label className="nf-itens-campo">
                         <span>Qtd.</span>
                         <input

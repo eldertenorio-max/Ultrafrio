@@ -4,8 +4,12 @@ import { DetailModal } from './components/DetailModal'
 import { ManualNfModal, type ManualNfModalResult } from './components/ManualNfModal'
 import { IntroSplash } from './components/IntroSplash'
 import { LayoutPanel } from './components/LayoutPanel'
+import { StageModal } from './components/StageModal'
+import { EntradaDestinoModal } from './components/EntradaDestinoModal'
+import { EscolhaEstoqueModal } from './components/EscolhaEstoqueModal'
 import { PrintLayoutDocument } from './components/PrintLayoutDocument'
 import { CAMARAS } from './layout/camaras'
+import { listarItensStage } from './layout/stage'
 import { EntradaPendenteAlert } from './components/EntradaPendenteAlert'
 import { OcupadoAlert } from './components/OcupadoAlert'
 import { PaletesLimiteAlert } from './components/PaletesLimiteAlert'
@@ -66,9 +70,21 @@ import {
   sugerirOrigemSaida,
   vincularSaidaXmlOrigem,
 } from './lib/saidaXml'
+import {
+  aplicarLocalizacaoItem,
+  aplicarLocalizacaoNf,
+  aplicarSaidaStage,
+  moverItemStageParaArmazem,
+  nfTemEstoqueArmazem,
+  nfTemEstoqueStage,
+  snapshotSaidaStage,
+} from './lib/stageEstoque'
 import type { EntradaItemCampos } from './lib/entradaCampos'
-import type { AddressId, AddressOccupancy, JustificativaSaidaId, MotivoRemocaoEstoqueId, NotaFiscal, SaidaXmlDocumento } from './types'
-import type { SaidaModoBusca } from './components/SaidaPanel'
+import { quantidadeEstoqueItem } from './lib/nfeUnidades'
+import type { SaidaItemDraft } from './lib/saidaParcial'
+import type { AddressId, AddressOccupancy, JustificativaSaidaId, LocalizacaoEstoque, MotivoRemocaoEstoqueId, MovimentoRegistro, NotaFiscal, SaidaXmlDocumento } from './types'
+import type { MovimentacaoModo } from './components/EditarPosicaoPanel'
+import type { SaidaModoBusca, SaidaOrigemEstoque } from './components/SaidaPanel'
 import './App.css'
 
 function buildOccupancyMap(notas: NotaFiscal[]): Map<AddressId, AddressOccupancy> {
@@ -159,6 +175,18 @@ export default function App() {
   const [selectedEntradaIds, setSelectedEntradaIds] = useState<string[]>([])
   const lastEntradaClickRef = useRef<string | null>(null)
   const stateRef = useRef(state)
+  const [stageModalOpen, setStageModalOpen] = useState(false)
+  const [entradaDestinoPendente, setEntradaDestinoPendente] = useState<{
+    imported: NotaFiscal[]
+    movimentos: MovimentoRegistro[]
+  } | null>(null)
+  const [editModoMovimentacao, setEditModoMovimentacao] = useState<MovimentacaoModo>('armazem')
+  const [movimentacaoModoPendente, setMovimentacaoModoPendente] = useState<NotaFiscal | null>(null)
+  const [saidaOrigemEstoque, setSaidaOrigemEstoque] = useState<SaidaOrigemEstoque>('armazem')
+  const [saidaDestinoPendente, setSaidaDestinoPendente] = useState<NotaFiscal | null>(null)
+  const [saidaStageItemIndex, setSaidaStageItemIndex] = useState<number | null>(null)
+  const [saidaStageQtdInput, setSaidaStageQtdInput] = useState('')
+  const [saidaStageConfirmados, setSaidaStageConfirmados] = useState<SaidaItemDraft[]>([])
 
   useEffect(() => {
     stateRef.current = state
@@ -211,17 +239,23 @@ export default function App() {
   }, [nfBuscaSaida, saidaXmlDoc])
   const saidaItensExibicao = useMemo(() => {
     if (!nfBuscaSaida) return []
+    if (saidaOrigemEstoque === 'stage') {
+      return nfBuscaSaida.items.filter((it) => it.localizacao === 'stage')
+    }
     if (saidaVinculo) return saidaVinculo.itensExibicao
     return nfBuscaSaida.items.filter((it) => it.allocatedAddresses.length > 0)
-  }, [nfBuscaSaida, saidaVinculo])
+  }, [nfBuscaSaida, saidaVinculo, saidaOrigemEstoque])
   const saidaLimitesPorItem = saidaVinculo?.limitesPorItem
   const saidaVinculoAvisos = saidaVinculo?.avisos ?? []
   const nfEditar = nfEditarId ? state.notas.find((n) => n.id === nfEditarId) ?? null : null
 
+  const activeEntradaItem = useMemo(() => {
+    if (!activeNf || activeNf.status !== 'em_andamento' || state.activeItemIndex == null) return null
+    return activeNf.items.find((it) => it.index === state.activeItemIndex) ?? null
+  }, [activeNf, state.activeItemIndex])
+
   const allocateMode =
-    !!activeNf &&
-    activeNf.status === 'em_andamento' &&
-    state.activeItemIndex != null
+    activeEntradaItem != null && activeEntradaItem.localizacao !== 'stage'
 
   const editMode = nfEditar != null && editItemIndex != null
 
@@ -272,7 +306,12 @@ export default function App() {
   }, [nfEditar])
 
   const consultaAddresses = useMemo(
-    () => new Set(consultaResultados.map((r) => r.addressId)),
+    () => new Set(consultaResultados.filter((r) => !r.isStage).map((r) => r.addressId)),
+    [consultaResultados],
+  )
+
+  const consultaStageHighlighted = useMemo(
+    () => consultaResultados.some((r) => r.isStage),
     [consultaResultados],
   )
 
@@ -293,10 +332,7 @@ export default function App() {
     (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
   const panelActiveNfNumero = editMode ? nfEditar?.numero ?? null : activeNf?.numero ?? null
 
-  const activeAllocateItem = useMemo(() => {
-    if (!allocateMode || !activeNf || state.activeItemIndex == null) return null
-    return activeNf.items.find((it) => it.index === state.activeItemIndex) ?? null
-  }, [allocateMode, activeNf, state.activeItemIndex])
+  const activeAllocateItem = allocateMode ? activeEntradaItem : null
 
   const paletesTotal =
     activeAllocateItem?.paletes != null && activeAllocateItem.paletes > 0
@@ -329,7 +365,7 @@ export default function App() {
 
   const syncPendingFromItem = useCallback((nf: NotaFiscal, itemIndex: number) => {
     const item = nf.items.find((it) => it.index === itemIndex)
-    if (!item) {
+    if (!item || item.localizacao === 'stage') {
       setPendingSelection(new Set())
       return
     }
@@ -367,27 +403,16 @@ export default function App() {
     }
 
     if (imported.length > 0) {
-      const applyImport = async () => {
-        const nextState = {
-          ...state,
-          notas: [...imported, ...state.notas],
-          movimentos,
-          activeNfId: imported[0].id,
-          activeItemIndex: 0,
-        }
-        setState(nextState)
-        setPendingSelection(new Set())
-        setSelectedEntradaIds(imported.map((nf) => nf.id))
-        lastEntradaClickRef.current = imported[0].id
-        await saveNow(nextState)
+      const askDestino = () => {
+        setEntradaDestinoPendente({ imported, movimentos })
       }
 
       const switchingAway =
         nfEntradaIncompleta(activeNf) && activeNf && imported[0].id !== activeNf.id
       if (switchingAway) {
-        trySairEntradaIncompleta(() => void applyImport())
+        trySairEntradaIncompleta(askDestino)
       } else {
-        await applyImport()
+        askDestino()
       }
     }
 
@@ -411,6 +436,29 @@ export default function App() {
     } else if (skipped.length > 0 || errors.length > 0) {
       setUploadError(feedback.join(' '))
     }
+  }
+
+  async function handleEntradaDestinoConfirm(localizacao: LocalizacaoEstoque) {
+    if (!entradaDestinoPendente) return
+    const { imported, movimentos } = entradaDestinoPendente
+    const nfsComDestino = imported.map((nf) => aplicarLocalizacaoNf(nf, localizacao))
+    const nextState = {
+      ...state,
+      notas: [...nfsComDestino, ...state.notas],
+      movimentos,
+      activeNfId: nfsComDestino[0].id,
+      activeItemIndex: nfsComDestino[0].items[0]?.index ?? 0,
+    }
+    setState(nextState)
+    setPendingSelection(new Set())
+    setSelectedEntradaIds(nfsComDestino.map((nf) => nf.id))
+    lastEntradaClickRef.current = nfsComDestino[0].id
+    setEntradaDestinoPendente(null)
+    await saveNow(nextState)
+  }
+
+  function handleEntradaDestinoCancel() {
+    setEntradaDestinoPendente(null)
   }
 
   async function handleUploadCancelada(file: File) {
@@ -855,6 +903,25 @@ export default function App() {
     })
   }
 
+  function handleUpdateItemLocalizacao(itemIndex: number, localizacao: LocalizacaoEstoque) {
+    if (!state.activeNfId) return
+    if (state.activeItemIndex === itemIndex && localizacao === 'stage') {
+      setPendingSelection(new Set())
+    }
+    setState((s) => ({
+      ...s,
+      notas: s.notas.map((nf) => {
+        if (nf.id !== s.activeNfId) return nf
+        return {
+          ...nf,
+          items: nf.items.map((it) =>
+            it.index === itemIndex ? aplicarLocalizacaoItem(it, localizacao) : it,
+          ),
+        }
+      }),
+    }))
+  }
+
   async function handleDesmembrarItem(itemIndex: number) {
     if (!activeNf || activeNf.status !== 'em_andamento') return
     const result = desmembrarNfeItem(activeNf, itemIndex)
@@ -1032,6 +1099,36 @@ export default function App() {
     setSaidaCaixasPalete('')
     setSaidaPaletesConfirmados([])
     setSaidaSelecaoErro(null)
+    setSaidaStageItemIndex(null)
+    setSaidaStageQtdInput('')
+    setSaidaStageConfirmados([])
+  }
+
+  function aplicarBuscaSaida(nf: NotaFiscal, origem: SaidaOrigemEstoque) {
+    setSaidaOrigemEstoque(origem)
+    setNfBuscaSaidaId(nf.id)
+    limparEstadoSaida()
+  }
+
+  function resolverDestinoSaida(nf: NotaFiscal): boolean {
+    const temArmazem = nfTemEstoqueArmazem(nf)
+    const temStage = nfTemEstoqueStage(nf)
+    if (temArmazem && temStage) {
+      setSaidaDestinoPendente(nf)
+      return false
+    }
+    if (temStage && !temArmazem) {
+      aplicarBuscaSaida(nf, 'stage')
+      return true
+    }
+    if (temArmazem) {
+      aplicarBuscaSaida(nf, 'armazem')
+      return true
+    }
+    setBuscaErro('NF sem itens no armazém nem no stage.')
+    setNfBuscaSaidaId(null)
+    limparEstadoSaida()
+    return false
   }
 
   function handleModoBuscaSaidaChange(modo: SaidaModoBusca) {
@@ -1087,7 +1184,7 @@ export default function App() {
       return
     }
     setNfBuscaSaidaId(nf.id)
-    limparEstadoSaida()
+    resolverDestinoSaida(nf)
   }
 
   function handleBuscarSaida(numero: string) {
@@ -1104,8 +1201,7 @@ export default function App() {
       limparEstadoSaida()
       return
     }
-    setNfBuscaSaidaId(nf.id)
-    limparEstadoSaida()
+    resolverDestinoSaida(nf)
   }
 
   function resetSelecaoPaletesSaida() {
@@ -1297,6 +1393,94 @@ export default function App() {
     limparEstadoSaida()
   }
 
+  function handleSelectItemStage(index: number) {
+    if (!nfBuscaSaida) return
+    const item = nfBuscaSaida.items.find((it) => it.index === index)
+    if (!item || item.localizacao !== 'stage') return
+    if (saidaStageConfirmados.some((s) => s.itemIndex === index)) return
+    setSaidaStageItemIndex(index)
+    setSaidaStageQtdInput(String(quantidadeEstoqueItem(item)))
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleStageQtdChange(value: string) {
+    setSaidaStageQtdInput(value)
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleConfirmarItemStage() {
+    if (!nfBuscaSaida || saidaStageItemIndex == null) return
+    const item = nfBuscaSaida.items.find((it) => it.index === saidaStageItemIndex)
+    if (!item) return
+    const qtd = parseQuantidadeSaida(saidaStageQtdInput)
+    if (qtd == null || qtd <= 0) {
+      setSaidaSelecaoErro('Informe uma quantidade válida.')
+      return
+    }
+    const max = quantidadeEstoqueItem(item)
+    if (qtd > max) {
+      setSaidaSelecaoErro(`Quantidade máxima: ${max}.`)
+      return
+    }
+    setSaidaStageConfirmados((prev) => [
+      ...prev.filter((s) => s.itemIndex !== saidaStageItemIndex),
+      { itemIndex: saidaStageItemIndex, quantidadeSaida: qtd },
+    ])
+    setSaidaStageItemIndex(null)
+    setSaidaStageQtdInput('')
+    setSaidaSelecaoErro(null)
+  }
+
+  function handleRemoverItemStage(itemIndex: number) {
+    setSaidaStageConfirmados((prev) => prev.filter((s) => s.itemIndex !== itemIndex))
+    if (saidaStageItemIndex === itemIndex) {
+      setSaidaStageItemIndex(null)
+      setSaidaStageQtdInput('')
+    }
+    setSaidaSelecaoErro(null)
+  }
+
+  async function handleFinalizarSaidaStage(justificativaSaida: JustificativaSaidaId) {
+    if (!nfBuscaSaida || saidaStageConfirmados.length === 0) return
+
+    const movBase = criarMovimentoSaida(
+      nfBuscaSaida,
+      [],
+      justificativaSaida,
+      saidaStageConfirmados,
+      undefined,
+      saidaXmlDoc
+        ? {
+            nfSaida: {
+              numero: saidaXmlDoc.numero,
+              serie: saidaXmlDoc.serie,
+              chave: saidaXmlDoc.chave,
+              emitente: saidaXmlDoc.emitente,
+              dataEmissao: saidaXmlDoc.dataEmissao,
+            },
+          }
+        : undefined,
+    )
+    const mov = {
+      ...movBase,
+      itens: snapshotSaidaStage(nfBuscaSaida, saidaStageConfirmados),
+    }
+    const nextState = {
+      ...state,
+      notas: state.notas.map((n) =>
+        n.id === nfBuscaSaida.id ? aplicarSaidaStage(n, saidaStageConfirmados) : n,
+      ),
+      movimentos: [mov, ...state.movimentos],
+    }
+    setState(nextState)
+    await saveNow(nextState)
+    setNfBuscaSaidaId(null)
+    setSaidaXmlDoc(null)
+    setSaidaOrigemSelecionadaId('')
+    setSaidaUploadXmlErro(null)
+    limparEstadoSaida()
+  }
+
   function handleCancelarSaida() {
     setNfBuscaSaidaId(null)
     setSaidaXmlDoc(null)
@@ -1304,6 +1488,14 @@ export default function App() {
     setSaidaUploadXmlErro(null)
     limparEstadoSaida()
     setBuscaErro(null)
+  }
+
+  function iniciarEdicaoNf(nf: NotaFiscal, modo: MovimentacaoModo) {
+    setEditModoMovimentacao(modo)
+    setNfEditarId(nf.id)
+    setEditItemIndex(null)
+    setEditPendingSelection(new Set())
+    editOriginalAddressesRef.current = new Set()
   }
 
   function handleBuscarEditar(numero: string) {
@@ -1317,7 +1509,22 @@ export default function App() {
       editOriginalAddressesRef.current = new Set()
       return
     }
-    setNfEditarId(nf.id)
+    const temArmazem = nfTemEstoqueArmazem(nf)
+    const temStage = nfTemEstoqueStage(nf)
+    if (temArmazem && temStage) {
+      setMovimentacaoModoPendente(nf)
+      return
+    }
+    if (temStage && !temArmazem) {
+      iniciarEdicaoNf(nf, 'stage_armazem')
+      return
+    }
+    if (temArmazem) {
+      iniciarEdicaoNf(nf, 'armazem')
+      return
+    }
+    setBuscaEditarErro('NF sem itens no armazém nem no stage.')
+    setNfEditarId(null)
     setEditItemIndex(null)
     setEditPendingSelection(new Set())
     editOriginalAddressesRef.current = new Set()
@@ -1327,6 +1534,17 @@ export default function App() {
     if (!nfEditar) return
     const item = nfEditar.items.find((it) => it.index === index)
     if (!item) return
+
+    if (editModoMovimentacao === 'stage_armazem') {
+      if (item.localizacao !== 'stage') return
+      editOriginalAddressesRef.current = new Set()
+      setEditItemIndex(index)
+      setEditPendingSelection(new Set())
+      setDetailAddress(null)
+      return
+    }
+
+    if (item.allocatedAddresses.length === 0) return
     const original = new Set(item.allocatedAddresses)
     editOriginalAddressesRef.current = original
     setEditItemIndex(index)
@@ -1340,6 +1558,29 @@ export default function App() {
     const currentItemIndex = editItemIndex
     const item = nfEditar.items.find((it) => it.index === currentItemIndex)
     if (!item) return
+
+    if (editModoMovimentacao === 'stage_armazem' && item.localizacao === 'stage') {
+      const notas = state.notas.map((nf) =>
+        nf.id === nfEditar.id
+          ? moverItemStageParaArmazem(nf, currentItemIndex, addresses)
+          : nf,
+      )
+      const updatedNf = notas.find((n) => n.id === nfEditar.id)!
+      const nextState = {
+        ...state,
+        notas,
+        movimentos: [
+          criarMovimentoMovimentacao(updatedNf, currentItemIndex, addresses),
+          ...state.movimentos,
+        ],
+      }
+      setState(nextState)
+      await saveNow(nextState)
+      editOriginalAddressesRef.current = new Set(addresses)
+      setEditPendingSelection(new Set())
+      setEditItemIndex(null)
+      return
+    }
 
     const original = editOriginalAddressesRef.current
     if (!enderecosAlterados(original, addresses)) return
@@ -1381,6 +1622,7 @@ export default function App() {
     setEditItemIndex(null)
     setEditPendingSelection(new Set())
     editOriginalAddressesRef.current = new Set()
+    setEditModoMovimentacao('armazem')
     setBuscaEditarErro(null)
   }
 
@@ -1394,7 +1636,7 @@ export default function App() {
     const resultados = buscarEstoque(state.notas, filtros)
     setConsultaResultados(resultados)
     if (resultados.length === 0) {
-      setConsultaErro('Nenhum endereço encontrado com os filtros informados.')
+      setConsultaErro('Nenhum resultado encontrado com os filtros informados.')
     }
   }
 
@@ -1604,6 +1846,8 @@ export default function App() {
     setDetailAddress(null)
   }
 
+  const stageItens = useMemo(() => listarItensStage(state.notas), [state.notas])
+
   const detailOcc = detailAddress ? occupancy.get(detailAddress) : null
   const detailNota = detailOcc ? state.notas.find((n) => n.id === detailOcc.nfId) : null
 
@@ -1634,6 +1878,7 @@ export default function App() {
           onUpdateItemCampos: handleUpdateItemCampos,
           onUpdateItemQuantidade: handleUpdateItemQuantidade,
           onUpdateItemPaletes: handleUpdateItemPaletes,
+          onUpdateItemLocalizacao: handleUpdateItemLocalizacao,
           onDesmembrarItem: handleDesmembrarItem,
           onConfirmItem: handleConfirmItem,
           onFinishEntrada: handleFinishEntrada,
@@ -1648,6 +1893,7 @@ export default function App() {
           uploadError,
         }}
         saida={{
+          origemEstoque: saidaOrigemEstoque,
           modoBusca: saidaModoBusca,
           onModoBuscaChange: handleModoBuscaSaidaChange,
           nfBusca: nfBuscaSaida,
@@ -1679,6 +1925,14 @@ export default function App() {
           onRemoverPalete: handleRemoverPaleteSaida,
           onFinalizarSaida: handleFinalizarSaida,
           onCancelarSaida: handleCancelarSaida,
+          stageItemIndex: saidaStageItemIndex,
+          stageQtdInput: saidaStageQtdInput,
+          stageConfirmados: saidaStageConfirmados,
+          onSelectItemStage: handleSelectItemStage,
+          onStageQtdChange: handleStageQtdChange,
+          onConfirmarItemStage: handleConfirmarItemStage,
+          onRemoverItemStage: handleRemoverItemStage,
+          onFinalizarSaidaStage: handleFinalizarSaidaStage,
           buscaErro,
           uploadXmlErro: saidaUploadXmlErro,
           selecaoErro: saidaSelecaoErro,
@@ -1703,6 +1957,7 @@ export default function App() {
           nfBusca: nfEditar,
           itemIndex: editItemIndex,
           pendingCount: editPendingSelection.size,
+          modoMovimentacao: editModoMovimentacao,
           onBuscar: handleBuscarEditar,
           onSelectItem: handleSelectItemEditar,
           onSalvar: handleSalvarEditar,
@@ -1755,6 +2010,9 @@ export default function App() {
           editMode={editMode}
           editAddresses={nfEditar ? editNfAddresses : undefined}
           consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
+          notas={state.notas}
+          stageHighlighted={consultaStageHighlighted}
+          onStageOpen={() => setStageModalOpen(true)}
           saidaAddresses={
             nfEditar ? undefined : saidaAddresses.size > 0 ? saidaAddresses : undefined
           }
@@ -1822,6 +2080,68 @@ export default function App() {
           nota={detailNota}
           onClose={() => setDetailAddress(null)}
         />
+      )}
+
+      {entradaDestinoPendente && (
+        <EntradaDestinoModal
+          nfNumeros={entradaDestinoPendente.imported.map((nf) => nf.numero)}
+          onConfirm={(destino) => void handleEntradaDestinoConfirm(destino)}
+          onCancel={handleEntradaDestinoCancel}
+        />
+      )}
+
+      {movimentacaoModoPendente && (
+        <EscolhaEstoqueModal
+          title="Modo de movimentação"
+          pergunta={`A NF ${movimentacaoModoPendente.numero} possui itens no armazém e no stage. O que deseja movimentar?`}
+          opcoes={[
+            {
+              id: 'armazem',
+              label: 'Apenas armazém físico',
+              descricao: 'Reposicionar itens já endereçados',
+            },
+            {
+              id: 'stage',
+              label: 'Stage → armazém',
+              descricao: 'Endereçar itens que estão no stage',
+            },
+          ]}
+          onConfirm={(opcao) => {
+            const nf = movimentacaoModoPendente
+            setMovimentacaoModoPendente(null)
+            iniciarEdicaoNf(nf, opcao === 'stage' ? 'stage_armazem' : 'armazem')
+          }}
+          onCancel={() => setMovimentacaoModoPendente(null)}
+        />
+      )}
+
+      {saidaDestinoPendente && (
+        <EscolhaEstoqueModal
+          title="Origem da saída"
+          pergunta={`A NF ${saidaDestinoPendente.numero} possui estoque no armazém e no stage. De onde deseja dar saída?`}
+          opcoes={[
+            {
+              id: 'armazem',
+              label: 'Saída normal (armazém)',
+              descricao: 'Retirar paletes endereçados',
+            },
+            {
+              id: 'stage',
+              label: 'Saída do stage',
+              descricao: 'Retirar itens em separação',
+            },
+          ]}
+          onConfirm={(opcao) => {
+            const nf = saidaDestinoPendente
+            setSaidaDestinoPendente(null)
+            aplicarBuscaSaida(nf, opcao === 'stage' ? 'stage' : 'armazem')
+          }}
+          onCancel={() => setSaidaDestinoPendente(null)}
+        />
+      )}
+
+      {stageModalOpen && (
+        <StageModal itens={stageItens} onClose={() => setStageModalOpen(false)} />
       )}
     </div>
   )

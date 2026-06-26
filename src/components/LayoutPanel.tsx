@@ -11,8 +11,9 @@ import {
   type CellKind,
   type RuaConfig,
 } from '../layout/camaras'
-import type { AddressId, AddressOccupancy } from '../types'
+import type { AddressId, AddressOccupancy, NotaFiscal } from '../types'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { StageSection } from './StageSection'
 
 const CELL_GAP = 0
 const MIN_CELL = 28
@@ -38,6 +39,9 @@ type Props = {
   paletesRestantes?: number | null
   paletesTotal?: number | null
   saidaMode?: boolean
+  notas?: NotaFiscal[]
+  stageHighlighted?: boolean
+  onStageOpen?: () => void
 }
 
 function rowLabelWidth(cellSize: number, mobile: boolean): number {
@@ -463,6 +467,13 @@ export function LayoutPanel(props: Props) {
       </div>
 
       <div className="camaras-stack">
+        {props.notas && props.onStageOpen && (
+          <StageSection
+            notas={props.notas}
+            highlighted={props.stageHighlighted}
+            onOpen={props.onStageOpen}
+          />
+        )}
         {CAMARAS.map((cam) => (
           <CamaraSection key={cam.id} cam={cam} mobile={mobile} paint={paint} {...props} />
         ))}

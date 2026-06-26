@@ -1,5 +1,7 @@
 export type AddressId = string
 
+export type LocalizacaoEstoque = 'armazem' | 'stage'
+
 export type NfeItem = {
   index: number
   codigo: string
@@ -7,6 +9,8 @@ export type NfeItem = {
   quantidade: number
   unidade: string
   allocatedAddresses: AddressId[]
+  /** Stage (separação) ou armazém físico. Padrão: armazém. */
+  localizacao?: LocalizacaoEstoque
   pesoBruto?: number
   /** Peso líquido da linha (quando unidade comercial não é peso). */
   pesoLiquido?: number

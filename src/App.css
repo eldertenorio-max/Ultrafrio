@@ -945,6 +945,221 @@
   gap: 10px;
 }
 
+/* Stage — área de separação */
+.stage-section {
+  margin-bottom: 0;
+  padding: 10px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.stage-section--highlight {
+  border-color: var(--accent-green, #22c55e);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-green, #22c55e) 35%, transparent);
+}
+
+.stage-section-head {
+  margin-bottom: 8px;
+}
+
+.stage-section-head .camara-title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.stage-section-hint {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.stage-area-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 120px;
+  padding: 16px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-panel) 92%, var(--accent, #3b82f6) 8%);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.stage-area-cell:hover {
+  border-color: var(--accent, #3b82f6);
+  background: color-mix(in srgb, var(--bg-panel) 85%, var(--accent, #3b82f6) 15%);
+}
+
+.stage-area-label {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.stage-area-count {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.stage-area-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.stage-modal {
+  max-width: 560px;
+  width: min(96vw, 560px);
+  max-height: 85vh;
+  overflow: auto;
+}
+
+.stage-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stage-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stage-modal-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
+.stage-modal-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.stage-modal-cod {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.stage-destino-fieldset,
+.consulta-origem-fieldset {
+  border: none;
+  margin: 12px 0;
+  padding: 0;
+}
+
+.stage-destino-aviso {
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.stage-modo-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #3b82f6) 18%, transparent);
+  color: var(--text);
+}
+
+.nf-itens-campo--destino select {
+  min-width: 110px;
+}
+
+.nf-itens-stage-badge {
+  align-self: center;
+  font-size: 0.85rem;
+}
+
+.consulta-origem-opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.consulta-origem-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.saida-stage-itens {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saida-stage-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  cursor: pointer;
+}
+
+.saida-stage-item--active {
+  border-color: var(--accent-green, #22c55e);
+  background: color-mix(in srgb, var(--accent-green, #22c55e) 12%, var(--bg-panel));
+}
+
+.saida-stage-item--done {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.saida-stage-qtd {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.saida-stage-confirmados {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saida-stage-confirmados li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
 .camara-section {
   margin-bottom: 0;
   padding: 10px 12px;
