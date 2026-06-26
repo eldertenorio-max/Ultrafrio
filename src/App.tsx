@@ -158,6 +158,11 @@ export default function App() {
   const [manualNfError, setManualNfError] = useState<string | null>(null)
   const [selectedEntradaIds, setSelectedEntradaIds] = useState<string[]>([])
   const lastEntradaClickRef = useRef<string | null>(null)
+  const stateRef = useRef(state)
+
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   const emAndamentoIds = useMemo(
     () => state.notas.filter((n) => n.status === 'em_andamento').map((n) => n.id),
@@ -630,18 +635,22 @@ export default function App() {
       return
     }
 
-    if (allocateMode && activeNf && state.activeItemIndex != null) {
+    if (allocateMode && state.activeItemIndex != null) {
+      const snapshot = stateRef.current
+      const nfAloc = snapshot.notas.find((n) => n.id === snapshot.activeNfId)
+      if (!nfAloc) return
+
       if (occ) {
         const mesmoItem =
-          occ.nfId === activeNf.id && occ.itemIndex === state.activeItemIndex
+          occ.nfId === nfAloc.id && occ.itemIndex === snapshot.activeItemIndex
         if (!mesmoItem) {
           setOcupadoAlert({ addressId, occ })
           return
         }
       }
 
-      const currentItemIndex = state.activeItemIndex
-      const item = activeNf.items.find((it) => it.index === currentItemIndex)
+      const currentItemIndex = snapshot.activeItemIndex
+      const item = nfAloc.items.find((it) => it.index === currentItemIndex)
       const limitePaletes = paletesLimiteItem(item)
 
       setPendingSelection((prev) => {
@@ -664,7 +673,7 @@ export default function App() {
         setState((s) => ({
           ...s,
           notas: s.notas.map((nf) => {
-            if (nf.id !== activeNf.id) return nf
+            if (nf.id !== nfAloc.id) return nf
             return {
               ...nf,
               items: nf.items.map((it) =>
@@ -788,30 +797,62 @@ export default function App() {
 
   function handleUpdateItemPaletes(itemIndex: number, value: string) {
     if (!state.activeNfId) return
-    const paletes = parsePaletesInput(value)
-    const shouldTrim =
-      state.activeItemIndex === itemIndex &&
-      paletes != null &&
-      paletes > 0 &&
-      pendingSelection.size > paletes
-    const trimmed = shouldTrim ? [...pendingSelection].slice(0, paletes) : null
-    if (trimmed) setPendingSelection(new Set(trimmed))
 
-    setState((s) => ({
-      ...s,
-      notas: s.notas.map((nf) => {
-        if (nf.id !== s.activeNfId) return nf
-        return {
-          ...nf,
-          items: nf.items.map((it) => {
-            if (it.index !== itemIndex) return it
-            const next = { ...it, paletes }
-            if (trimmed) return { ...next, allocatedAddresses: trimmed }
-            return next
-          }),
-        }
-      }),
-    }))
+    setState((s) => {
+      const nf = s.notas.find((n) => n.id === s.activeNfId)
+      const item = nf?.items.find((it) => it.index === itemIndex)
+      if (!nf || !item) return s
+
+      const trimmed = value.trim()
+      let paletes: number | undefined
+      if (trimmed === '') {
+        paletes = undefined
+      } else {
+        const parsed = parsePaletesInput(value)
+        if (parsed == null || parsed <= 0) return s
+        paletes = parsed
+      }
+
+      let allocatedAddresses = item.allocatedAddresses
+      if (
+        s.activeItemIndex === itemIndex &&
+        paletes != null &&
+        paletes > 0 &&
+        allocatedAddresses.length > paletes
+      ) {
+        allocatedAddresses = allocatedAddresses.slice(0, paletes)
+      }
+
+      if (s.activeItemIndex === itemIndex) {
+        queueMicrotask(() => {
+          setPendingSelection((prev) => {
+            if (paletes != null && paletes > 0 && prev.size > paletes) {
+              return new Set([...prev].slice(0, paletes))
+            }
+            return prev
+          })
+        })
+      }
+
+      const next: typeof s = {
+        ...s,
+        notas: s.notas.map((n) => {
+          if (n.id !== s.activeNfId) return n
+          return {
+            ...n,
+            items: n.items.map((it) =>
+              it.index === itemIndex ? { ...it, paletes, allocatedAddresses } : it,
+            ),
+          }
+        }),
+      }
+
+      queueMicrotask(() => {
+        void saveNow(next)
+      })
+
+      return next
+    })
   }
 
   async function handleDesmembrarItem(itemIndex: number) {

@@ -1,4 +1,4 @@
-import { Fragment, type SyntheticEvent } from 'react'
+import { Fragment, useEffect, useState, type SyntheticEvent } from 'react'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
 import { normalizeDataFabricacao, todayDateInputMax } from '../lib/entradaCampos'
 import { canDesmembrarNfeItem } from '../lib/desmembrarItem'
@@ -34,6 +34,42 @@ function itemStatus(item: NfeItem): 'pendente' | 'parcial' | 'ok' {
 
 function stopRowActivate(e: SyntheticEvent) {
   e.stopPropagation()
+}
+
+function PaletesItemInput({
+  itemIndex,
+  value,
+  disabled,
+  onCommit,
+}: {
+  itemIndex: number
+  value: number | undefined
+  disabled: boolean
+  onCommit: (itemIndex: number, raw: string) => void
+}) {
+  const [draft, setDraft] = useState(() => (value != null && value > 0 ? String(value) : ''))
+
+  useEffect(() => {
+    setDraft(value != null && value > 0 ? String(value) : '')
+  }, [itemIndex, value])
+
+  return (
+    <input
+      type="number"
+      min={1}
+      step={1}
+      className="input-nf input-nf--compact"
+      value={draft}
+      disabled={disabled}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={(e) => onCommit(itemIndex, e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
+        stopRowActivate(e)
+      }}
+      onClick={stopRowActivate}
+    />
+  )
 }
 
 export function NfItensTable({
@@ -161,15 +197,11 @@ export function NfItensTable({
                       </label>
                       <label className="nf-itens-campo">
                         <span>Paletes</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          className="input-nf input-nf--compact"
-                          value={item.paletes ?? ''}
+                        <PaletesItemInput
+                          itemIndex={item.index}
+                          value={item.paletes}
                           disabled={!canEdit}
-                          onChange={(e) => onUpdateItemPaletes(item.index, e.target.value)}
-                          onClick={stopRowActivate}
+                          onCommit={onUpdateItemPaletes}
                         />
                       </label>
                       <label className="nf-itens-campo">
