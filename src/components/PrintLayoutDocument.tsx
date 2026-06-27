@@ -9,6 +9,7 @@ import {
   type RuaConfig,
 } from '../layout/camaras'
 import { portaCamaraUrl } from '../lib/portaCamaraAsset'
+import type { AddressId, AddressOccupancy } from '../types'
 
 const CELL_GAP = 0
 
@@ -71,11 +72,37 @@ function printRowAxisFont(cellH: number): number {
   return Math.max(14, Math.min(28, Math.round(cellH * 0.36)))
 }
 
-type Props = {
-  camaraIds: number[]
+function printNfFontSize(cellW: number, cellH: number): number {
+  const ref = Math.min(cellW, cellH)
+  if (ref >= 14) return 11
+  if (ref >= 11) return 9
+  if (ref >= 9) return 7.5
+  return 6
 }
 
-function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: RuaConfig; dims: PrintCellDims }) {
+function printNfLabel(numero: string, cellW: number, cellH: number): string {
+  const ref = Math.min(cellW, cellH)
+  if (ref >= 11) return numero
+  if (ref >= 9) return numero.length > 6 ? numero.slice(-6) : numero
+  return numero.length > 4 ? numero.slice(-4) : numero
+}
+
+type Props = {
+  camaraIds: number[]
+  occupancy?: Map<AddressId, AddressOccupancy>
+}
+
+function PrintRuaGrid({
+  camaraId,
+  config,
+  dims,
+  occupancy,
+}: {
+  camaraId: number
+  config: RuaConfig
+  dims: PrintCellDims
+  occupancy?: Map<AddressId, AddressOccupancy>
+}) {
   const { cellW, cellH, labelW } = dims
   const colFont = printColAxisFont(cellW)
   const rowFont = printRowAxisFont(cellH)
@@ -123,6 +150,7 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
               >
                 {Array.from({ length: config.colunas }, (_, i) => {
                   const col = i + 1
+                  const addressId = makeAddressId(camaraId, config.rua, nivel, col)
                   const kind = cellKind(
                     col,
                     nivel,
@@ -132,25 +160,37 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
                     config.colunasBloqueadas,
                     config.celulasBloqueadas,
                   )
+                  const occ = occupancy?.get(addressId)
                   const portaBg =
                     kind === 'porta' && config.porta
                       ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl)
                       : null
                   let cellClass = `print-cell print-cell--${kind}`
+                  if (occ && kind === 'disponivel') cellClass += ' print-cell--ocupado'
                   if (kind === 'porta' && config.porta) {
                     const edge = portaCellEdgeClasses(col, nivel, config.porta)
                     if (edge) cellClass += ` ${edge.replace(/cell--/g, 'print-cell--')}`
                   }
+                  const nfFont = printNfFontSize(cellW, cellH)
                   return (
                     <div
-                      key={makeAddressId(camaraId, config.rua, nivel, col)}
+                      key={addressId}
                       className={cellClass}
                       style={{
                         width: `${cellW}mm`,
                         height: `${cellH}mm`,
                         ...(portaBg ?? {}),
                       }}
-                    />
+                    >
+                      {occ && kind === 'disponivel' && (
+                        <span
+                          className="print-cell-nf"
+                          style={{ fontSize: `${nfFont}pt` }}
+                        >
+                          {printNfLabel(occ.nfNumero, cellW, cellH)}
+                        </span>
+                      )}
+                    </div>
                   )
                 })}
               </div>
@@ -162,10 +202,23 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
   )
 }
 
-function PrintPage({ cam, rua, pageIndex, totalPages }: { cam: CamaraConfig; rua: RuaConfig; pageIndex: number; totalPages: number }) {
+function PrintPage({
+  cam,
+  rua,
+  pageIndex,
+  totalPages,
+  occupancy,
+}: {
+  cam: CamaraConfig
+  rua: RuaConfig
+  pageIndex: number
+  totalPages: number
+  occupancy?: Map<AddressId, AddressOccupancy>
+}) {
   const dims = computePrintCellDimensions(rua.colunas)
   const isRua1 = rua.rua === cam.ruas[0]?.rua
   const versoRua = cam.ruas.find((r) => r.rua !== rua.rua)
+  const withOccupancy = occupancy != null
 
   return (
     <section className="print-page">
@@ -175,7 +228,9 @@ function PrintPage({ cam, rua, pageIndex, totalPages }: { cam: CamaraConfig; rua
           <p className="print-page-sub">{cam.tipo} · Rua {rua.rua}</p>
         </div>
         <div className="print-page-meta">
-          <span>Ultrafrio — Layout de endereçamento</span>
+          <span>
+            Ultrafrio — {withOccupancy ? 'Mapa de ocupação' : 'Layout de endereçamento'}
+          </span>
           <span>
             Folha {pageIndex + 1} de {totalPages}
           </span>
@@ -183,12 +238,19 @@ function PrintPage({ cam, rua, pageIndex, totalPages }: { cam: CamaraConfig; rua
       </header>
 
       <div className="print-page-body">
-        <PrintRuaGrid camaraId={cam.id} config={rua} dims={dims} />
+        <PrintRuaGrid camaraId={cam.id} config={rua} dims={dims} occupancy={occupancy} />
       </div>
 
       <footer className="print-page-footer">
         <div className="print-legend">
-          <span><i className="print-swatch print-swatch--disp" /> Posição</span>
+          {withOccupancy ? (
+            <>
+              <span><i className="print-swatch print-swatch--ocup" /> Ocupado (NF)</span>
+              <span><i className="print-swatch print-swatch--disp" /> Disponível</span>
+            </>
+          ) : (
+            <span><i className="print-swatch print-swatch--disp" /> Posição</span>
+          )}
           <span><i className="print-swatch print-swatch--porta" /> Porta</span>
           <span><i className="print-swatch print-swatch--nv5" /> Nív. 5 inexistente</span>
         </div>
@@ -208,7 +270,7 @@ function PrintPage({ cam, rua, pageIndex, totalPages }: { cam: CamaraConfig; rua
   )
 }
 
-export function PrintLayoutDocument({ camaraIds }: Props) {
+export function PrintLayoutDocument({ camaraIds, occupancy }: Props) {
   const pages: { cam: CamaraConfig; rua: RuaConfig }[] = []
 
   for (const cam of CAMARAS) {
@@ -223,7 +285,14 @@ export function PrintLayoutDocument({ camaraIds }: Props) {
   return (
     <div className="print-document" aria-hidden>
       {pages.map(({ cam, rua }, i) => (
-        <PrintPage key={`${cam.id}-r${rua.rua}`} cam={cam} rua={rua} pageIndex={i} totalPages={pages.length} />
+        <PrintPage
+          key={`${cam.id}-r${rua.rua}`}
+          cam={cam}
+          rua={rua}
+          pageIndex={i}
+          totalPages={pages.length}
+          occupancy={occupancy}
+        />
       ))}
     </div>
   )

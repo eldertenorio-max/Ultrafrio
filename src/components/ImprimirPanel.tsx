@@ -6,6 +6,7 @@ type Props = {
   onToggleCamara: (id: number) => void
   onSelectAll: () => void
   onClearAll: () => void
+  onPrint: (withOccupancy: boolean, orientacao: 'landscape' | 'portrait') => void
 }
 
 export function ImprimirPanel({
@@ -13,29 +14,20 @@ export function ImprimirPanel({
   onToggleCamara,
   onSelectAll,
   onClearAll,
+  onPrint,
 }: Props) {
   const [orientacao, setOrientacao] = useState<'landscape' | 'portrait'>('landscape')
   const totalFolhas = useMemo(() => {
     return CAMARAS.filter((c) => selectedCamaras.includes(c.id)).reduce((s, c) => s + c.ruas.length, 0)
   }, [selectedCamaras])
 
-  function handlePrint() {
-    const styleId = 'print-page-style'
-    let el = document.getElementById(styleId) as HTMLStyleElement | null
-    if (!el) {
-      el = document.createElement('style')
-      el.id = styleId
-      document.head.appendChild(el)
-    }
-    el.textContent = `@page { size: A4 ${orientacao}; margin: 5mm; }`
-    window.print()
-  }
+  const disabled = selectedCamaras.length === 0
 
   return (
     <div className="imprimir-panel">
       <p className="muted">
-        Gera o layout em branco para impressão. Cada rua ocupa uma folha inteira — ideal para frente e verso
-        (Rua 1 na frente, Rua 2 no verso).
+        Imprima o layout das câmaras selecionadas — em branco para endereçar manualmente, ou
+        preenchido com as NFs e posições ocupadas como aparecem no painel.
       </p>
 
       <div className="sidebar-block">
@@ -105,14 +97,24 @@ export function ImprimirPanel({
         </p>
       </div>
 
-      <button
-        type="button"
-        className="btn primary full"
-        disabled={selectedCamaras.length === 0}
-        onClick={handlePrint}
-      >
-        Imprimir layout ({totalFolhas} folha{totalFolhas !== 1 ? 's' : ''})
-      </button>
+      <div className="imprimir-actions">
+        <button
+          type="button"
+          className="btn primary full"
+          disabled={disabled}
+          onClick={() => onPrint(true, orientacao)}
+        >
+          Imprimir mapa preenchido ({totalFolhas} folha{totalFolhas !== 1 ? 's' : ''})
+        </button>
+        <button
+          type="button"
+          className="btn full"
+          disabled={disabled}
+          onClick={() => onPrint(false, orientacao)}
+        >
+          Imprimir layout em branco ({totalFolhas} folha{totalFolhas !== 1 ? 's' : ''})
+        </button>
+      </div>
     </div>
   )
 }

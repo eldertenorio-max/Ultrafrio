@@ -183,6 +183,8 @@ export default function App() {
   const [uploadCanceladaError, setUploadCanceladaError] = useState<string | null>(null)
   const [canceladaPendenteId, setCanceladaPendenteId] = useState<string | null>(null)
   const [printCamaras, setPrintCamaras] = useState<number[]>(() => CAMARAS.map((c) => c.id))
+  const [printWithOccupancy, setPrintWithOccupancy] = useState(false)
+  const [printOrientacao, setPrintOrientacao] = useState<'landscape' | 'portrait'>('landscape')
   const [ocupadoAlert, setOcupadoAlert] = useState<{
     addressId: AddressId
     occ: AddressOccupancy
@@ -233,6 +235,35 @@ export default function App() {
   }, [emAndamentoIds])
 
   const occupancy = useMemo(() => buildOccupancyMap(state.notas), [state.notas])
+  const [printJobId, setPrintJobId] = useState(0)
+
+  const schedulePrint = useCallback(
+    (withOccupancy: boolean, orientacao: 'landscape' | 'portrait') => {
+      setPrintWithOccupancy(withOccupancy)
+      setPrintOrientacao(orientacao)
+      setPrintJobId((n) => n + 1)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (printJobId === 0) return
+    const styleId = 'print-page-style'
+    let el = document.getElementById(styleId) as HTMLStyleElement | null
+    if (!el) {
+      el = document.createElement('style')
+      el.id = styleId
+      document.head.appendChild(el)
+    }
+    el.textContent = `@page { size: A4 ${printOrientacao}; margin: 5mm; }`
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print()
+      })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [printJobId, printOrientacao, printWithOccupancy])
+
   const activeNf = state.notas.find((n) => n.id === state.activeNfId) ?? null
 
   const trySairEntradaIncompleta = useCallback(
@@ -2205,6 +2236,7 @@ export default function App() {
             ),
           onSelectAll: () => setPrintCamaras(CAMARAS.map((c) => c.id)),
           onClearAll: () => setPrintCamaras([]),
+          onPrint: schedulePrint,
         }}
       />
 
@@ -2250,7 +2282,10 @@ export default function App() {
         />
       </main>
 
-      <PrintLayoutDocument camaraIds={printCamaras} />
+      <PrintLayoutDocument
+        camaraIds={printCamaras}
+        occupancy={printWithOccupancy ? occupancy : undefined}
+      />
 
       {entradaPendenteAlert && (
         <EntradaPendenteAlert

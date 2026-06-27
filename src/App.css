@@ -2567,6 +2567,12 @@ html.scroll-locked .sidebar.sidebar--wide {
   font-size: 0.8rem;
 }
 
+.imprimir-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Documento de impressão (oculto na tela) */
 .print-document {
   display: none;
@@ -2655,6 +2661,11 @@ html.scroll-locked .sidebar.sidebar--wide {
   border: 1px solid #333;
 }
 
+.print-swatch--ocup {
+  background: #1a4d8c;
+  border: 1px solid #1a56a8;
+}
+
 .print-swatch--porta {
   background: #1d4ed8;
   border: 1px solid #1d4ed8;
@@ -2730,10 +2741,31 @@ html.scroll-locked .sidebar.sidebar--wide {
   border-top: 0.45mm solid #e87722;
   border-left: 0.45mm solid #1a56a8;
   border-radius: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .print-cell--disponivel {
   background: #fff;
+}
+
+.print-cell--ocupado {
+  background: #1a4d8c;
+}
+
+.print-cell-nf {
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.05;
+  text-align: center;
+  word-break: break-all;
+  padding: 0.2mm;
+  pointer-events: none;
 }
 
 .print-cell--porta {
