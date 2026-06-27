@@ -6,7 +6,7 @@ import {
   formatAddressLabel,
   isClickable,
   makeAddressId,
-  portaCellBackgroundStyle,
+  portaOverlayStyle,
   type CamaraConfig,
   type CellKind,
   type RuaConfig,
@@ -260,7 +260,17 @@ function RuaGrid({
             ))}
           </div>
 
-          <div className="cells-area" style={{ position: 'relative' }}>
+          <div className="cells-area">
+            {config.porta && (
+              <div
+                className="porta-overlay"
+                aria-hidden
+                style={{
+                  ...portaOverlayStyle(config.porta, cellSize, CELL_GAP),
+                  backgroundImage: `url("${portaCamaraUrl}")`,
+                }}
+              />
+            )}
             <div className="cells-stack" style={{ gap: CELL_GAP }}>
               {NIVEIS.map((nivel) => (
                 <div
@@ -316,11 +326,6 @@ function RuaGrid({
                       ((allocateMode || !!editMode) && clickable)
                     if (editMode && (clickable || pending)) className += ' cell--alocavel'
 
-                    const portaBg =
-                      kind === 'porta' && config.porta
-                        ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl)
-                        : null
-
                     return (
                       <button
                         key={addressId}
@@ -329,7 +334,6 @@ function RuaGrid({
                         style={{
                           width: cellSize,
                           height: cellSize,
-                          ...(portaBg ?? {}),
                         }}
                         disabled={!canInteract}
                         data-address-id={addressId}

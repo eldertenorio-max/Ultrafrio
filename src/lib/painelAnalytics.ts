@@ -435,8 +435,54 @@ export function dadosGrafico(
   }
 }
 
+export type PainelSecaoId = 'estoque' | 'movimentacao' | 'operacao'
+
+export type PainelSecao = {
+  id: PainelSecaoId
+  titulo: string
+  subtitulo: string
+  graficos: PainelGraficoId[]
+}
+
+/** Gráficos agrupados por seção na aba Painel. */
+export const PAINEL_SECOES: PainelSecao[] = [
+  {
+    id: 'estoque',
+    titulo: 'Estoque atual',
+    subtitulo: 'Situação em tempo real do armazém',
+    graficos: [
+      'estoque-ocupacao',
+      'estoque-valor-total',
+      'estoque-valor-paletes',
+      'estoque-pos-ocupadas',
+      'estoque-pos-livres',
+      'stage-armazem',
+    ],
+  },
+  {
+    id: 'movimentacao',
+    titulo: 'Movimentação',
+    subtitulo: 'Fluxo e volume no período selecionado',
+    graficos: ['entradas-saidas-dia', 'movimentos-linha', 'movimentos-tipo', 'paletes-dia', 'nfs-dia'],
+  },
+  {
+    id: 'operacao',
+    titulo: 'Operação',
+    subtitulo: 'Emitentes e motivos de saída',
+    graficos: ['top-emitentes', 'saidas-motivo'],
+  },
+]
+
 export function tituloGrafico(id: PainelGraficoId): string {
   return PAINEL_GRAFICOS_SUGESTOES.find((g) => g.id === id)?.titulo ?? id
+}
+
+export function descricaoGrafico(id: PainelGraficoId): string {
+  return PAINEL_GRAFICOS_SUGESTOES.find((g) => g.id === id)?.descricao ?? ''
+}
+
+export function categoriaGrafico(id: PainelGraficoId): PainelSecaoId {
+  return PAINEL_GRAFICOS_SUGESTOES.find((g) => g.id === id)?.categoria ?? 'operacao'
 }
 
 export function tipoVisualGrafico(id: PainelGraficoId): 'bar' | 'line' | 'donut' | 'grouped-bar' {
