@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { MOTIVOS_REMOCAO_ESTOQUE } from '../lib/motivoRemocaoEstoque'
 import type { AddressId, MotivoRemocaoEstoqueId, NotaFiscal } from '../types'
+import { formatAddressLabel } from '../layout/camaras'
 import { itemNoStage } from '../layout/stage'
 import { nfTemEstoqueArmazem, nfTemEstoqueStage } from '../lib/stageEstoque'
 import { NfDetalheLeitura } from './NfDetalheLeitura'
@@ -12,6 +13,10 @@ type Props = {
   itemIndex: number | null
   pendingCount: number
   stagePendingCount: number
+  moveOrigem: AddressId | null
+  moveDestino: AddressId | null
+  marcandoStage: boolean
+  onSetMarcandoStage: (value: boolean) => void
   enderecosOcupados: Set<AddressId>
   enderecosSelecionados: Set<AddressId>
   onBuscar: (numero: string) => void
@@ -32,6 +37,10 @@ export function EditarPosicaoPanel({
   itemIndex,
   pendingCount,
   stagePendingCount,
+  moveOrigem,
+  moveDestino,
+  marcandoStage,
+  onSetMarcandoStage,
   enderecosOcupados,
   enderecosSelecionados,
   onBuscar,
@@ -150,28 +159,55 @@ export function EditarPosicaoPanel({
                 </>
               ) : (
                 <>
-                  {stagePendingCount > 0 ? (
-                    <p className="muted movimentacao-stage-hint">
-                      {stagePendingCount} palete(s) marcado(s) para o stage — clique na área{' '}
-                      <strong>STAGE</strong> no mapa para confirmar.
-                    </p>
+                  <div className="movimentacao-modo-toggle">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${!marcandoStage ? 'primary' : ''}`}
+                      onClick={() => onSetMarcandoStage(false)}
+                    >
+                      Reposicionar
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${marcandoStage ? 'primary' : ''}`}
+                      onClick={() => onSetMarcandoStage(true)}
+                    >
+                      Enviar ao STAGE
+                    </button>
+                  </div>
+                  {marcandoStage ? (
+                    stagePendingCount > 0 ? (
+                      <p className="muted movimentacao-stage-hint">
+                        {stagePendingCount} palete(s) marcado(s) — clique na área{' '}
+                        <strong>STAGE</strong> no mapa para confirmar.
+                      </p>
+                    ) : (
+                      <p className="muted">
+                        Clique nos endereços ocupados do item no mapa para marcar envio ao stage.
+                      </p>
+                    )
                   ) : (
-                    <p className="muted">
-                      Clique nos endereços do item no mapa para enviar ao stage, ou arraste para
-                      reposicionar no armazém. {pendingCount} endereço(s) selecionado(s).
-                    </p>
+                    <>
+                      <p className="muted">
+                        {moveOrigem
+                          ? moveDestino
+                            ? `Origem: ${formatAddressLabel(moveOrigem)} → Destino: ${formatAddressLabel(moveDestino)}`
+                            : `Origem: ${formatAddressLabel(moveOrigem)} — agora clique no destino vazio no mapa.`
+                          : 'Passo 1: clique no endereço ocupado de onde vai tirar. Passo 2: clique no vazio onde vai colocar.'}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn success full"
+                        onClick={() => {
+                          onSalvar()
+                          setNumero('')
+                        }}
+                        disabled={!moveOrigem || !moveDestino || stagePendingCount > 0}
+                      >
+                        Confirmar movimentação
+                      </button>
+                    </>
                   )}
-                  <button
-                    type="button"
-                    className="btn success full"
-                    onClick={() => {
-                      onSalvar()
-                      setNumero('')
-                    }}
-                    disabled={pendingCount === 0 || stagePendingCount > 0}
-                  >
-                    Salvar novas posições
-                  </button>
                 </>
               )}
             </div>

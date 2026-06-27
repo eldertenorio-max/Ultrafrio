@@ -169,6 +169,9 @@ export default function App() {
   const [nfEditarId, setNfEditarId] = useState<string | null>(null)
   const [editItemIndex, setEditItemIndex] = useState<number | null>(null)
   const [editPendingSelection, setEditPendingSelection] = useState<Set<AddressId>>(new Set())
+  const [editMoveOrigem, setEditMoveOrigem] = useState<AddressId | null>(null)
+  const [editMoveDestino, setEditMoveDestino] = useState<AddressId | null>(null)
+  const [editMarcandoStage, setEditMarcandoStage] = useState(false)
   const [buscaEditarErro, setBuscaEditarErro] = useState<string | null>(null)
   const [consultaResultados, setConsultaResultados] = useState<ConsultaEstoqueResultado[]>([])
   const [consultaErro, setConsultaErro] = useState<string | null>(null)
@@ -287,7 +290,6 @@ export default function App() {
   const displayOccupancy = useMemo(() => {
     const map = new Map(occupancy)
     if (editMode) {
-      for (const addr of editPendingSelection) map.delete(addr)
       for (const addr of editStagePending) map.delete(addr)
       return map
     }
@@ -298,7 +300,6 @@ export default function App() {
   }, [
     occupancy,
     editMode,
-    editPendingSelection,
     editStagePending,
     allocateMode,
     activeNf,
@@ -636,9 +637,17 @@ export default function App() {
     const stagePending = editStagePending.has(addressId)
     const editPending = editPendingSelection.has(addressId)
     const entradaPending = pendingSelection.has(addressId)
+    const movOrigemOuDestino =
+      editMoveOrigem === addressId || editMoveDestino === addressId
     handleCellPaint(
       addressId,
-      saidaPending || editPending || stagePending || entradaPending ? 'remove' : 'add',
+      saidaPending ||
+        editPending ||
+        stagePending ||
+        entradaPending ||
+        movOrigemOuDestino
+        ? 'remove'
+        : 'add',
       canInteract,
     )
   }
@@ -681,54 +690,60 @@ export default function App() {
         return
       }
 
+      if (editMarcandoStage) {
+        if (occ) {
+          const mesmoItem = occ.nfId === nfEditar.id && occ.itemIndex === editItemIndex
+          if (!mesmoItem) {
+            setOcupadoAlert({ addressId, occ })
+            return
+          }
+
+          if (mode === 'add') {
+            setEditStagePending((prev) => {
+              if (prev.has(addressId)) return prev
+              const next = new Set(prev)
+              next.add(addressId)
+              return next
+            })
+            setEditMoveOrigem(null)
+            setEditMoveDestino(null)
+          } else {
+            setEditStagePending((prev) => {
+              const next = new Set(prev)
+              next.delete(addressId)
+              return next
+            })
+          }
+        }
+        return
+      }
+
       if (occ) {
         const mesmoItem = occ.nfId === nfEditar.id && occ.itemIndex === editItemIndex
         if (!mesmoItem) {
           setOcupadoAlert({ addressId, occ })
           return
         }
+        if (!item.allocatedAddresses.includes(addressId)) return
 
         if (mode === 'add') {
-          setEditStagePending((prev) => {
-            if (prev.has(addressId)) return prev
-            const next = new Set(prev)
-            next.add(addressId)
-            return next
-          })
-          setEditPendingSelection((prev) => {
-            const next = new Set(prev)
-            next.delete(addressId)
-            return next
-          })
-        } else {
-          setEditStagePending((prev) => {
-            const next = new Set(prev)
-            next.delete(addressId)
-            return next
-          })
-          setEditPendingSelection((prev) => {
-            const next = new Set(prev)
-            if (editOriginalAddressesRef.current.has(addressId)) {
-              next.add(addressId)
-            }
-            return next
-          })
+          setEditMoveOrigem((prev) => (prev === addressId ? null : addressId))
+          setEditMoveDestino(null)
+        } else if (editMoveOrigem === addressId) {
+          setEditMoveOrigem(null)
+          setEditMoveDestino(null)
         }
         return
       }
 
-      setEditPendingSelection((prev) => {
-        const next = new Set(prev)
-        if (mode === 'add') {
-          if (next.has(addressId)) return prev
-          const origem = [...editOriginalAddressesRef.current].find((a) => next.has(a))
-          if (origem) next.delete(origem)
-          next.add(addressId)
-        } else {
-          next.delete(addressId)
-        }
-        return next
-      })
+      if (occupancy.has(addressId)) return
+
+      if (mode === 'add') {
+        if (!editMoveOrigem) return
+        setEditMoveDestino((prev) => (prev === addressId ? null : addressId))
+      } else if (editMoveDestino === addressId) {
+        setEditMoveDestino(null)
+      }
       return
     }
 
@@ -1627,6 +1642,9 @@ export default function App() {
       editOriginalAddressesRef.current = new Set()
       setEditItemIndex(index)
       setEditPendingSelection(new Set())
+      setEditMoveOrigem(null)
+      setEditMoveDestino(null)
+      setEditMarcandoStage(false)
       setDetailAddress(null)
       return
     }
@@ -1635,7 +1653,10 @@ export default function App() {
     const original = new Set(item.allocatedAddresses)
     editOriginalAddressesRef.current = original
     setEditItemIndex(index)
-    setEditPendingSelection(new Set(original))
+    setEditPendingSelection(new Set())
+    setEditMoveOrigem(null)
+    setEditMoveDestino(null)
+    setEditMarcandoStage(false)
     setDetailAddress(null)
   }
 
@@ -1667,6 +1688,7 @@ export default function App() {
     setState(nextState)
     await saveNow(nextState)
     setEditStagePending(new Set())
+    setEditMarcandoStage(false)
 
     const updatedItem = updatedNf.items.find((it) => it.index === currentItemIndex)
     if (
@@ -1675,7 +1697,8 @@ export default function App() {
       updatedItem.allocatedAddresses.length > 0
     ) {
       editOriginalAddressesRef.current = new Set(updatedItem.allocatedAddresses)
-      setEditPendingSelection(new Set(updatedItem.allocatedAddresses))
+      setEditMoveOrigem(null)
+      setEditMoveDestino(null)
     } else {
       setEditItemIndex(null)
       setEditPendingSelection(new Set())
@@ -1684,13 +1707,14 @@ export default function App() {
   }
 
   async function handleSalvarEditar() {
-    if (!nfEditar || editItemIndex == null || editPendingSelection.size === 0) return
-    const addresses = [...editPendingSelection]
+    if (!nfEditar || editItemIndex == null) return
     const currentItemIndex = editItemIndex
     const item = nfEditar.items.find((it) => it.index === currentItemIndex)
     if (!item) return
 
     if (itemNoStage(item)) {
+      if (editPendingSelection.size === 0) return
+      const addresses = [...editPendingSelection]
       const notas = state.notas.map((nf) =>
         nf.id === nfEditar.id
           ? moverItemStageParaArmazem(nf, currentItemIndex, addresses)
@@ -1712,6 +1736,14 @@ export default function App() {
       setEditItemIndex(null)
       return
     }
+
+    if (!editMoveOrigem || !editMoveDestino) return
+    if (!item.allocatedAddresses.includes(editMoveOrigem)) return
+    if (occupancy.has(editMoveDestino)) return
+
+    const addresses = item.allocatedAddresses
+      .filter((a) => a !== editMoveOrigem)
+      .concat(editMoveDestino)
 
     const original = editOriginalAddressesRef.current
     if (!enderecosAlterados(original, addresses)) return
@@ -1744,8 +1776,9 @@ export default function App() {
     setState(nextState)
     await saveNow(nextState)
     editOriginalAddressesRef.current = new Set(addresses)
-    setEditPendingSelection(new Set())
-    setEditItemIndex(null)
+    setEditMoveOrigem(null)
+    setEditMoveDestino(null)
+    setEditMarcandoStage(false)
   }
 
   function handleCancelarEditar() {
@@ -1753,6 +1786,9 @@ export default function App() {
     setEditItemIndex(null)
     setEditPendingSelection(new Set())
     setEditStagePending(new Set())
+    setEditMoveOrigem(null)
+    setEditMoveDestino(null)
+    setEditMarcandoStage(false)
     editOriginalAddressesRef.current = new Set()
     setBuscaEditarErro(null)
   }
@@ -2103,6 +2139,15 @@ export default function App() {
           itemIndex: editItemIndex,
           pendingCount: editPendingSelection.size,
           stagePendingCount: editStagePending.size,
+          moveOrigem: editMoveOrigem,
+          moveDestino: editMoveDestino,
+          marcandoStage: editMarcandoStage,
+          onSetMarcandoStage: (value) => {
+            setEditMarcandoStage(value)
+            setEditMoveOrigem(null)
+            setEditMoveDestino(null)
+            setEditStagePending(new Set())
+          },
           enderecosOcupados: editEnderecosOcupados,
           enderecosSelecionados: editPendingSelection,
           onBuscar: handleBuscarEditar,
@@ -2156,7 +2201,10 @@ export default function App() {
           activeNfId={editMode ? nfEditar?.id ?? null : activeNf?.id ?? null}
           allocateMode={panelAllocateMode}
           editMode={editMode}
-          editAddresses={nfEditar ? editNfAddresses : undefined}
+          editMoveOrigem={editMode ? editMoveOrigem : null}
+          editMoveDestino={editMode ? editMoveDestino : null}
+          editMarcandoStage={editMode ? editMarcandoStage : false}
+          editAddresses={nfEditar && editItemIndex == null ? editNfAddresses : undefined}
           consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
           notas={state.notas}
           stageHighlighted={consultaStageHighlighted}
@@ -2171,8 +2219,8 @@ export default function App() {
           }
           saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
           paintMode={
-            editMode ||
-            nfEmEdicao ||
+            (editMode && editMarcandoStage) ||
+            (nfEmEdicao && !editMode) ||
             allocateMode ||
             (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
           }

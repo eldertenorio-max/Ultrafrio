@@ -1170,6 +1170,16 @@
   color: #b45309;
 }
 
+.movimentacao-modo-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.movimentacao-modo-toggle .btn {
+  flex: 1;
+}
+
 .stage-section--drop-target {
   outline: 2px solid #f59e0b;
   outline-offset: 4px;

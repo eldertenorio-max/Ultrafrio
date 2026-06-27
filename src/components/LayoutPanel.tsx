@@ -31,6 +31,9 @@ type Props = {
   allocateMode: boolean
   editMode?: boolean
   editAddresses?: Set<AddressId>
+  editMoveOrigem?: AddressId | null
+  editMoveDestino?: AddressId | null
+  editMarcandoStage?: boolean
   saidaAddresses?: Set<AddressId>
   saidaItemDestaqueAddresses?: Set<AddressId>
   saidaFlaggedAddresses?: Set<AddressId>
@@ -207,6 +210,9 @@ function RuaGrid({
   allocateMode,
   editMode,
   editAddresses,
+  editMoveOrigem = null,
+  editMoveDestino = null,
+  editMarcandoStage = false,
   saidaAddresses,
   saidaItemDestaqueAddresses,
   saidaFlaggedAddresses,
@@ -298,10 +304,12 @@ function RuaGrid({
                       !!activeNfId &&
                       occ.nfId === activeNfId
                     if (occ) className += ' cell--ocupado'
-                    if (stagePending) className += ' cell--stage-pending'
+                    if (editMoveOrigem === addressId) className += ' cell--selecionado'
+                    else if (editMoveDestino === addressId) className += ' cell--destaque-verde'
+                    else if (stagePending) className += ' cell--stage-pending'
                     else if (pending) className += editMode ? ' cell--destaque-verde' : ' cell--selecionado'
                     else if (confirmed) className += ' cell--confirmado'
-                    if (editAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
+                    if (editAddresses?.has(addressId) && !pending && !editMode) className += ' cell--destaque-verde'
                     else if (consultaAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
                     else if (saidaFlaggedAddresses?.has(addressId)) className += ' cell--saida-flag'
                     else if (saidaItemDestaqueAddresses?.has(addressId) && !pending)
@@ -310,11 +318,29 @@ function RuaGrid({
                     if (allocateMode && (clickable || pending)) className += ' cell--alocavel'
                     if (paintMode && (clickable || pending)) className += ' cell--pintavel'
 
-                    const title = cellTooltip(addressId, kind, allocateMode, editMode, occ, pending)
-                    const canInteract =
-                      !!occ ||
-                      pending ||
-                      ((allocateMode || !!editMode) && clickable)
+                    const title = cellTooltip(
+                      addressId,
+                      kind,
+                      allocateMode,
+                      editMode,
+                      occ,
+                      pending,
+                      editMoveOrigem,
+                      editMoveDestino,
+                    )
+                    const canInteract = Boolean(
+                      editMoveOrigem === addressId ||
+                        editMoveDestino === addressId ||
+                        occ ||
+                        pending ||
+                        (editMode &&
+                          editMarcandoStage &&
+                          (occ || (clickable && !occ))) ||
+                        (editMode &&
+                          !editMarcandoStage &&
+                          (occ || (editMoveOrigem && clickable && !occ))) ||
+                        ((allocateMode || (editMode && editMarcandoStage)) && clickable),
+                    )
                     if (editMode && (clickable || pending)) className += ' cell--alocavel'
 
                     const portaBg =
@@ -436,14 +462,19 @@ function cellTooltip(
   editMode?: boolean,
   occ?: AddressOccupancy,
   pending?: boolean,
+  editMoveOrigem?: AddressId | null,
+  editMoveDestino?: AddressId | null,
 ): string {
   const label = formatAddressLabel(addressId)
-  if (pending) return `${label} — Selecionando (clique ou arraste para remover)`
-  if (occ) return `${label} — NF ${occ.nfNumero} (confirmado)`
+  if (pending) return `${label} — Selecionando (clique para remover)`
+  if (editMoveOrigem === addressId) return `${label} — Origem (de onde tirar)`
+  if (editMoveDestino === addressId) return `${label} — Destino (onde colocar)`
+  if (occ) return `${label} — NF ${occ.nfNumero}${editMode ? ' (clique para marcar origem)' : ' (confirmado)'}`
   if (kind === 'porta') return `${label} — Porta`
   if (kind === 'bloqueado') return `${label} — Indisponível`
   if (kind === 'sem-nivel5') return `${label} — Nível 5 inexistente`
-  if (editMode) return `${label} — Disponível (clique ou arraste para selecionar)`
+  if (editMode && editMoveOrigem) return `${label} — Disponível (clique para marcar destino)`
+  if (editMode) return `${label} — Disponível (marque a origem primeiro)`
   if (allocateMode) return `${label} — Disponível (clique ou arraste para selecionar)`
   return `${label} — Disponível`
 }
@@ -545,7 +576,11 @@ export function LayoutPanel(props: Props) {
         <p className="layout-hint">
           {props.stageDropEnabled
             ? 'Clique na área STAGE abaixo para confirmar a movimentação dos paletes marcados.'
-            : 'Físico → stage: clique nos endereços do item. Stage → físico: use os campos ou clique/arraste no mapa.'}
+            : props.editMarcandoStage
+              ? 'Modo STAGE: clique nos endereços ocupados do item para marcar envio ao stage.'
+              : props.editMoveOrigem
+                ? 'Passo 2: clique no quadrado vazio onde vai colocar o palete (verde).'
+                : 'Passo 1: clique no endereço ocupado de onde vai tirar (roxo).'}
         </p>
       )}
       {props.editAddresses && props.editAddresses.size > 0 && !props.editMode && (
