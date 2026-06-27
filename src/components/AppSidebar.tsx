@@ -93,6 +93,7 @@ export function AppSidebar({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      <div className="sidebar-layout">
       <div className="sidebar-body">
       <div className="sidebar-block sidebar-header">
         <div className="sidebar-header-brand">
@@ -205,6 +206,7 @@ export function AppSidebar({
       >
         <SidebarLayoutControl mode={sidebarMode} onChange={onSidebarModeChange} />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      </div>
       </div>
     </aside>
   )
