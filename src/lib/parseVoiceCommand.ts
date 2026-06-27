@@ -198,6 +198,7 @@ function buildCommandExamples(): { frase: string; descricao: string }[] {
     { frase: `${wake} últimos sete dias`, descricao: 'Filtra o painel pelos últimos 7 dias.' },
     { frase: `${wake} último mês`, descricao: 'Filtra o painel pelos últimos 30 dias.' },
     { frase: `${wake} painel hoje`, descricao: 'Filtra o painel para hoje.' },
+    { frase: `${wake} confirme`, descricao: 'Confirma a movimentação se a distribuição estiver completa.' },
     {
       frase: `${wake} confirmar movimentação`,
       descricao: 'Confirma reposição se a distribuição estiver completa.',
@@ -295,7 +296,7 @@ export function parseVoiceCommand(text: string): VoiceCommand | null {
     return { type: 'sidebar_mode', mode: 'collapsed', label: 'Menu recolhido' }
   }
 
-  if (/\bconfirmar movimentac/.test(norm)) {
+  if (/^(confirme|confirmar)$/.test(norm) || /\bconfirmar movimentac/.test(norm)) {
     return { type: 'confirmar_movimentacao' }
   }
 

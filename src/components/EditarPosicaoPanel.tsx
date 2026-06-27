@@ -21,7 +21,7 @@ type Props = {
   marcandoStage: boolean
   onSetMarcandoStage: (value: boolean) => void
   onSelectVozOrigem: (addressId: AddressId, itemIndex: number) => void
-  onVozDestino: (transcript: string) => void
+  onVozDestino: (transcript: string) => boolean
   onVozErro: (message: string) => void
   onLimparVozErro: () => void
   onPrepareLocalSpeech?: () => void

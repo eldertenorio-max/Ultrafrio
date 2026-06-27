@@ -1,10 +1,12 @@
+import { useRef } from 'react'
 import { formatAddressLabel } from '../layout/camaras'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import type { AddressId } from '../types'
 
 type Props = {
   origemSelecionada: AddressId | null
-  onDestinoFalado: (transcript: string) => void
+  /** Retorna true quando a distribuição ficou completa e pode ouvir "confirme". */
+  onDestinoFalado: (transcript: string) => boolean
   onErro: (message: string) => void
   erro: string | null
   onLimparErro: () => void
@@ -22,15 +24,45 @@ export function MovimentacaoVozControle({
   onReleaseMic,
 }: Props) {
   const { listening, supported, interimTranscript, start, stop } = useSpeechRecognition()
+  const confirmListenRef = useRef(false)
+
+  function startConfirmListen() {
+    confirmListenRef.current = true
+    window.setTimeout(() => {
+      if (!confirmListenRef.current) return
+      start(
+        (text) => {
+          confirmListenRef.current = false
+          onDestinoFalado(text)
+        },
+        onErro,
+        {
+          extended: false,
+          maxDurationMs: 12000,
+          silenceAfterSpeechMs: 2500,
+          onPrepareMic,
+          onReleaseMic,
+        },
+      )
+    }, 450)
+  }
+
+  function handleSpeechResult(text: string) {
+    const listenForConfirm = onDestinoFalado(text)
+    if (listenForConfirm) {
+      startConfirmListen()
+    }
+  }
 
   function handleMicClick() {
     onLimparErro()
+    confirmListenRef.current = false
     if (listening) {
       stop()
       return
     }
     if (!origemSelecionada) return
-    start(onDestinoFalado, onErro, {
+    start(handleSpeechResult, onErro, {
       extended: true,
       maxDurationMs: 20000,
       silenceAfterSpeechMs: 3500,
@@ -53,8 +85,9 @@ export function MovimentacaoVozControle({
             {origemSelecionada ? (
               <>
                 Origem: <strong>{formatAddressLabel(origemSelecionada)}</strong> — toque no
-                microfone e fale o destino com calma (até ~20 s). Ex.: &quot;câmara 6 rua 1 coluna 2
-                nível 3&quot;.
+                microfone e fale o destino com calma (até ~20 s). Depois diga{' '}
+                <strong>confirme</strong> para salvar. Ex.: &quot;câmara 6 rua 1 coluna 2 nível 3
+                confirme&quot;.
               </>
             ) : (
               <>Selecione um endereço na lista acima e depois fale para onde mover.</>

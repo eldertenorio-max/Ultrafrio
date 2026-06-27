@@ -1427,9 +1427,14 @@
 }
 
 .addr-voz-origem {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: #a371f7;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--cell-destaque-verde) 48%, var(--bg-elevated));
+  outline: 2px solid var(--cell-sel);
+  outline-offset: -1px;
+  box-shadow: inset 3px 0 0 var(--cell-sel);
+  border-radius: 4px;
+  padding: 1px 4px;
 }
 
 .stage-section--drop-target {
@@ -1835,17 +1840,6 @@
 .cell--ocupado.cell--selecionado:focus-visible {
   background-color: var(--cell-ocup);
   filter: brightness(1.1);
-}
-
-.cell--voz-origem {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
-  z-index: 4;
-}
-
-.cell--ocupado.cell--voz-origem {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .cell--confirmado {

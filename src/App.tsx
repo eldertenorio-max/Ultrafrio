@@ -76,6 +76,7 @@ import { findNotaByNumero, mensagemNfCanceladaDuplicada, mensagemNfDuplicada } f
 import { parseCanceladaXml } from './lib/parseCanceladaXml'
 import { parseNfeReferenciaChaves, parseNfeXml } from './lib/parseNfeXml'
 import { parseEnderecoFalado, validarEnderecoDestinoVoz } from './lib/parseEnderecoFalado'
+import { splitMovimentacaoVozTranscript } from './lib/movimentacaoVoz'
 import {
   documentoSaidaFromNota,
   notasDisponiveisParaSaida,
@@ -1788,48 +1789,72 @@ export default function App() {
     setVozOrigemAddress(addressId)
   }
 
-  function handleVozDestino(transcript: string) {
-    if (!transcript.trim()) return
+  function handleVozDestino(transcript: string): boolean {
+    if (!transcript.trim()) return false
     setVozErro(null)
-    if (!vozOrigemAddress || !nfEditar || editItemIndex == null || editMarcandoStage) return
 
-    const destId = parseEnderecoFalado(transcript)
-    if (!destId) {
-      setVozErro(
-        `Não entendi "${transcript.trim()}". Fale devagar: "câmara 6 rua 1 coluna 2 nível 3".`,
+    const { addressText, confirm } = splitMovimentacaoVozTranscript(transcript)
+
+    if (addressText) {
+      if (!vozOrigemAddress || !nfEditar || editItemIndex == null || editMarcandoStage) return false
+
+      const destId = parseEnderecoFalado(addressText)
+      if (!destId) {
+        setVozErro(
+          `Não entendi "${addressText.trim()}". Fale devagar: "câmara 6 rua 1 coluna 2 nível 3".`,
+        )
+        return false
+      }
+
+      const item = nfEditar.items.find((it) => it.index === editItemIndex)
+      if (!item?.allocatedAddresses.includes(vozOrigemAddress)) {
+        setVozErro('Endereço de origem inválido para este item.')
+        return false
+      }
+
+      const validationError = validarEnderecoDestinoVoz(
+        destId,
+        occupancy,
+        editMoveOrigens,
+        editMoveDestinos,
+        vozOrigemAddress,
       )
-      return
+      if (validationError) {
+        setVozErro(validationError)
+        return false
+      }
+
+      const origem = vozOrigemAddress
+      const nextOrigens = new Set(editMoveOrigensRef.current)
+      nextOrigens.add(origem)
+      const nextDestinos = new Set(editMoveDestinosRef.current)
+      nextDestinos.add(destId)
+      editMoveOrigensRef.current = nextOrigens
+      editMoveDestinosRef.current = nextDestinos
+      setEditMoveOrigens(nextOrigens)
+      setEditMoveDestinos(nextDestinos)
+      setVozOrigemAddress(null)
+
+      if (!confirm) {
+        return nextOrigens.size > 0 && nextOrigens.size === nextDestinos.size
+      }
+    } else if (!confirm) {
+      return false
     }
 
-    const item = nfEditar.items.find((it) => it.index === editItemIndex)
-    if (!item?.allocatedAddresses.includes(vozOrigemAddress)) {
-      setVozErro('Endereço de origem inválido para este item.')
-      return
+    if (confirm) {
+      if (
+        editMoveOrigensRef.current.size === 0 ||
+        editMoveOrigensRef.current.size !== editMoveDestinosRef.current.size
+      ) {
+        setVozErro('Distribuição incompleta. Fale o destino antes de confirmar.')
+        return false
+      }
+      void handleSalvarEditar()
+      return false
     }
 
-    const validationError = validarEnderecoDestinoVoz(
-      destId,
-      occupancy,
-      editMoveOrigens,
-      editMoveDestinos,
-      vozOrigemAddress,
-    )
-    if (validationError) {
-      setVozErro(validationError)
-      return
-    }
-
-    setEditMoveOrigens((prev) => {
-      const next = new Set(prev)
-      next.add(vozOrigemAddress)
-      return next
-    })
-    setEditMoveDestinos((prev) => {
-      const next = new Set(prev)
-      next.add(destId)
-      return next
-    })
-    setVozOrigemAddress(null)
+    return false
   }
 
   function handleAdicionarEnderecoDestino(addressId: AddressId) {
@@ -2319,6 +2344,13 @@ export default function App() {
           break
         case 'confirmar_movimentacao':
           handleOpenSection('editar')
+          if (
+            editMoveOrigensRef.current.size === 0 ||
+            editMoveOrigensRef.current.size !== editMoveDestinosRef.current.size
+          ) {
+            setVoiceFeedback('Distribuição incompleta. Complete os destinos antes de confirmar.')
+            break
+          }
           void handleSalvarEditar()
           break
         case 'sidebar_mode':

@@ -313,7 +313,7 @@ function RuaGrid({
                     if (occ) className += ' cell--ocupado'
                     if (editMoveOrigens?.has(addressId)) className += ' cell--selecionado'
                     else if (editMoveDestinos?.has(addressId)) className += ' cell--destaque-verde'
-                    else if (focusAddressId === addressId) className += ' cell--voz-origem'
+                    else if (focusAddressId === addressId) className += ' cell--selecionado'
                     else if (stagePending) className += ' cell--stage-pending'
                     else if (pending) className += editMode ? ' cell--destaque-verde' : ' cell--selecionado'
                     else if (confirmed) className += ' cell--confirmado'
