@@ -7,7 +7,6 @@ import {
   isClickable,
   makeAddressId,
   portaCellBackgroundStyle,
-  rackGridOverlaySize,
   type CamaraConfig,
   type CellKind,
   type RuaConfig,
@@ -226,7 +225,6 @@ function RuaGrid({
   const headerH = Math.max(14, Math.round(cellSize * 0.72))
   const axisFont = cellSize >= 36 ? 11 : 9
   const gridWidth = labelW + 6 + config.colunas * cellSize + (config.colunas - 1) * CELL_GAP
-  const rackGrid = rackGridOverlaySize(config.colunas, NIVEIS.length, cellSize, CELL_GAP)
 
   return (
     <div className="rua-block">
@@ -356,15 +354,6 @@ function RuaGrid({
                 </div>
               ))}
             </div>
-            <div
-              className="rack-grid-overlay"
-              aria-hidden
-              style={{
-                width: rackGrid.width,
-                height: rackGrid.height,
-                backgroundSize: rackGrid.backgroundSize,
-              }}
-            />
           </div>
         </div>
           </div>

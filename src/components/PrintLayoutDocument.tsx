@@ -4,7 +4,6 @@ import {
   cellKind,
   makeAddressId,
   portaCellBackgroundStyle,
-  rackGridOverlaySize,
   type CamaraConfig,
   type RuaConfig,
 } from '../layout/camaras'
@@ -79,7 +78,6 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
   const { cellW, cellH, labelW } = dims
   const colFont = printColAxisFont(cellW)
   const rowFont = printRowAxisFont(cellH)
-  const rackGrid = rackGridOverlaySize(config.colunas, NIVEIS.length, cellW, CELL_GAP, cellH)
 
   return (
     <div className="print-rua-grid">
@@ -152,15 +150,6 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
               </div>
             ))}
           </div>
-          <div
-            className="print-rack-grid-overlay"
-            aria-hidden
-            style={{
-              width: `${rackGrid.width}mm`,
-              height: `${rackGrid.height}mm`,
-              backgroundSize: `${cellW + CELL_GAP}mm ${cellH + CELL_GAP}mm`,
-            }}
-          />
         </div>
       </div>
     </div>

@@ -1449,28 +1449,13 @@
 }
 
 .cells-area {
-  position: relative;
   border-right: var(--rack-upright-w) solid var(--rack-upright);
   border-bottom: var(--rack-beam-w) solid var(--rack-beam);
   border-radius: 2px;
-  isolation: isolate;
-}
-
-.rack-grid-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  pointer-events: none;
-  /* Vertical (1ª camada) desenhada por cima da horizontal (2ª) nos cruzamentos. */
-  background-image:
-    linear-gradient(to right, var(--rack-upright) var(--rack-upright-w), transparent var(--rack-upright-w)),
-    linear-gradient(to bottom, var(--rack-beam) var(--rack-beam-w), transparent var(--rack-beam-w));
+  overflow: hidden;
 }
 
 .cells-stack {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
 }
@@ -1481,6 +1466,8 @@
 
 .cell {
   border: none;
+  border-top: var(--rack-beam-w) solid var(--rack-beam);
+  border-left: var(--rack-upright-w) solid var(--rack-upright);
   border-radius: 0;
   padding: 0;
   position: relative;
@@ -2723,23 +2710,10 @@ html.scroll-locked .sidebar.sidebar--wide {
   position: relative;
   border-right: 0.45mm solid #1a56a8;
   border-bottom: 0.45mm solid #e87722;
-  isolation: isolate;
-}
-
-.print-rack-grid-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  pointer-events: none;
-  background-image:
-    linear-gradient(to right, #1a56a8 0.45mm, transparent 0.45mm),
-    linear-gradient(to bottom, #e87722 0.45mm, transparent 0.45mm);
+  overflow: hidden;
 }
 
 .print-cells-stack {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
 }
@@ -2750,7 +2724,8 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .print-cell {
   box-sizing: border-box;
-  border: none;
+  border-top: 0.45mm solid #e87722;
+  border-left: 0.45mm solid #1a56a8;
   border-radius: 0;
 }
 

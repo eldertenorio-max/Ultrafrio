@@ -192,18 +192,3 @@ export function portaCellBackgroundStyle(
     backgroundRepeat: 'no-repeat',
   }
 }
-
-/** Dimensões da malha de linhas do rack (verticais por cima das horizontais). */
-export function rackGridOverlaySize(
-  colunas: number,
-  rows: number,
-  cellW: number,
-  gap: number,
-  cellH: number = cellW,
-): { width: number; height: number; backgroundSize: string } {
-  return {
-    width: colunas * cellW + (colunas - 1) * gap,
-    height: rows * cellH + (rows - 1) * gap,
-    backgroundSize: `${cellW + gap}px ${cellH + gap}px`,
-  }
-}
