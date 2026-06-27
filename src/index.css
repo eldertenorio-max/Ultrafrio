@@ -22,7 +22,6 @@
   --rack-bay: #ffffff;
   --rack-upright-w: 3px;
   --rack-beam-w: 3px;
-  --cell-fill-inset: 3px;
   --overlay: rgb(0 0 0 / 0.67);
   --overlay-strong: rgb(0 0 0 / 0.73);
   --shadow-sidebar: 8px 0 28px rgb(0 0 0 / 0.4);
@@ -75,7 +74,6 @@
   --rack-bay: #ffffff;
   --rack-upright-w: 3px;
   --rack-beam-w: 3px;
-  --cell-fill-inset: 3px;
   --overlay: rgb(0 0 0 / 0.4);
   --overlay-strong: rgb(0 0 0 / 0.5);
   --shadow-sidebar: 8px 0 24px rgb(0 0 0 / 0.1);
