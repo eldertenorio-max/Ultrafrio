@@ -6,57 +6,43 @@ type Props = {
   onChange: (mode: SidebarMode) => void
 }
 
-const CYCLE: SidebarMode[] = ['collapsed', 'open', 'fullscreen']
-
-const MODE_META: Record<
-  SidebarMode,
-  { label: string; title: string }
-> = {
-  collapsed: {
-    label: 'Recolhido',
-    title: 'Menu recolhido — clique para alternar o layout',
-  },
-  open: {
-    label: 'Aberto',
-    title: 'Menu aberto — clique para alternar o layout',
-  },
-  fullscreen: {
-    label: 'Tela cheia',
-    title: 'Menu em tela cheia — clique para alternar o layout',
-  },
-}
+const OPTIONS: { id: SidebarMode; label: string; title: string }[] = [
+  { id: 'collapsed', label: 'Recolhido', title: 'Menu recolhido' },
+  { id: 'open', label: 'Aberto', title: 'Menu aberto ao lado do mapa' },
+  { id: 'fullscreen', label: 'Tela cheia', title: 'Menu em tela cheia' },
+]
 
 export function SidebarLayoutControl({ mode, onChange }: Props) {
-  const meta = MODE_META[mode]
-
   function stopSidebar(e: MouseEvent | PointerEvent) {
     e.stopPropagation()
   }
 
-  function cycleMode() {
-    const index = CYCLE.indexOf(mode)
-    onChange(CYCLE[(index + 1) % CYCLE.length])
-  }
-
   return (
-    <button
-      type="button"
-      className="sidebar-layout-toggle"
-      title={meta.title}
-      aria-label={meta.title}
+    <div
+      className="sidebar-layout-control"
+      role="group"
+      aria-label="Layout do menu lateral"
       onPointerDown={stopSidebar}
-      onClick={(e) => {
-        stopSidebar(e)
-        cycleMode()
-      }}
+      onClick={stopSidebar}
     >
-      <span className="sidebar-layout-toggle-icon" aria-hidden>
-        {mode === 'collapsed' && <CollapsedIcon />}
-        {mode === 'open' && <OpenIcon />}
-        {mode === 'fullscreen' && <FullscreenIcon />}
-      </span>
-      <span className="sidebar-layout-toggle-label">{meta.label}</span>
-    </button>
+      {OPTIONS.map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          className={`sidebar-layout-btn${mode === opt.id ? ' sidebar-layout-btn--active' : ''}`}
+          title={opt.title}
+          aria-label={opt.title}
+          aria-pressed={mode === opt.id}
+          onClick={() => onChange(opt.id)}
+        >
+          <span className="sidebar-layout-btn-icon" aria-hidden>
+            {opt.id === 'collapsed' && <CollapsedIcon />}
+            {opt.id === 'open' && <OpenIcon />}
+            {opt.id === 'fullscreen' && <FullscreenIcon />}
+          </span>
+        </button>
+      ))}
+    </div>
   )
 }
 

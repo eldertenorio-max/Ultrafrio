@@ -93,6 +93,7 @@ export function AppSidebar({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      <div className="sidebar-body">
       <div className="sidebar-block sidebar-header">
         <div className="sidebar-header-brand">
           <img
@@ -195,6 +196,7 @@ export function AppSidebar({
       >
         <ImprimirPanel {...imprimir} />
       </CollapsibleSidebarSection>
+      </div>
 
       <div
         className="sidebar-bottom-bar"
