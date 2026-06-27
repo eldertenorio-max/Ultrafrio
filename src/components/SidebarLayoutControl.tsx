@@ -6,50 +6,63 @@ type Props = {
   onChange: (mode: SidebarMode) => void
 }
 
-const OPTIONS: { id: SidebarMode; label: string; title: string }[] = [
-  { id: 'collapsed', label: 'Recolhido', title: 'Menu recolhido — clique para abrir temporariamente' },
-  { id: 'open', label: 'Aberto', title: 'Menu aberto ao lado do mapa' },
-  { id: 'fullscreen', label: 'Tela cheia', title: 'Menu expandido em tela inteira' },
-]
+const CYCLE: SidebarMode[] = ['collapsed', 'open', 'fullscreen']
+
+const MODE_META: Record<
+  SidebarMode,
+  { label: string; title: string }
+> = {
+  collapsed: {
+    label: 'Recolhido',
+    title: 'Menu recolhido — clique para alternar o layout',
+  },
+  open: {
+    label: 'Aberto',
+    title: 'Menu aberto — clique para alternar o layout',
+  },
+  fullscreen: {
+    label: 'Tela cheia',
+    title: 'Menu em tela cheia — clique para alternar o layout',
+  },
+}
 
 export function SidebarLayoutControl({ mode, onChange }: Props) {
+  const meta = MODE_META[mode]
+
   function stopSidebar(e: MouseEvent | PointerEvent) {
     e.stopPropagation()
   }
 
+  function cycleMode() {
+    const index = CYCLE.indexOf(mode)
+    onChange(CYCLE[(index + 1) % CYCLE.length])
+  }
+
   return (
-    <div
-      className="sidebar-layout-control"
-      role="group"
-      aria-label="Layout do menu lateral"
+    <button
+      type="button"
+      className="sidebar-layout-toggle"
+      title={meta.title}
+      aria-label={meta.title}
       onPointerDown={stopSidebar}
-      onClick={stopSidebar}
+      onClick={(e) => {
+        stopSidebar(e)
+        cycleMode()
+      }}
     >
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          className={`sidebar-layout-btn${mode === opt.id ? ' sidebar-layout-btn--active' : ''}`}
-          title={opt.title}
-          aria-label={opt.title}
-          aria-pressed={mode === opt.id}
-          onClick={() => onChange(opt.id)}
-        >
-          <span className="sidebar-layout-btn-icon" aria-hidden>
-            {opt.id === 'collapsed' && <CollapsedIcon />}
-            {opt.id === 'open' && <OpenIcon />}
-            {opt.id === 'fullscreen' && <FullscreenIcon />}
-          </span>
-          <span className="sidebar-layout-btn-label">{opt.label}</span>
-        </button>
-      ))}
-    </div>
+      <span className="sidebar-layout-toggle-icon" aria-hidden>
+        {mode === 'collapsed' && <CollapsedIcon />}
+        {mode === 'open' && <OpenIcon />}
+        {mode === 'fullscreen' && <FullscreenIcon />}
+      </span>
+      <span className="sidebar-layout-toggle-label">{meta.label}</span>
+    </button>
   )
 }
 
 function CollapsedIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
       <rect x="4" y="5" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="1.75" />
       <rect x="10" y="5" width="10" height="14" rx="1" stroke="currentColor" strokeWidth="1.75" opacity="0.35" />
     </svg>
@@ -58,7 +71,7 @@ function CollapsedIcon() {
 
 function OpenIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
       <rect x="4" y="5" width="8" height="14" rx="1" stroke="currentColor" strokeWidth="1.75" />
       <rect x="14" y="5" width="6" height="14" rx="1" stroke="currentColor" strokeWidth="1.75" opacity="0.35" />
     </svg>
@@ -67,7 +80,7 @@ function OpenIcon() {
 
 function FullscreenIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
       <rect x="4" y="5" width="16" height="14" rx="1" stroke="currentColor" strokeWidth="1.75" />
     </svg>
   )
