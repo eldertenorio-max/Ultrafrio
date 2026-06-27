@@ -29,3 +29,11 @@ alter table public.ultrafrio_movimentos
 
 alter table public.ultrafrio_movimentos
   alter column nf_id drop not null;
+
+-- Reposicionamento de paletes (tipo movimentacao no historico)
+alter table public.ultrafrio_movimentos
+  drop constraint if exists ultrafrio_movimentos_tipo_check;
+
+alter table public.ultrafrio_movimentos
+  add constraint ultrafrio_movimentos_tipo_check
+  check (tipo in ('entrada', 'saida', 'movimentacao'));

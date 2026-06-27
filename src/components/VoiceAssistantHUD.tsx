@@ -15,7 +15,28 @@ export function VoiceAssistantHUD({
   feedback,
   onCancel,
 }: Props) {
-  // Só aparece após "ok estoque", enquanto aguarda o comando
+  // Escuta contínua: mostra o que o microfone capta enquanto aguarda a frase de ativação
+  if (phase === 'ouvindo') {
+    return (
+      <div className="voice-assistant-hud voice-assistant-hud--passive" role="status" aria-live="polite">
+        <div className="voice-assistant-hud-inner">
+          <span className="voice-assistant-hud-dot voice-assistant-hud-dot--ouvindo" aria-hidden />
+          <div className="voice-assistant-hud-body">
+            <strong className="voice-assistant-hud-title">Aguardando frase de ativação…</strong>
+            {liveText ? (
+              <p className="voice-assistant-hud-live">
+                Ouvindo: <strong>{liveText}</strong>
+              </p>
+            ) : (
+              <p className="voice-assistant-hud-hint muted">Fale &quot;ok estoque&quot; com calma.</p>
+            )}
+            {feedback && <p className="voice-assistant-hud-feedback">{feedback}</p>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (phase !== 'armado') return null
 
   return (

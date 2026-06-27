@@ -28,6 +28,22 @@ const REMOTE_RELOAD_DEBOUNCE_MS = 300
 const IGNORE_REMOTE_AFTER_SAVE_MS = 5000
 const POLL_INTERVAL_MS = 3000
 const PERSIST_RETRY_MS = 600
+
+function formatPersistErrorMessage(e: unknown, supabaseMode: boolean): string {
+  if (!supabaseMode) {
+    return e instanceof Error ? e.message : 'Erro ao salvar dados.'
+  }
+  const raw = e instanceof Error ? e.message : ''
+  if (raw.includes('ultrafrio_movimentos_tipo_check')) {
+    return (
+      'Erro ao salvar movimentação na nuvem: o Supabase ainda não aceita o tipo "movimentacao". ' +
+      'No SQL Editor, rode o arquivo supabase/sql/apply_pending_columns.sql (ou movimentos_tipo_movimentacao.sql) e tente de novo.'
+    )
+  }
+  return raw
+    ? `Erro ao salvar na nuvem: ${raw}`
+    : 'Erro ao salvar na nuvem. Verifique a conexão com o Supabase.'
+}
 const PERSIST_MAX_ATTEMPTS = 3
 
 function pickRepository(): EnderecamentoRepository {
@@ -174,15 +190,7 @@ export function useEnderecamentoStore() {
         throw lastError
       }
     } catch (e) {
-      setError(
-        repo.mode === 'supabase'
-          ? e instanceof Error
-            ? `Erro ao salvar na nuvem: ${e.message}`
-            : 'Erro ao salvar na nuvem. Verifique a conexão com o Supabase.'
-          : e instanceof Error
-            ? e.message
-            : 'Erro ao salvar dados.',
-      )
+      setError(formatPersistErrorMessage(e, repo.mode === 'supabase'))
     } finally {
       savingRef.current = false
       setSaving(false)

@@ -16,11 +16,12 @@ No **SQL Editor** do Supabase, execute **nesta ordem** (copie e cole cada arquiv
 3. `supabase/sql/create_ultrafrio_notas_canceladas.sql`
 4. `supabase/sql/create_ultrafrio_cadastro_remetentes.sql` ← cadastro de remetentes no NF manual
 5. `supabase/sql/movimentos_historico_soft_delete.sql` (se ainda não rodou)
-6. `supabase/sql/add_nf_itens_campos_entrada.sql` (UP, lote, datas — se ainda não rodou)
-7. `supabase/sql/add_nf_itens_comercial.sql` (peso, valores — se ainda não rodou)
-8. `supabase/sql/add_nf_totais.sql` (totais da nota — se ainda não rodou)
-   - **Atalho:** em vez de 6–8, pode rodar só `supabase/sql/apply_pending_columns.sql`
-9. `supabase/sql/enable_realtime.sql` ← necessário para atualizar sem recarregar a página
+6. `supabase/sql/movimentos_tipo_movimentacao.sql` (reposicionamento — incluído também em `apply_pending_columns.sql`)
+7. `supabase/sql/add_nf_itens_campos_entrada.sql` (UP, lote, datas — se ainda não rodou)
+8. `supabase/sql/add_nf_itens_comercial.sql` (peso, valores — se ainda não rodou)
+9. `supabase/sql/add_nf_totais.sql` (totais da nota — se ainda não rodou)
+   - **Atalho:** em vez de 6–9, pode rodar só `supabase/sql/apply_pending_columns.sql`
+10. `supabase/sql/enable_realtime.sql` ← necessário para atualizar sem recarregar a página
 
 ---
 
@@ -85,6 +86,7 @@ Se aparecer NF que ninguém criou nesta sessão, ela já está na nuvem (outro P
 |---------|---------|
 | Ainda mostra “só neste navegador” | Variáveis não estão no build do Render → confira env vars e faça **novo deploy** |
 | Erro ao salvar na nuvem: coluna `peso_bruto` (ou similar) não encontrada | Rode `supabase/sql/apply_pending_columns.sql` no SQL Editor (ou os arquivos 6–8 da lista acima) |
+| Erro `ultrafrio_movimentos_tipo_check` ao confirmar movimentação | Rode `supabase/sql/apply_pending_columns.sql` ou `supabase/sql/movimentos_tipo_movimentacao.sql` no SQL Editor |
 | Erro ao salvar / nuvem indisponível | Rode os SQLs no Supabase; confira URL e chave |
 | Sugestões de remetente vazias | Rode `create_ultrafrio_cadastro_remetentes.sql` |
 | Outro PC não atualiza na hora | Rode `enable_realtime.sql`; recarregue a página |

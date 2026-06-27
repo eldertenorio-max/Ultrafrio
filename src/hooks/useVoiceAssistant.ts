@@ -55,9 +55,16 @@ function readIncrementalTranscript(ev: SpeechRecognitionResultEvent): {
   let final = ''
   for (let i = ev.resultIndex; i < ev.results.length; i++) {
     const result = ev.results[i]
-    const piece = result?.[0]?.transcript ?? ''
-    if (result?.isFinal) final += piece
-    else interim += piece
+    if (!result) continue
+
+    let best = result[0]?.transcript ?? ''
+    for (let a = 1; a < result.length; a++) {
+      const alt = result[a]?.transcript ?? ''
+      if (alt.length > best.length) best = alt
+    }
+
+    if (result.isFinal) final += best
+    else interim += best
   }
   return { interim: interim.trim(), final: final.trim() }
 }
@@ -77,7 +84,7 @@ function createRecognitionInstance(): SpeechRecognitionInstance | null {
   const rec = new Ctor()
   rec.lang = 'pt-BR'
   rec.interimResults = true
-  rec.maxAlternatives = 1
+  rec.maxAlternatives = 5
   rec.continuous = true
   return rec
 }
@@ -183,13 +190,23 @@ export function useVoiceAssistant({
     setLiveText('')
   }, [])
 
+  const audioDeferredTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearAudioDeferredTimer = useCallback(() => {
+    if (audioDeferredTimerRef.current) {
+      clearTimeout(audioDeferredTimerRef.current)
+      audioDeferredTimerRef.current = null
+    }
+  }, [])
+
   const stopAudioCapture = useCallback(() => {
+    clearAudioDeferredTimer()
     audioRecorderRef.current?.stop()
     audioRecorderRef.current = null
     audioStreamRef.current?.getTracks().forEach((t) => t.stop())
     audioStreamRef.current = null
     audioChunksRef.current = []
-  }, [])
+  }, [clearAudioDeferredTimer])
 
   const startAudioCapture = useCallback(async () => {
     stopAudioCapture()
@@ -216,6 +233,16 @@ export function useVoiceAssistant({
     }
   }, [stopAudioCapture])
 
+  const scheduleAudioCapture = useCallback(() => {
+    clearAudioDeferredTimer()
+    audioDeferredTimerRef.current = setTimeout(() => {
+      audioDeferredTimerRef.current = null
+      if (runningRef.current && !pausedForLocalSpeechRef.current) {
+        void startAudioCapture()
+      }
+    }, 700)
+  }, [clearAudioDeferredTimer, startAudioCapture])
+
   const getRecentAudioBlob = useCallback((): Blob | null => {
     const chunks = audioChunksRef.current
     if (chunks.length === 0) return null
@@ -230,9 +257,9 @@ export function useVoiceAssistant({
     if (!requireVoiceMatchRef.current || profiles.length === 0) return true
 
     const blob = getRecentAudioBlob()
-    if (!blob || blob.size === 0) {
-      onErrorRef.current?.('Não foi possível verificar sua voz. Tente falar de novo.')
-      return false
+    if (!blob || blob.size < 200) {
+      setLastHint('Frase reconhecida — fale o comando.')
+      return true
     }
 
     try {
@@ -348,6 +375,11 @@ export function useVoiceAssistant({
       const working = `${sessionAccumRef.current}${interim ? ` ${interim}` : ''}`.trim()
       if (working) {
         listeningBufferRef.current = working
+        setLiveText(working)
+        setPhase('ouvindo')
+        if (wakePhraseMatches(working, wakePhraseRef.current)) {
+          if (await processWake(working)) return
+        }
         scheduleSilenceFlush()
       }
     },
@@ -490,7 +522,7 @@ export function useVoiceAssistant({
       return
     }
 
-    await startAudioCapture()
+    scheduleAudioCapture()
 
     recRef.current?.abort()
     const rec = createRecognitionInstance()
@@ -504,7 +536,7 @@ export function useVoiceAssistant({
     setPhase('ouvindo')
     setLastHint(null)
     rec.start()
-  }, [bindRecognitionHandlers, clearListeningBuffers, startAudioCapture])
+  }, [bindRecognitionHandlers, clearListeningBuffers, scheduleAudioCapture])
 
   const suspendForLocalSpeech = useCallback(() => {
     localSpeechHoldRef.current += 1

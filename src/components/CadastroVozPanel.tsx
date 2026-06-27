@@ -201,6 +201,8 @@ export function CadastroVozPanel({
         {assistantActive && (
           <p className="cadastro-voz-status cadastro-voz-status--on">
             Microfone aguardando &quot;{wake}&quot; — diga a frase para abrir o comando de voz.
+            Fale com calma; variações como &quot;okay estoque&quot; ou &quot;oque estoque&quot; também
+            funcionam.
           </p>
         )}
 
