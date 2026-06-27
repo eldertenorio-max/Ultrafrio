@@ -179,3 +179,36 @@ export function portaOverlayStyle(
     height: rowCount * cell + (rowCount - 1) * gap,
   }
 }
+
+/** Recorta um pedaço da imagem da porta para cada célula do grid. */
+export function portaCellBackgroundStyle(
+  col: number,
+  nivel: number,
+  porta: NonNullable<RuaConfig['porta']>,
+  imageUrl: string,
+): {
+  backgroundImage: string
+  backgroundSize: string
+  backgroundPosition: string
+  backgroundRepeat: 'no-repeat'
+  borderColor: string
+} | null {
+  const [c0, c1] = porta.cols
+  const [n0, n1] = porta.niveis
+  if (col < c0 || col > c1 || nivel < n0 || nivel > n1) return null
+
+  const colCount = c1 - c0 + 1
+  const rowCount = n1 - n0 + 1
+  const colIdx = col - c0
+  const rowIdx = n1 - nivel
+  const xPct = colCount === 1 ? 50 : (colIdx / (colCount - 1)) * 100
+  const yPct = rowCount === 1 ? 50 : (rowIdx / (rowCount - 1)) * 100
+
+  return {
+    backgroundImage: `url("${imageUrl}")`,
+    backgroundSize: `${colCount * 100}% ${rowCount * 100}%`,
+    backgroundPosition: `${xPct}% ${yPct}%`,
+    backgroundRepeat: 'no-repeat',
+    borderColor: 'transparent',
+  }
+}

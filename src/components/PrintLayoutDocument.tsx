@@ -3,9 +3,11 @@ import {
   NIVEIS,
   cellKind,
   makeAddressId,
+  portaCellBackgroundStyle,
   type CamaraConfig,
   type RuaConfig,
 } from '../layout/camaras'
+import { portaCamaraUrl } from '../lib/portaCamaraAsset'
 
 const CELL_GAP = 0
 
@@ -66,26 +68,6 @@ function printColAxisFont(cellW: number): number {
 
 function printRowAxisFont(cellH: number): number {
   return Math.max(14, Math.min(28, Math.round(cellH * 0.36)))
-}
-
-function printPortaOverlayStyleMm(
-  porta: NonNullable<RuaConfig['porta']>,
-  cellW: number,
-  cellH: number,
-  gapMm: number,
-): { left: string; top: string; width: string; height: string } {
-  const [c0, c1] = porta.cols
-  const [n0, n1] = porta.niveis
-  const colCount = c1 - c0 + 1
-  const rowCount = n1 - n0 + 1
-  const topRow = NIVEIS.indexOf(n1 as (typeof NIVEIS)[number])
-
-  return {
-    left: `${(c0 - 1) * (cellW + gapMm)}mm`,
-    top: `${topRow * (cellH + gapMm)}mm`,
-    width: `${colCount * cellW + (colCount - 1) * gapMm}mm`,
-    height: `${rowCount * cellH + (rowCount - 1) * gapMm}mm`,
-  }
 }
 
 type Props = {
@@ -149,26 +131,25 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
                     config.colunasBloqueadas,
                     config.celulasBloqueadas,
                   )
+                  const portaBg =
+                    kind === 'porta' && config.porta
+                      ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl)
+                      : null
                   return (
                     <div
                       key={makeAddressId(camaraId, config.rua, nivel, col)}
                       className={`print-cell print-cell--${kind}`}
-                      style={{ width: `${cellW}mm`, height: `${cellH}mm` }}
+                      style={{
+                        width: `${cellW}mm`,
+                        height: `${cellH}mm`,
+                        ...(portaBg ?? {}),
+                      }}
                     />
                   )
                 })}
               </div>
             ))}
           </div>
-
-          {config.porta && (
-            <div
-              className="print-porta-label"
-              role="img"
-              aria-label="Porta da câmara"
-              style={printPortaOverlayStyleMm(config.porta, cellW, cellH, CELL_GAP)}
-            />
-          )}
         </div>
       </div>
     </div>

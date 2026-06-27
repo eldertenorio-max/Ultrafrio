@@ -948,7 +948,9 @@
   outline: 2px solid var(--cell-destaque-borda);
   outline-offset: -1px;
 }
-.swatch--porta { background: url('/porta-camara.png') center / cover no-repeat; }
+.swatch--porta {
+  background-color: #1d4ed8;
+}
 .swatch--nv5 { background: var(--cell-nv5); border: 1px solid var(--border); }
 
 .camaras-stack {
@@ -1599,18 +1601,9 @@
 }
 
 .cell--porta {
-  background: transparent;
   border-color: transparent;
   box-shadow: none;
-}
-
-.porta-label {
-  pointer-events: none;
-  z-index: 2;
-  background: url('/porta-camara.png') center / cover no-repeat;
-  border: 1px solid color-mix(in srgb, #1d4ed8 35%, var(--border));
-  border-radius: 3px;
-  overflow: hidden;
+  background-color: transparent;
 }
 
 .cell--sem-nivel5 {
@@ -2632,7 +2625,7 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .print-swatch--porta {
-  background: url('/porta-camara.png') center / cover no-repeat;
+  background: #1d4ed8;
   border: 1px solid #1d4ed8;
 }
 
@@ -2713,19 +2706,9 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .print-cell--porta {
-  background: transparent;
   border-color: transparent;
 }
 
-.print-porta-label {
-  position: absolute;
-  pointer-events: none;
-  z-index: 2;
-  background: url('/porta-camara.png') center / cover no-repeat;
-  border: 0.35mm solid #1d4ed8;
-  border-radius: 0.5mm;
-  overflow: hidden;
-}
 .print-cell--bloqueado {
   position: relative;
 }

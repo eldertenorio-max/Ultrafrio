@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   CAMARAS,
   NIVEIS,
@@ -6,11 +6,12 @@ import {
   formatAddressLabel,
   isClickable,
   makeAddressId,
-  portaOverlayStyle,
+  portaCellBackgroundStyle,
   type CamaraConfig,
   type CellKind,
   type RuaConfig,
 } from '../layout/camaras'
+import { portaCamaraUrl } from '../lib/portaCamaraAsset'
 import type { AddressId, AddressOccupancy, NotaFiscal } from '../types'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { StageSection } from './StageSection'
@@ -315,12 +316,21 @@ function RuaGrid({
                       ((allocateMode || !!editMode) && clickable)
                     if (editMode && (clickable || pending)) className += ' cell--alocavel'
 
+                    const portaBg =
+                      kind === 'porta' && config.porta
+                        ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl)
+                        : null
+
                     return (
                       <button
                         key={addressId}
                         type="button"
                         className={className}
-                        style={{ width: cellSize, height: cellSize }}
+                        style={{
+                          width: cellSize,
+                          height: cellSize,
+                          ...(portaBg ?? {}),
+                        }}
                         disabled={!canInteract}
                         data-address-id={addressId}
                         data-can-interact={canInteract ? 'true' : 'false'}
@@ -344,18 +354,6 @@ function RuaGrid({
                 </div>
               ))}
             </div>
-
-            {config.porta && (
-              <div
-                className="porta-label"
-                role="img"
-                aria-label="Porta da câmara"
-                style={{
-                  ...portaOverlayStyle(config.porta, cellSize, CELL_GAP),
-                  position: 'absolute',
-                }}
-              />
-            )}
           </div>
         </div>
           </div>
@@ -445,7 +443,7 @@ function cellTooltip(
   return `${label} — Disponível`
 }
 
-type LegendItem = { swatch: string; label: string }
+type LegendItem = { swatch: string; label: string; swatchStyle?: CSSProperties }
 
 function buildLegendItems(props: Props): LegendItem[] {
   const items: LegendItem[] = [
@@ -481,7 +479,15 @@ function buildLegendItems(props: Props): LegendItem[] {
     items.push({ swatch: 'swatch--saida-flag', label: 'Item para retirar' })
   }
 
-  items.push({ swatch: 'swatch--porta', label: 'Porta' })
+  items.push({
+    swatch: 'swatch--porta',
+    label: 'Porta',
+    swatchStyle: {
+      backgroundImage: `url("${portaCamaraUrl}")`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    },
+  })
   items.push({ swatch: 'swatch--nv5', label: 'Sem nível 5' })
 
   return items
@@ -509,7 +515,7 @@ export function LayoutPanel(props: Props) {
       <div className="layout-legend" aria-label="Legenda do painel">
         {buildLegendItems(props).map((item) => (
           <span key={item.label}>
-            <i className={`swatch ${item.swatch}`} aria-hidden />
+            <i className={`swatch ${item.swatch}`} style={item.swatchStyle} aria-hidden />
             {item.label}
           </span>
         ))}
