@@ -44,7 +44,8 @@
   --swatch-outline: #ffffff;
   --sidebar-w: 50vw;
   --sidebar-w-collapsed: 72px;
-  --sidebar-tools-h: 196px;
+  --sidebar-icon-size: 28px;
+  --sidebar-tools-h: 156px;
   font-family: 'Segoe UI', system-ui, sans-serif;
   line-height: 1.45;
   color: var(--text);
