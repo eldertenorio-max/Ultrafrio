@@ -162,6 +162,11 @@ export function listAllAddresses(): { id: string; camara: number; rua: number; n
   return out
 }
 
+/** Margem interna da arte da porta em relação à célula (mostra as linhas do rack). */
+export function portaInsetPx(cellSize: number): number {
+  return Math.max(4, Math.round(cellSize * 0.14))
+}
+
 export function portaOverlayStyle(
   porta: NonNullable<RuaConfig['porta']>,
   cellW: number,
@@ -173,10 +178,63 @@ export function portaOverlayStyle(
   const colCount = c1 - c0 + 1
   const rowCount = n1 - n0 + 1
   const topRow = NIVEIS.indexOf(n1 as (typeof NIVEIS)[number])
+  const inset = portaInsetPx(cellW)
+  const left = (c0 - 1) * (cellW + gap) + inset
+  const top = topRow * (cellH + gap) + inset
+  const width = colCount * cellW + (colCount - 1) * gap - inset * 2
+  const height = rowCount * cellH + (rowCount - 1) * gap - inset * 2
+  return { left, top, width: Math.max(0, width), height: Math.max(0, height) }
+}
+
+/** Recorte da imagem da porta por célula, com margem interna (CSS vars para ::before). */
+export function portaCellBackgroundStyle(
+  col: number,
+  nivel: number,
+  porta: NonNullable<RuaConfig['porta']>,
+  imageUrl: string,
+  cellW: number,
+  cellH: number = cellW,
+  unit: 'px' | 'mm' = 'px',
+): Record<string, string> | null {
+  const [c0, c1] = porta.cols
+  const [n0, n1] = porta.niveis
+  if (col < c0 || col > c1 || nivel < n0 || nivel > n1) return null
+
+  const colCount = c1 - c0 + 1
+  const rowCount = n1 - n0 + 1
+  const colIdx = col - c0
+  const rowIdx = n1 - nivel
+  const inset =
+    unit === 'px'
+      ? portaInsetPx(cellW)
+      : Math.max(0.8, Math.round(cellW * 0.14 * 10) / 10)
+  const insetH =
+    unit === 'px'
+      ? portaInsetPx(cellH)
+      : Math.max(0.8, Math.round(cellH * 0.14 * 10) / 10)
+  const bgW = colCount * cellW - inset * 2
+  const bgH = rowCount * cellH - insetH * 2
+
   return {
-    left: (c0 - 1) * (cellW + gap),
-    top: topRow * (cellH + gap),
-    width: colCount * cellW + (colCount - 1) * gap,
-    height: rowCount * cellH + (rowCount - 1) * gap,
+    '--porta-inset': `${inset}${unit}`,
+    '--porta-inset-block': `${insetH}${unit}`,
+    '--porta-bg-image': `url("${imageUrl}")`,
+    '--porta-bg-size': `${bgW}${unit} ${bgH}${unit}`,
+    '--porta-bg-pos': `${-colIdx * cellW}${unit} ${-rowIdx * cellH}${unit}`,
+  }
+}
+
+/** Dimensões da malha de linhas do rack (verticais por cima das horizontais). */
+export function rackGridOverlaySize(
+  colunas: number,
+  rows: number,
+  cellW: number,
+  gap: number,
+  cellH: number = cellW,
+): { width: number; height: number; backgroundSize: string } {
+  return {
+    width: colunas * cellW + (colunas - 1) * gap,
+    height: rows * cellH + (rows - 1) * gap,
+    backgroundSize: `${cellW + gap}px ${cellH + gap}px`,
   }
 }

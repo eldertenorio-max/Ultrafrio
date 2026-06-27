@@ -94,25 +94,22 @@ export function AppSidebar({
       onMouseLeave={onMouseLeave}
     >
       <div className="sidebar-block sidebar-header">
-        <div className="sidebar-header-row">
-          <SidebarLayoutControl mode={sidebarMode} onChange={onSidebarModeChange} />
-          <div className="sidebar-header-brand">
-            <img
-              src="/logo-ultrafrio-vertical-azul.svg"
-              alt=""
-              aria-hidden
-              className="sidebar-logo sidebar-logo--compact"
-            />
-            <img
-              src="/logo-ultrafrio-horizontal-azul.svg"
-              alt="Ultrafrio"
-              className="sidebar-logo sidebar-logo--full"
-            />
-            <h1 className="app-brand-title">
-              <span className="app-brand-title__main">Stock System</span>
-              <span className="app-brand-title__light">Light</span>
-            </h1>
-          </div>
+        <div className="sidebar-header-brand">
+          <img
+            src="/logo-ultrafrio-vertical-azul.svg"
+            alt=""
+            aria-hidden
+            className="sidebar-logo sidebar-logo--compact"
+          />
+          <img
+            src="/logo-ultrafrio-horizontal-azul.svg"
+            alt="Ultrafrio"
+            className="sidebar-logo sidebar-logo--full"
+          />
+          <h1 className="app-brand-title">
+            <span className="app-brand-title__main">Stock System</span>
+            <span className="app-brand-title__light">Light</span>
+          </h1>
         </div>
         <p className="muted">Ultrafrio · entrada e saída por NF-e</p>
         {saving && <p className="saving-hint">Salvando…</p>}
@@ -199,7 +196,12 @@ export function AppSidebar({
         <ImprimirPanel {...imprimir} />
       </CollapsibleSidebarSection>
 
-      <div className="sidebar-footer">
+      <div
+        className="sidebar-bottom-bar"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <SidebarLayoutControl mode={sidebarMode} onChange={onSidebarModeChange} />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </aside>

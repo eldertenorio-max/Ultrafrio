@@ -6,7 +6,8 @@ import {
   formatAddressLabel,
   isClickable,
   makeAddressId,
-  portaOverlayStyle,
+  portaCellBackgroundStyle,
+  rackGridOverlaySize,
   type CamaraConfig,
   type CellKind,
   type RuaConfig,
@@ -225,6 +226,7 @@ function RuaGrid({
   const headerH = Math.max(14, Math.round(cellSize * 0.72))
   const axisFont = cellSize >= 36 ? 11 : 9
   const gridWidth = labelW + 6 + config.colunas * cellSize + (config.colunas - 1) * CELL_GAP
+  const rackGrid = rackGridOverlaySize(config.colunas, NIVEIS.length, cellSize, CELL_GAP)
 
   return (
     <div className="rua-block">
@@ -261,16 +263,6 @@ function RuaGrid({
           </div>
 
           <div className="cells-area">
-            {config.porta && (
-              <div
-                className="porta-overlay"
-                aria-hidden
-                style={{
-                  ...portaOverlayStyle(config.porta, cellSize, CELL_GAP),
-                  backgroundImage: `url("${portaCamaraUrl}")`,
-                }}
-              />
-            )}
             <div className="cells-stack" style={{ gap: CELL_GAP }}>
               {NIVEIS.map((nivel) => (
                 <div
@@ -326,6 +318,11 @@ function RuaGrid({
                       ((allocateMode || !!editMode) && clickable)
                     if (editMode && (clickable || pending)) className += ' cell--alocavel'
 
+                    const portaStyle =
+                      kind === 'porta' && config.porta
+                        ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl, cellSize)
+                        : null
+
                     return (
                       <button
                         key={addressId}
@@ -334,6 +331,7 @@ function RuaGrid({
                         style={{
                           width: cellSize,
                           height: cellSize,
+                          ...(portaStyle ?? {}),
                         }}
                         disabled={!canInteract}
                         data-address-id={addressId}
@@ -358,6 +356,15 @@ function RuaGrid({
                 </div>
               ))}
             </div>
+            <div
+              className="rack-grid-overlay"
+              aria-hidden
+              style={{
+                width: rackGrid.width,
+                height: rackGrid.height,
+                backgroundSize: rackGrid.backgroundSize,
+              }}
+            />
           </div>
         </div>
           </div>
