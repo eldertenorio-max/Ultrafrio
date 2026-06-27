@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useVoiceProfileEnrollment } from '../hooks/useVoiceProfileEnrollment'
-import { VOICE_COMMAND_EXAMPLES } from '../lib/parseVoiceCommand'
+import { VOICE_COMMAND_BLOCKED_NOTE, VOICE_COMMAND_EXAMPLES } from '../lib/parseVoiceCommand'
 import type { VoicePrefs } from '../lib/voicePrefs'
 import { DEFAULT_WAKE_PHRASE } from '../lib/voicePrefs'
 import {
@@ -373,6 +373,7 @@ export function CadastroVozPanel({
             </li>
           ))}
         </ul>
+        <p className="muted cadastro-voz-comandos-blocked">{VOICE_COMMAND_BLOCKED_NOTE}</p>
       </div>
     </>
   )

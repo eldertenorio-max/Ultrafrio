@@ -2273,6 +2273,11 @@ export default function App() {
         return
       }
 
+      if (cmd.type === 'blocked') {
+        setVoiceFeedback(cmd.message)
+        return
+      }
+
       const msg = describeVoiceCommand(cmd)
       setVoiceFeedback(msg)
 
@@ -2280,6 +2285,21 @@ export default function App() {
         case 'open_section':
           handleOpenSection(cmd.section)
           break
+        case 'close_section': {
+          const current = openSectionRef.current
+          if (cmd.section === null) {
+            if (current === 'painel') setSidebarMode('open')
+            handleOpenSection(null)
+            break
+          }
+          if (current !== cmd.section) {
+            setVoiceFeedback(`${cmd.label} não está aberta.`)
+            break
+          }
+          if (cmd.section === 'painel') setSidebarMode('open')
+          handleOpenSection(null)
+          break
+        }
         case 'buscar_nota':
           handleOpenSection('editar')
           handleBuscarEditar(cmd.numero)

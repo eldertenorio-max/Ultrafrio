@@ -2470,7 +2470,7 @@ html.scroll-locked .sidebar.sidebar--wide {
   gap: 6px;
   width: 100%;
   padding: 8px 0 10px;
-  padding-left: calc((100% - var(--sidebar-icon-size)) / 2);
+  padding-left: calc((100% - var(--sidebar-icon-size)) / 2 - 4px);
   box-sizing: border-box;
   background: var(--bg-panel);
   border-top: 1px solid var(--border);
@@ -2479,6 +2479,7 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .sidebar.sidebar--wide .sidebar-bottom-bar {
   padding: 8px 4px 10px;
+  padding-left: 0;
 }
 
 .sidebar-bottom-bar .theme-toggle {
@@ -2723,6 +2724,19 @@ html.scroll-locked .sidebar.sidebar--wide {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.cadastro-voz-comandos-blocked {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--danger, #c0392b) 35%, var(--border));
+  background: color-mix(in srgb, var(--danger, #c0392b) 8%, var(--bg-elevated));
 }
 
 .cadastro-voz-comandos li {
