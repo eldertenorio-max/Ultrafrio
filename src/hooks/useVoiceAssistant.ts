@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { extractVoiceFeatures } from '../lib/voiceFeatures'
 import {
-  normalizeVoiceText,
   stripWakePhrase,
   wakePhraseMatches,
 } from '../lib/voiceNormalize'
@@ -46,6 +45,34 @@ export type VoiceAssistantPhase = 'off' | 'ouvindo' | 'armado' | 'executando'
 
 const ARMED_TIMEOUT_MS = 8000
 const AUDIO_BUFFER_MS = 9000
+const SILENCE_AFTER_SPEECH_MS = 1500
+
+function readResultSnapshot(ev: SpeechRecognitionResultEvent): {
+  interim: string
+  final: string
+  snapshot: string
+} {
+  let interim = ''
+  let final = ''
+  for (let i = ev.resultIndex; i < ev.results.length; i++) {
+    const result = ev.results[i]
+    const piece = result?.[0]?.transcript ?? ''
+    if (result?.isFinal) final += piece
+    else interim += piece
+  }
+
+  let allFinal = ''
+  let lastInterim = ''
+  for (let i = 0; i < ev.results.length; i++) {
+    const result = ev.results[i]
+    const piece = result?.[0]?.transcript ?? ''
+    if (result?.isFinal) allFinal += piece
+    else lastInterim = piece
+  }
+
+  const snapshot = `${allFinal}${lastInterim}`.trim()
+  return { interim: interim.trim(), final: final.trim(), snapshot }
+}
 
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (typeof window === 'undefined') return null
@@ -82,6 +109,11 @@ export function useVoiceAssistant({
   const runningRef = useRef(false)
   const armedRef = useRef(false)
   const armedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const armedBufferRef = useRef('')
+  const armedInterimRef = useRef('')
+  const listeningBufferRef = useRef('')
+  const sessionAccumRef = useRef('')
   const onCommandTextRef = useRef(onCommandText)
   const onErrorRef = useRef(onError)
   const wakePhraseRef = useRef(wakePhrase)
@@ -116,6 +148,13 @@ export function useVoiceAssistant({
     if (armedTimerRef.current) {
       clearTimeout(armedTimerRef.current)
       armedTimerRef.current = null
+    }
+  }, [])
+
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
     }
   }, [])
 
@@ -197,12 +236,16 @@ export function useVoiceAssistant({
   const disarm = useCallback(() => {
     armedRef.current = false
     clearArmedTimer()
+    armedBufferRef.current = ''
+    armedInterimRef.current = ''
     setPhase('ouvindo')
     setLastHint(`Diga "${wakePhraseRef.current}" com sua voz cadastrada`)
   }, [clearArmedTimer])
 
   const arm = useCallback(() => {
     armedRef.current = true
+    armedBufferRef.current = ''
+    armedInterimRef.current = ''
     clearArmedTimer()
     setPhase('armado')
     setLastHint('Ouvindo comando…')
@@ -215,12 +258,17 @@ export function useVoiceAssistant({
     (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
+      clearSilenceTimer()
+      armedBufferRef.current = ''
+      armedInterimRef.current = ''
+      listeningBufferRef.current = ''
+      sessionAccumRef.current = ''
       setPhase('executando')
       setLiveText(trimmed)
       onCommandTextRef.current(trimmed)
       disarm()
     },
-    [disarm],
+    [clearSilenceTimer, disarm],
   )
 
   const processWake = useCallback(
@@ -232,22 +280,52 @@ export function useVoiceAssistant({
       if (!ok) return true
 
       const remainder = stripWakePhrase(raw, wake)
+      if (remainder) {
+        dispatchCommand(remainder)
+        return true
+      }
+
       arm()
-      if (remainder) dispatchCommand(remainder)
+      sessionAccumRef.current = ''
       return true
     },
     [arm, dispatchCommand, verifyRegisteredVoice],
   )
+
+  const flushAfterSilence = useCallback(async () => {
+    silenceTimerRef.current = null
+
+    if (armedRef.current) {
+      const text = `${armedBufferRef.current} ${armedInterimRef.current}`.replace(/\s+/g, ' ').trim()
+      if (text) dispatchCommand(text)
+      return
+    }
+
+    const full = listeningBufferRef.current.trim()
+    if (!full) return
+    const handled = await processWake(full)
+    if (handled) {
+      listeningBufferRef.current = ''
+      sessionAccumRef.current = ''
+    }
+  }, [dispatchCommand, processWake])
+
+  const scheduleSilenceFlush = useCallback(() => {
+    clearSilenceTimer()
+    silenceTimerRef.current = setTimeout(() => {
+      void flushAfterSilence()
+    }, SILENCE_AFTER_SPEECH_MS)
+  }, [clearSilenceTimer, flushAfterSilence])
 
   const processTranscript = useCallback(
     async (raw: string, isFinal: boolean) => {
       if (await processWake(raw)) return
 
       if (armedRef.current && isFinal) {
-        dispatchCommand(normalizeVoiceText(raw))
+        armedBufferRef.current = `${armedBufferRef.current} ${raw}`.replace(/\s+/g, ' ').trim()
       }
     },
-    [processWake, dispatchCommand],
+    [processWake],
   )
 
   const stopRecognition = useCallback(() => {
@@ -256,10 +334,15 @@ export function useVoiceAssistant({
     recRef.current = null
     stopAudioCapture()
     clearArmedTimer()
+    clearSilenceTimer()
     armedRef.current = false
+    armedBufferRef.current = ''
+    armedInterimRef.current = ''
+    listeningBufferRef.current = ''
+    sessionAccumRef.current = ''
     setPhase('off')
     setLiveText('')
-  }, [clearArmedTimer, stopAudioCapture])
+  }, [clearArmedTimer, clearSilenceTimer, stopAudioCapture])
 
   const startRecognition = useCallback(async () => {
     const Ctor = getSpeechRecognitionCtor()
@@ -284,20 +367,30 @@ export function useVoiceAssistant({
     rec.continuous = true
 
     rec.onresult = (ev) => {
-      let interim = ''
-      let final = ''
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const result = ev.results[i]
-        const piece = result?.[0]?.transcript ?? ''
-        if (result?.isFinal) final += piece
-        else interim += piece
-      }
-      const preview = (interim || final).trim()
-      setLiveText(preview)
-      if (final.trim()) {
-        void processTranscript(final, true)
-      } else if (interim.trim() && armedRef.current) {
+      const { interim, final, snapshot } = readResultSnapshot(ev)
+
+      if (armedRef.current) {
+        if (final) {
+          armedBufferRef.current = `${armedBufferRef.current} ${final}`.replace(/\s+/g, ' ').trim()
+        }
+        armedInterimRef.current = interim
+        const preview = `${armedBufferRef.current}${interim ? ` ${interim}` : ''}`.trim()
+        setLiveText(preview)
         setPhase('armado')
+        if (preview) scheduleSilenceFlush()
+        return
+      }
+
+      if (final) {
+        sessionAccumRef.current = `${sessionAccumRef.current} ${final}`.replace(/\s+/g, ' ').trim()
+        void processTranscript(final, true)
+      }
+
+      const working = `${sessionAccumRef.current}${interim ? ` ${interim}` : ''}`.trim() || snapshot
+      if (working) {
+        listeningBufferRef.current = working
+        setLiveText(working)
+        scheduleSilenceFlush()
       }
     }
 
