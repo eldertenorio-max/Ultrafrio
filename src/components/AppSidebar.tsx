@@ -52,6 +52,9 @@ export function AppSidebar({
   const [openSection, setOpenSection] = useState<SidebarSectionId | null>(null)
 
   function sectionOpenChange(id: SidebarSectionId, open: boolean) {
+    if (open && id === 'painel') {
+      onSidebarModeChange('fullscreen')
+    }
     setOpenSection(open ? id : null)
   }
 

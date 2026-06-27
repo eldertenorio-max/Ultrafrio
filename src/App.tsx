@@ -172,6 +172,7 @@ export default function App() {
   const [editPendingSelection, setEditPendingSelection] = useState<Set<AddressId>>(new Set())
   const [editMoveOrigens, setEditMoveOrigens] = useState<Set<AddressId>>(new Set())
   const [editMoveDestinos, setEditMoveDestinos] = useState<Set<AddressId>>(new Set())
+  const [editSalvando, setEditSalvando] = useState(false)
   const [editMarcandoStage, setEditMarcandoStage] = useState(false)
   const [vozOrigemAddress, setVozOrigemAddress] = useState<AddressId | null>(null)
   const [vozErro, setVozErro] = useState<string | null>(null)
@@ -325,6 +326,9 @@ export default function App() {
     const map = new Map(occupancy)
     if (editMode) {
       for (const addr of editStagePending) map.delete(addr)
+      if (!editMarcandoStage) {
+        for (const addr of editMoveOrigens) map.delete(addr)
+      }
       return map
     }
     if (allocateMode && activeNf && state.activeItemIndex != null) {
@@ -334,7 +338,9 @@ export default function App() {
   }, [
     occupancy,
     editMode,
+    editMarcandoStage,
     editStagePending,
+    editMoveOrigens,
     allocateMode,
     activeNf,
     state.activeItemIndex,
@@ -1834,33 +1840,43 @@ export default function App() {
   }
 
   async function handleSalvarEditar() {
-    if (!nfEditar) return
+    if (editSalvando) return
+    const nfAtual = nfEditarId
+      ? stateRef.current.notas.find((n) => n.id === nfEditarId) ?? null
+      : null
+    if (!nfAtual) return
 
     if (editItemIndex != null) {
-      const stageItem = nfEditar.items.find((it) => it.index === editItemIndex)
+      const stageItem = nfAtual.items.find((it) => it.index === editItemIndex)
       if (stageItem && itemNoStage(stageItem)) {
         if (editPendingSelection.size === 0) return
         const addresses = [...editPendingSelection]
         const currentItemIndex = editItemIndex
-        const notas = state.notas.map((nf) =>
-          nf.id === nfEditar.id
+        const snapshot = stateRef.current
+        const notas = snapshot.notas.map((nf) =>
+          nf.id === nfAtual.id
             ? moverItemStageParaArmazem(nf, currentItemIndex, addresses)
             : nf,
         )
-        const updatedNf = notas.find((n) => n.id === nfEditar.id)!
+        const updatedNf = notas.find((n) => n.id === nfAtual.id)!
         const nextState = {
-          ...state,
+          ...snapshot,
           notas,
           movimentos: [
             criarMovimentoMovimentacao(updatedNf, currentItemIndex, addresses),
-            ...state.movimentos,
+            ...snapshot.movimentos,
           ],
         }
-        setState(nextState)
-        await saveNow(nextState)
-        editOriginalAddressesRef.current = new Set(addresses)
+        setEditSalvando(true)
         setEditPendingSelection(new Set())
-        setEditItemIndex(null)
+        editOriginalAddressesRef.current = new Set(addresses)
+        setState(nextState)
+        try {
+          await saveNow(nextState)
+          setEditItemIndex(null)
+        } finally {
+          setEditSalvando(false)
+        }
         return
       }
     }
@@ -1870,15 +1886,15 @@ export default function App() {
     const origens = [...editMoveOrigens]
     const destinos = [...editMoveDestinos]
     const origOcc = occupancy.get(origens[0])
-    if (!origOcc || origOcc.nfId !== nfEditar.id) return
+    if (!origOcc || origOcc.nfId !== nfAtual.id) return
 
     const currentItemIndex = origOcc.itemIndex
-    const item = nfEditar.items.find((it) => it.index === currentItemIndex)
+    const item = nfAtual.items.find((it) => it.index === currentItemIndex)
     if (!item || itemNoStage(item)) return
 
     for (const orig of origens) {
       const o = occupancy.get(orig)
-      if (!o || o.nfId !== nfEditar.id || o.itemIndex !== currentItemIndex) return
+      if (!o || o.nfId !== nfAtual.id || o.itemIndex !== currentItemIndex) return
     }
 
     if (new Set(destinos).size !== destinos.length) return
@@ -1887,20 +1903,19 @@ export default function App() {
       if (occupancy.has(dest)) return
     }
 
-    let addresses = [...item.allocatedAddresses]
-    origens.forEach((orig, i) => {
-      addresses = addresses.filter((a) => a !== orig).concat(destinos[i])
-    })
+    const moveMap = new Map(origens.map((orig, i) => [orig, destinos[i] as AddressId]))
+    const addresses = item.allocatedAddresses.map((addr) => moveMap.get(addr) ?? addr)
 
     const original = editOriginalAddressesRef.current
     if (!enderecosAlterados(original, addresses)) return
 
     const removedFromItem = item.allocatedAddresses.filter((a) => !addresses.includes(a))
+    const snapshot = stateRef.current
 
-    const notas = state.notas.map((nf) => ({
+    const notas = snapshot.notas.map((nf) => ({
       ...nf,
       items: nf.items.map((it) => {
-        if (nf.id === nfEditar.id && it.index === currentItemIndex) {
+        if (nf.id === nfAtual.id && it.index === currentItemIndex) {
           return { ...it, allocatedAddresses: addresses }
         }
         return {
@@ -1911,21 +1926,28 @@ export default function App() {
         }
       }),
     }))
-    const updatedNf = notas.find((n) => n.id === nfEditar.id)!
+    const updatedNf = notas.find((n) => n.id === nfAtual.id)!
     const nextState = {
-      ...state,
+      ...snapshot,
       notas,
       movimentos: [
         criarMovimentoMovimentacao(updatedNf, currentItemIndex, addresses),
-        ...state.movimentos,
+        ...snapshot.movimentos,
       ],
     }
-    setState(nextState)
-    await saveNow(nextState)
-    editOriginalAddressesRef.current = new Set(addresses)
+
+    setEditSalvando(true)
     setEditMoveOrigens(new Set())
     setEditMoveDestinos(new Set())
-    setEditMarcandoStage(false)
+    setVozOrigemAddress(null)
+    setVozErro(null)
+    editOriginalAddressesRef.current = new Set(addresses)
+    setState(nextState)
+    try {
+      await saveNow(nextState)
+    } finally {
+      setEditSalvando(false)
+    }
   }
 
   function handleCancelarEditar() {
@@ -2290,6 +2312,7 @@ export default function App() {
           stagePendingCount: editStagePending.size,
           moveOrigensCount: editMoveOrigens.size,
           moveDestinosCount: editMoveDestinos.size,
+          salvando: editSalvando,
           marcandoStage: editMarcandoStage,
           onSetMarcandoStage: (value) => {
             setEditMarcandoStage(value)

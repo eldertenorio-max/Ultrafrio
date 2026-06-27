@@ -16,7 +16,10 @@ type SpeechRecognitionInstance = {
 }
 
 type SpeechRecognitionResultEvent = {
-  results: { [index: number]: { [index: number]: { transcript: string } }; length: number }
+  results: {
+    [index: number]: { [index: number]: { transcript: string }; isFinal?: boolean }
+    length: number
+  }
 }
 
 type SpeechRecognitionErrorEvent = {
@@ -35,6 +38,7 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 export function useSpeechRecognition() {
   const [listening, setListening] = useState(false)
   const [supported, setSupported] = useState(false)
+  const [interimTranscript, setInterimTranscript] = useState('')
   const recRef = useRef<SpeechRecognitionInstance | null>(null)
 
   useEffect(() => {
@@ -49,6 +53,7 @@ export function useSpeechRecognition() {
     recRef.current?.stop()
     recRef.current = null
     setListening(false)
+    setInterimTranscript('')
   }, [])
 
   const start = useCallback(
@@ -63,13 +68,28 @@ export function useSpeechRecognition() {
       const rec = new Ctor()
       recRef.current = rec
       rec.lang = 'pt-BR'
-      rec.interimResults = false
+      rec.interimResults = true
       rec.maxAlternatives = 1
       rec.continuous = false
 
       rec.onresult = (ev) => {
-        const text = ev.results[0]?.[0]?.transcript?.trim() ?? ''
-        if (text) onResult(text)
+        let interim = ''
+        let final = ''
+        for (let i = 0; i < ev.results.length; i++) {
+          const result = ev.results[i]
+          const piece = result?.[0]?.transcript ?? ''
+          if (result?.isFinal) {
+            final += piece
+          } else {
+            interim += piece
+          }
+        }
+        const preview = (interim || final).trim()
+        setInterimTranscript(preview)
+        if (final.trim()) {
+          onResult(final.trim())
+          setInterimTranscript('')
+        }
       }
 
       rec.onerror = (ev) => {
@@ -81,19 +101,22 @@ export function useSpeechRecognition() {
           )
         }
         setListening(false)
+        setInterimTranscript('')
         recRef.current = null
       }
 
       rec.onend = () => {
         setListening(false)
+        setInterimTranscript('')
         recRef.current = null
       }
 
+      setInterimTranscript('')
       setListening(true)
       rec.start()
     },
     [],
   )
 
-  return { listening, supported, start, stop }
+  return { listening, supported, interimTranscript, start, stop }
 }

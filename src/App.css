@@ -22,6 +22,7 @@
 }
 
 .sidebar {
+  position: relative;
   width: var(--sidebar-w-collapsed);
   flex-shrink: 0;
   align-self: stretch;
@@ -70,6 +71,8 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  padding-bottom: var(--sidebar-tools-h);
+  box-sizing: border-box;
 }
 
 .sidebar:not(.sidebar--wide) .sidebar-body {
@@ -1236,6 +1239,12 @@
   border: 1px dashed var(--border);
   border-radius: 8px;
   background: var(--bg-elevated);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.movimentacao-voz--listening {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 4%, var(--bg-elevated));
 }
 
 .movimentacao-voz-title {
@@ -1251,6 +1260,56 @@
   margin: 0 0 10px;
   font-size: 0.82rem;
   line-height: 1.4;
+}
+
+.movimentacao-voz-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-panel));
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+}
+
+.movimentacao-voz-live-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: movimentacao-voz-blink 1s ease-in-out infinite;
+}
+
+.movimentacao-voz-live-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.movimentacao-voz-live-label strong {
+  color: var(--danger);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.movimentacao-voz-waves {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+}
+
+.movimentacao-voz-wave-bar {
+  width: 3px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--danger);
+  animation: movimentacao-voz-wave 0.85s ease-in-out infinite;
 }
 
 .movimentacao-voz-mic {
@@ -1269,6 +1328,28 @@
   font-size: 0.88rem;
   cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.movimentacao-voz-mic-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.movimentacao-voz-mic.is-listening .movimentacao-voz-mic-icon-wrap::before,
+.movimentacao-voz-mic.is-listening .movimentacao-voz-mic-icon-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0;
+  animation: movimentacao-voz-ring 1.6s ease-out infinite;
+}
+
+.movimentacao-voz-mic.is-listening .movimentacao-voz-mic-icon-wrap::after {
+  animation-delay: 0.8s;
 }
 
 .movimentacao-voz-mic:hover:not(:disabled) {
@@ -1295,10 +1376,45 @@
 @keyframes movimentacao-voz-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(207 34 46 / 0.25);
+    box-shadow: 0 0 0 0 rgb(207 34 46 / 0.3);
   }
   50% {
-    box-shadow: 0 0 0 6px rgb(207 34 46 / 0);
+    box-shadow: 0 0 0 8px rgb(207 34 46 / 0);
+  }
+}
+
+@keyframes movimentacao-voz-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+@keyframes movimentacao-voz-wave {
+  0%,
+  100% {
+    height: 6px;
+    opacity: 0.45;
+  }
+  50% {
+    height: 18px;
+    opacity: 1;
+  }
+}
+
+@keyframes movimentacao-voz-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
   }
 }
 
@@ -2323,17 +2439,27 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .sidebar-bottom-bar {
-  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
   width: 100%;
-  margin-top: auto;
-  padding: 8px 0 0;
+  padding: 8px 10px 10px;
   box-sizing: border-box;
   background: var(--bg-panel);
   border-top: 1px solid var(--border);
+  pointer-events: auto;
+}
+
+.sidebar.sidebar--wide .sidebar-bottom-bar {
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 10px;
 }
 
 .sidebar-bottom-bar .theme-toggle {

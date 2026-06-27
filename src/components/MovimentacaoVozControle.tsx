@@ -17,7 +17,7 @@ export function MovimentacaoVozControle({
   erro,
   onLimparErro,
 }: Props) {
-  const { listening, supported, start, stop } = useSpeechRecognition()
+  const { listening, supported, interimTranscript, start, stop } = useSpeechRecognition()
 
   function handleMicClick() {
     onLimparErro()
@@ -30,7 +30,7 @@ export function MovimentacaoVozControle({
   }
 
   return (
-    <div className="movimentacao-voz">
+    <div className={`movimentacao-voz${listening ? ' movimentacao-voz--listening' : ''}`}>
       <p className="movimentacao-voz-title">Mover por voz</p>
       {!supported ? (
         <p className="muted movimentacao-voz-hint">
@@ -49,6 +49,21 @@ export function MovimentacaoVozControle({
               <>Selecione um endereço na lista acima e depois fale para onde mover.</>
             )}
           </p>
+          {listening && (
+            <div className="movimentacao-voz-live" role="status" aria-live="polite">
+              <span className="movimentacao-voz-live-dot" aria-hidden />
+              <ListeningWaveBars />
+              <span className="movimentacao-voz-live-label">
+                {interimTranscript ? (
+                  <>
+                    Ouvindo: <strong>{interimTranscript}</strong>
+                  </>
+                ) : (
+                  'Aguardando sua voz…'
+                )}
+              </span>
+            </div>
+          )}
           <button
             type="button"
             className={`movimentacao-voz-mic${listening ? ' is-listening' : ''}`}
@@ -67,10 +82,13 @@ export function MovimentacaoVozControle({
                   : 'Falar endereço de destino'
                 : 'Selecione um endereço de origem primeiro'
             }
+            aria-pressed={listening}
             onClick={handleMicClick}
           >
-            <MicIcon listening={listening} />
-            <span>{listening ? 'Ouvindo… fale agora' : 'Falar destino'}</span>
+            <span className="movimentacao-voz-mic-icon-wrap">
+              <MicIcon />
+            </span>
+            <span>{listening ? 'Ouvindo… toque para parar' : 'Falar destino'}</span>
           </button>
         </>
       )}
@@ -79,14 +97,24 @@ export function MovimentacaoVozControle({
   )
 }
 
-function MicIcon({ listening }: { listening: boolean }) {
+function ListeningWaveBars() {
+  return (
+    <span className="movimentacao-voz-waves" aria-hidden>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className="movimentacao-voz-wave-bar"
+          style={{ animationDelay: `${i * 0.11}s` }}
+        />
+      ))}
+    </span>
+  )
+}
+
+function MicIcon() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden fill="currentColor">
-      {listening ? (
-        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z" />
-      ) : (
-        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z" />
-      )}
+      <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z" />
     </svg>
   )
 }

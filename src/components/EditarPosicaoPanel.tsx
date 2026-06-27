@@ -15,6 +15,7 @@ type Props = {
   stagePendingCount: number
   moveOrigensCount: number
   moveDestinosCount: number
+  salvando?: boolean
   vozOrigemAddress: AddressId | null
   vozErro: string | null
   marcandoStage: boolean
@@ -28,7 +29,7 @@ type Props = {
   onBuscar: (numero: string) => void
   onSelectItem: (index: number) => void
   onAdicionarEnderecoDestino: (addressId: AddressId) => void
-  onSalvar: () => void
+  onSalvar: () => void | Promise<void>
   onRemoverDoEstoque: (nfId: string, motivo: MotivoRemocaoEstoqueId) => void
   onCancelarEditar: () => void
   buscaErro: string | null
@@ -45,6 +46,7 @@ export function EditarPosicaoPanel({
   stagePendingCount,
   moveOrigensCount,
   moveDestinosCount,
+  salvando = false,
   vozOrigemAddress,
   vozErro,
   marcandoStage,
@@ -167,13 +169,13 @@ export function EditarPosicaoPanel({
                   <button
                     type="button"
                     className="btn success full"
-                    onClick={() => {
-                      onSalvar()
+                    onClick={async () => {
+                      await onSalvar()
                       setNumero('')
                     }}
-                    disabled={pendingCount === 0}
+                    disabled={pendingCount === 0 || salvando}
                   >
-                    Mover para o armazém
+                    {salvando ? 'Salvando…' : 'Mover para o armazém'}
                   </button>
                 </>
               ) : (
@@ -250,13 +252,13 @@ export function EditarPosicaoPanel({
                       <button
                         type="button"
                         className="btn success full"
-                        onClick={() => {
-                          onSalvar()
+                        onClick={async () => {
+                          await onSalvar()
                           setNumero('')
                         }}
-                        disabled={!distribuicaoCompleta || stagePendingCount > 0}
+                        disabled={!distribuicaoCompleta || stagePendingCount > 0 || salvando}
                       >
-                        Confirmar movimentação
+                        {salvando ? 'Salvando…' : 'Confirmar movimentação'}
                       </button>
                     </>
                   )}
