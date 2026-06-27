@@ -13,6 +13,7 @@ import {
   type RuaConfig,
 } from '../layout/camaras'
 import { portaCamaraUrl } from '../lib/portaCamaraAsset'
+import { codigoProdutoExibicao } from '../lib/codigoProduto'
 import type { AddressId, AddressOccupancy, NotaFiscal } from '../types'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { StageSection } from './StageSection'
@@ -383,7 +384,10 @@ function RuaGrid({
                               {cellNfLabel(occ.nfNumero, cellSize)}
                             </span>
                             <span className="cell-codigo">
-                              {cellCodigoLabel(occ.codigo, cellSize)}
+                              {cellCodigoLabel(
+                                codigoProdutoExibicao(occ.codigo, occ.descricao),
+                                cellSize,
+                              )}
                             </span>
                           </span>
                         )}
