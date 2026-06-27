@@ -4,6 +4,7 @@ import {
   cellKind,
   makeAddressId,
   portaCellBackgroundStyle,
+  portaCellEdgeClasses,
   type CamaraConfig,
   type RuaConfig,
 } from '../layout/camaras'
@@ -135,10 +136,15 @@ function PrintRuaGrid({ camaraId, config, dims }: { camaraId: number; config: Ru
                     kind === 'porta' && config.porta
                       ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl)
                       : null
+                  let cellClass = `print-cell print-cell--${kind}`
+                  if (kind === 'porta' && config.porta) {
+                    const edge = portaCellEdgeClasses(col, nivel, config.porta)
+                    if (edge) cellClass += ` ${edge.replace(/cell--/g, 'print-cell--')}`
+                  }
                   return (
                     <div
                       key={makeAddressId(camaraId, config.rua, nivel, col)}
-                      className={`print-cell print-cell--${kind}`}
+                      className={cellClass}
                       style={{
                         width: `${cellW}mm`,
                         height: `${cellH}mm`,

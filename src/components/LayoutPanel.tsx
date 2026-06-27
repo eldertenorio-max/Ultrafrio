@@ -7,6 +7,7 @@ import {
   isClickable,
   makeAddressId,
   portaCellBackgroundStyle,
+  portaCellEdgeClasses,
   type CamaraConfig,
   type CellKind,
   type RuaConfig,
@@ -320,6 +321,10 @@ function RuaGrid({
                       kind === 'porta' && config.porta
                         ? portaCellBackgroundStyle(col, nivel, config.porta, portaCamaraUrl)
                         : null
+                    if (kind === 'porta' && config.porta) {
+                      const edge = portaCellEdgeClasses(col, nivel, config.porta)
+                      if (edge) className += ` ${edge}`
+                    }
 
                     return (
                       <button

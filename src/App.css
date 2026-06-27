@@ -1618,9 +1618,22 @@
 
 .cell--porta {
   background-color: var(--rack-bay);
+  background-image: none;
+  box-shadow: none;
+}
+
+.cell--porta.cell--porta-edge-top.cell--porta-edge-left {
   box-shadow:
     inset 0 var(--rack-beam-w) 0 0 var(--rack-beam),
     inset var(--rack-upright-w) 0 0 0 var(--rack-upright);
+}
+
+.cell--porta.cell--porta-edge-top:not(.cell--porta-edge-left) {
+  box-shadow: inset 0 var(--rack-beam-w) 0 0 var(--rack-beam);
+}
+
+.cell--porta.cell--porta-edge-left:not(.cell--porta-edge-top) {
+  box-shadow: inset var(--rack-upright-w) 0 0 0 var(--rack-upright);
 }
 
 .cell--sem-nivel5 {
@@ -2746,6 +2759,16 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .print-cell--porta {
   background: #fff;
+  border-top: none;
+  border-left: none;
+}
+
+.print-cell--porta.print-cell--porta-edge-top {
+  border-top: 0.45mm solid #e87722;
+}
+
+.print-cell--porta.print-cell--porta-edge-left {
+  border-left: 0.45mm solid #1a56a8;
 }
 
 .print-cell--bloqueado {

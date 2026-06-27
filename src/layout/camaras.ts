@@ -192,3 +192,17 @@ export function portaCellBackgroundStyle(
     backgroundRepeat: 'no-repeat',
   }
 }
+
+/** Linhas do rack só nas bordas externas do bloco da porta (sem cruz no meio). */
+export function portaCellEdgeClasses(
+  col: number,
+  nivel: number,
+  porta: NonNullable<RuaConfig['porta']>,
+): string {
+  const [c0] = porta.cols
+  const [, n1] = porta.niveis
+  const classes: string[] = []
+  if (nivel === n1) classes.push('cell--porta-edge-top')
+  if (col === c0) classes.push('cell--porta-edge-left')
+  return classes.join(' ')
+}
