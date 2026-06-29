@@ -20,6 +20,8 @@ export const VOICE_PROFILE_KEY = 'ultrafrio-voice-profile'
 export const MAX_VOICE_PROFILES = 5
 export const VOICE_ENROLLMENT_SAMPLES = 3
 export const VOICE_MATCH_THRESHOLD = 0.55
+/** Limiar mais baixo na verificação ao vivo (áudio contínuo com ruído). */
+export const VOICE_LIVE_MATCH_THRESHOLD = 0.42
 
 export function createVoiceId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {

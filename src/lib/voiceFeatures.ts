@@ -31,10 +31,14 @@ function bandEnergy(frame: Float32Array, band: number, bands: number): number {
 }
 
 export async function decodeAudioBlob(blob: Blob): Promise<AudioBuffer> {
+  const arrayBuffer = await blob.arrayBuffer()
+  if (arrayBuffer.byteLength < 64) {
+    throw new Error('Áudio muito curto para análise.')
+  }
+
   const ctx = new AudioContext()
   try {
-    const buffer = await blob.arrayBuffer()
-    return await ctx.decodeAudioData(buffer.slice(0))
+    return await ctx.decodeAudioData(arrayBuffer.slice(0))
   } finally {
     await ctx.close()
   }

@@ -6,7 +6,7 @@ import {
 } from '../lib/voiceNormalize'
 import {
   findBestVoiceMatch,
-  VOICE_MATCH_THRESHOLD,
+  VOICE_LIVE_MATCH_THRESHOLD,
   type NamedVoiceProfile,
 } from '../lib/voiceProfile'
 
@@ -156,6 +156,7 @@ export function useVoiceAssistant({
   const audioStreamRef = useRef<MediaStream | null>(null)
   const audioRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<{ data: Blob; ts: number }[]>([])
+  const audioHeaderChunkRef = useRef<Blob | null>(null)
 
   useEffect(() => {
     onCommandTextRef.current = onCommandText
@@ -222,23 +223,14 @@ export function useVoiceAssistant({
     setLiveText('')
   }, [])
 
-  const audioDeferredTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const clearAudioDeferredTimer = useCallback(() => {
-    if (audioDeferredTimerRef.current) {
-      clearTimeout(audioDeferredTimerRef.current)
-      audioDeferredTimerRef.current = null
-    }
-  }, [])
-
   const stopAudioCapture = useCallback(() => {
-    clearAudioDeferredTimer()
     audioRecorderRef.current?.stop()
     audioRecorderRef.current = null
     audioStreamRef.current?.getTracks().forEach((t) => t.stop())
     audioStreamRef.current = null
     audioChunksRef.current = []
-  }, [clearAudioDeferredTimer])
+    audioHeaderChunkRef.current = null
+  }, [])
 
   const startAudioCapture = useCallback(async () => {
     stopAudioCapture()
@@ -254,9 +246,16 @@ export function useVoiceAssistant({
       recorder.ondataavailable = (e) => {
         if (e.data.size === 0) return
         const ts = Date.now()
+        if (audioChunksRef.current.length === 0) {
+          audioHeaderChunkRef.current = e.data
+        }
         audioChunksRef.current.push({ data: e.data, ts })
+        if (audioChunksRef.current.length === 1) return
+
         const cutoff = ts - AUDIO_BUFFER_MS
-        audioChunksRef.current = audioChunksRef.current.filter((c) => c.ts >= cutoff)
+        const first = audioChunksRef.current[0]
+        const rest = audioChunksRef.current.slice(1).filter((c) => c.ts >= cutoff)
+        audioChunksRef.current = [first, ...rest]
       }
       recorder.start(400)
       audioRecorderRef.current = recorder
@@ -265,49 +264,78 @@ export function useVoiceAssistant({
     }
   }, [stopAudioCapture])
 
-  const scheduleAudioCapture = useCallback(() => {
-    clearAudioDeferredTimer()
-    audioDeferredTimerRef.current = setTimeout(() => {
-      audioDeferredTimerRef.current = null
-      if (runningRef.current && !pausedForLocalSpeechRef.current) {
-        void startAudioCapture()
-      }
-    }, 1500)
-  }, [clearAudioDeferredTimer, startAudioCapture])
-
   const scheduleVoiceCaptureIfNeeded = useCallback(() => {
     if (!requireVoiceMatchRef.current || voiceProfilesRef.current.length === 0) {
       stopAudioCapture()
       return
     }
-    scheduleAudioCapture()
-  }, [scheduleAudioCapture, stopAudioCapture])
+    void startAudioCapture()
+  }, [startAudioCapture, stopAudioCapture])
 
   const getRecentAudioBlob = useCallback((): Blob | null => {
     const chunks = audioChunksRef.current
     if (chunks.length === 0) return null
+    const type = chunks[0]?.data.type || audioHeaderChunkRef.current?.type || 'audio/webm'
     return new Blob(
       chunks.map((c) => c.data),
-      { type: chunks[0]?.data.type || 'audio/webm' },
+      { type },
     )
   }, [])
+
+  const flushAudioForVerification = useCallback(async (): Promise<Blob | null> => {
+    const recorder = audioRecorderRef.current
+    if (recorder?.state === 'recording') {
+      await new Promise<void>((resolve) => {
+        let settled = false
+        const finish = () => {
+          if (settled) return
+          settled = true
+          resolve()
+        }
+        const onData = (e: BlobEvent) => {
+          if (e.data.size === 0) return
+          const ts = Date.now()
+          if (audioChunksRef.current.length === 0) {
+            audioHeaderChunkRef.current = e.data
+          }
+          audioChunksRef.current.push({ data: e.data, ts })
+        }
+        recorder.addEventListener('dataavailable', onData, { once: true })
+        try {
+          recorder.requestData()
+        } catch {
+          finish()
+          return
+        }
+        setTimeout(finish, 120)
+      })
+    }
+    return getRecentAudioBlob()
+  }, [getRecentAudioBlob])
 
   const verifyRegisteredVoice = useCallback(async (): Promise<boolean> => {
     const profiles = voiceProfilesRef.current
     if (!requireVoiceMatchRef.current || profiles.length === 0) return true
 
-    const blob = getRecentAudioBlob()
+    const blob = await flushAudioForVerification()
     if (!blob || blob.size < 200) {
-      setLastHint('Frase reconhecida — fale o comando.')
-      return true
+      onErrorRef.current?.(
+        'Áudio insuficiente para verificar a voz. Aguarde 1 segundo e fale "ok estoque" de novo.',
+      )
+      return false
     }
 
     try {
       const features = await extractVoiceFeatures(blob)
+      if (features.every((v) => v === 0)) {
+        onErrorRef.current?.('Não detectei voz no microfone. Fale "ok estoque" mais perto.')
+        return false
+      }
+
       const { match, score, profile } = findBestVoiceMatch(
         profiles,
         features,
-        VOICE_MATCH_THRESHOLD,
+        VOICE_LIVE_MATCH_THRESHOLD,
       )
       if (!match) {
         onErrorRef.current?.(
@@ -320,10 +348,12 @@ export function useVoiceAssistant({
       }
       return true
     } catch {
-      onErrorRef.current?.('Erro ao verificar voz cadastrada.')
+      onErrorRef.current?.(
+        'Não foi possível analisar o áudio. Grave sua voz de novo em Comando de voz ou desative "Exigir voz cadastrada".',
+      )
       return false
     }
-  }, [getRecentAudioBlob])
+  }, [flushAudioForVerification])
 
   const dispatchCommand = useCallback(
     (text: string) => {

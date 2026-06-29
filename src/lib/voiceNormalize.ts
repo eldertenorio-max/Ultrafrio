@@ -18,6 +18,8 @@ function fuzzyWakePhraseMatch(norm: string, wake: string): boolean {
     if (/\b(o\s*k|ok|okay|oki|oque|o k)\s+est(o|ó)?que\b/.test(norm)) return true
     if (/\best(o|ó)?que\s+(ok|okay|oki|oque)\b/.test(norm)) return true
     if (/\baqui\s+est(o|ó)?que\b/.test(norm)) return true
+    // STT às vezes transcreve "ok estoque" como "ok estou aqui"
+    if (/\bok\s+estou(\s+aqui)?\b/.test(norm)) return true
   }
   return false
 }
@@ -53,6 +55,10 @@ export function stripWakePhrase(transcript: string, wakePhrase: string): string 
     const m = norm.match(OK_ESTOQUE_WAKE_RE)
     if (m?.index != null) {
       return norm.slice(m.index + m[0].length).trim()
+    }
+    const estou = norm.match(/\bok\s+estou(?:\s+aqui)?\b/)
+    if (estou?.index != null) {
+      return norm.slice(estou.index + estou[0].length).trim()
     }
   }
 
