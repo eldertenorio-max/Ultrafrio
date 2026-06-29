@@ -101,6 +101,7 @@ import {
 } from './lib/contaSessao'
 import { useVoiceRegistry } from './hooks/useVoiceRegistry'
 import { findNotaByNumero, mensagemNfCanceladaDuplicada, mensagemNfDuplicada } from './lib/nfDuplicate'
+import { nfPrecisaReparoEnderecos, tentarRepararPersistido } from './lib/repararNfEstoque'
 import { parseCanceladaXml } from './lib/parseCanceladaXml'
 import { parseNfeReferenciaChaves, parseNfeXml } from './lib/parseNfeXml'
 import { parseEnderecoFalado, validarEnderecoDestinoVoz } from './lib/parseEnderecoFalado'
@@ -304,6 +305,21 @@ export default function App() {
   useEffect(() => {
     stateRef.current = state
   }, [state])
+
+  const reparoInicialFeitoRef = useRef(false)
+  useEffect(() => {
+    if (loading || reparoInicialFeitoRef.current) return
+    reparoInicialFeitoRef.current = true
+    const atual = stateRef.current
+    const { data, reparado } = tentarRepararPersistido({
+      notas: atual.notas,
+      movimentos: atual.movimentos,
+      notasCanceladas: atual.notasCanceladas,
+      emitentes: atual.emitentes,
+    })
+    if (!reparado) return
+    void saveNow({ ...atual, ...data })
+  }, [loading, saveNow])
 
   useEffect(() => {
     openSectionRef.current = openSection
@@ -630,6 +646,7 @@ export default function App() {
     const errors: string[] = []
     const acumulado = [...state.notas]
     let movimentos = state.movimentos
+    let reparos: string[] = []
 
     for (const file of files) {
       try {
@@ -637,6 +654,26 @@ export default function App() {
         const nf = parseNfeXml(text)
         const dup = mensagemNfDuplicada(nf, acumulado, state.notasCanceladas, movimentos)
         if (dup) {
+          const dupNota = findNotaByNumero(acumulado, nf.numero)
+          if (dupNota && nfPrecisaReparoEnderecos(dupNota, movimentos)) {
+            const { data: reparado, reparado: ok, enderecosRecuperados } = tentarRepararPersistido({
+              notas: state.notas,
+              movimentos,
+              notasCanceladas: state.notasCanceladas,
+              emitentes: state.emitentes,
+            })
+            if (ok) {
+              const nextState = { ...state, ...reparado }
+              setState(nextState)
+              movimentos = reparado.movimentos
+              acumulado.splice(0, acumulado.length, ...reparado.notas)
+              await saveNow(nextState)
+              reparos.push(
+                `NF ${dupNota.numero}: ${enderecosRecuperados} posição(ões) restaurada(s) do histórico.`,
+              )
+              continue
+            }
+          }
           skipped.push(`NF ${nf.numero} (${file.name}): ${dup}`)
           continue
         }
@@ -671,6 +708,9 @@ export default function App() {
           ? `NF ${imported[0].numero} importada.`
           : `${imported.length} NFs importadas.`,
       )
+    }
+    if (reparos.length > 0) {
+      feedback.push(reparos.join(' · '))
     }
     if (skipped.length > 0) {
       feedback.push(`Ignoradas (${skipped.length}): ${skipped.join(' · ')}`)

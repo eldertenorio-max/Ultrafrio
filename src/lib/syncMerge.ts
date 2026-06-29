@@ -1,6 +1,6 @@
 import { todosItensEnderecados } from './excluirItemNf'
 import { itemEnderecamentoCompleto } from './paletes'
-import type { NotaFiscal, NfeItem, PersistedData } from '../types'
+import type { MovimentoRegistro, NotaFiscal, NfeItem, PersistedData } from '../types'
 
 function entityById<T extends { id: string }>(list: T[], id: string): T | undefined {
   return list.find((x) => x.id === id)
@@ -14,10 +14,18 @@ function enderecoCount(nf: NotaFiscal): number {
   return nf.items.reduce((s, it) => s + it.allocatedAddresses.length, 0)
 }
 
+/** Endereços e itens completos pesam mais que status concluída sem posições no mapa. */
 function nfCompleteness(nf: NotaFiscal): number {
+  const addrCount = enderecoCount(nf)
   const completeItems = nf.items.filter(itemEnderecamentoCompleto).length
-  const statusBonus = nf.status === 'concluida' ? 1_000_000 : 0
-  return statusBonus + completeItems * 1_000 + enderecoCount(nf)
+  const concluidaComEstoque =
+    nf.status === 'concluida' && (addrCount > 0 || todosItensEnderecados(nf))
+  return (
+    addrCount * 10_000 +
+    completeItems * 1_000 +
+    nf.items.length * 10 +
+    (concluidaComEstoque ? 500 : nf.status === 'concluida' ? 50 : 0)
+  )
 }
 
 function mergeAllocatedAddresses(remote: string[], fallback: string[]): string[] {
@@ -127,6 +135,95 @@ function mergeNotaFiscal(base: NotaFiscal[], local: NotaFiscal[], remote: NotaFi
   return result
 }
 
+function movimentoRichness(m: MovimentoRegistro): number {
+  return (
+    m.itens.reduce((s, it) => s + it.addressIds.length, 0) * 1_000 +
+    m.itens.length * 10 +
+    (m.excluido ? 0 : 1)
+  )
+}
+
+function mergeSingleMovimento(
+  b: MovimentoRegistro | undefined,
+  l: MovimentoRegistro | undefined,
+  r: MovimentoRegistro | undefined,
+): MovimentoRegistro | undefined {
+  if (entityJson(b) !== entityJson(l)) {
+    return l
+  }
+
+  if (entityJson(b) !== entityJson(r)) {
+    if (r === undefined) return l
+    if (l === undefined) return r
+    return movimentoRichness(l) >= movimentoRichness(r) ? l : r
+  }
+
+  return l
+}
+
+function mergeMovimentos(
+  base: MovimentoRegistro[],
+  local: MovimentoRegistro[],
+  remote: MovimentoRegistro[],
+): MovimentoRegistro[] {
+  const allIds = new Set([
+    ...base.map((x) => x.id),
+    ...local.map((x) => x.id),
+    ...remote.map((x) => x.id),
+  ])
+  const result: MovimentoRegistro[] = []
+
+  for (const id of allIds) {
+    const merged = mergeSingleMovimento(
+      entityById(base, id),
+      entityById(local, id),
+      entityById(remote, id),
+    )
+    if (merged !== undefined) result.push(merged)
+  }
+
+  return result
+}
+
+/** Evita que sync remoto apague endereços ou NFs que ainda existem no estado anterior. */
+export function protegerNotasContraRegressao(
+  anterior: NotaFiscal[],
+  mesclado: NotaFiscal[],
+): NotaFiscal[] {
+  const porId = new Map(mesclado.map((nf) => [nf.id, nf]))
+  const extras: NotaFiscal[] = []
+
+  for (const prev of anterior) {
+    const atual = porId.get(prev.id)
+    if (!atual) {
+      if (
+        prev.status === 'concluida' ||
+        prev.status === 'em_andamento' ||
+        enderecoCount(prev) > 0
+      ) {
+        extras.push(prev)
+      }
+      continue
+    }
+    if (nfCompleteness(prev) > nfCompleteness(atual)) {
+      porId.set(prev.id, prev)
+    }
+  }
+
+  return [...porId.values(), ...extras.filter((nf) => !porId.has(nf.id))]
+}
+
+export function protegerPersistedContraRegressao(
+  preferido: PersistedData,
+  mesclado: PersistedData,
+): PersistedData {
+  return {
+    ...mesclado,
+    notas: protegerNotasContraRegressao(preferido.notas, mesclado.notas),
+    movimentos: mergeMovimentos(preferido.movimentos, preferido.movimentos, mesclado.movimentos),
+  }
+}
+
 export function pickPersisted(state: {
   notas: PersistedData['notas']
   movimentos: PersistedData['movimentos']
@@ -204,7 +301,7 @@ export function mergePersistedData(
 ): PersistedData {
   return {
     notas: mergeNotaFiscal(base.notas, local.notas, remote.notas),
-    movimentos: mergeEntityList(base.movimentos, local.movimentos, remote.movimentos),
+    movimentos: mergeMovimentos(base.movimentos, local.movimentos, remote.movimentos),
     notasCanceladas: mergeEntityList(base.notasCanceladas, local.notasCanceladas, remote.notasCanceladas),
     emitentes: mergeEmitentes(base.emitentes, local.emitentes, remote.emitentes),
   }

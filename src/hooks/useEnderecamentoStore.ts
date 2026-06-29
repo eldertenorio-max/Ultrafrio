@@ -5,11 +5,14 @@ import { ensureSupabaseConfig } from '../lib/supabaseConfig'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { subscribeEnderecamentoChanges } from '../lib/supabaseRealtime'
 import { normalizePersistedData, prepareLoadedDataWithRepair } from '../lib/persistence'
+import { contarEnderecosPersistidos } from '../lib/movimentos'
 import { mesclarEmitentesSugeridos, normalizarEmitente } from '../lib/emitentesRegistry'
 import {
   mergePersistedData,
   persistedEquals,
   pickPersisted,
+  protegerNotasContraRegressao,
+  protegerPersistedContraRegressao,
 } from '../lib/syncMerge'
 import type { AppState, PersistedData } from '../types'
 import type { StorageMode } from '../lib/repository/types'
@@ -54,7 +57,7 @@ function pickRepository(): EnderecamentoRepository {
 }
 
 function preserveUi(prev: AppState, data: PersistedData): AppState {
-  let notas = data.notas
+  let notas = protegerNotasContraRegressao(prev.notas, data.notas)
   let activeNfId = prev.activeNfId
 
   if (activeNfId) {
@@ -157,6 +160,7 @@ export function useEnderecamentoStore() {
       if (lastPersistedRef.current) {
         const remote = pickPersisted(await repo.loadData())
         dataToSave = mergePersistedData(lastPersistedRef.current, dataToSave, remote)
+        dataToSave = protegerPersistedContraRegressao(pickPersisted(next), dataToSave)
       }
 
       dataToSave = normalizePersistedData(dataToSave)
@@ -172,7 +176,12 @@ export function useEnderecamentoStore() {
       })
 
       if (!persistedEquals(dataToSave, pickPersisted(next))) {
-        applyPersistedToState(dataToSave, next)
+        const localPick = pickPersisted(next)
+        if (
+          contarEnderecosPersistidos(dataToSave) >= contarEnderecosPersistidos(localPick)
+        ) {
+          applyPersistedToState(dataToSave, next)
+        }
       }
 
       return dataToSave
@@ -282,7 +291,8 @@ export function useEnderecamentoStore() {
       setState((prev) => {
         const local = pickPersisted(prev)
         const merged = base ? mergePersistedData(base, local, data) : data
-        const normalized = normalizePersistedData(merged)
+        const protegido = protegerPersistedContraRegressao(local, merged)
+        const normalized = normalizePersistedData(protegido)
         lastPersistedRef.current = normalized
         const next = preserveUi(prev, normalized)
         if (persistedEquals(pickPersisted(prev), pickPersisted(next))) return prev
