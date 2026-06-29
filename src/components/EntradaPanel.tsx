@@ -25,6 +25,7 @@ type Props = {
   paletesRestantes: number | null
   onConfirmItem: () => void
   onFinishEntrada: () => void
+  onDeixarPendente: () => void | Promise<void>
   onCancelarEntrada: (nfId: string) => void
   onLimparSelecao: () => void
   uploadError: string | null
@@ -48,6 +49,7 @@ export function EntradaPanel({
   paletesRestantes,
   onConfirmItem,
   onFinishEntrada,
+  onDeixarPendente,
   onCancelarEntrada,
   onLimparSelecao,
   uploadError,
@@ -62,6 +64,10 @@ export function EntradaPanel({
       ? activeNf.items.find((it) => it.index === activeItemIndex) ?? null
       : null
   const activeItemStage = activeItem != null && localizacaoItem(activeItem) === 'stage'
+  const itensPendentesEntrada =
+    activeNf?.items.filter((it) => !itemEnderecamentoCompleto(it)).length ?? 0
+  const podeDeixarPendente =
+    activeNf?.status === 'em_andamento' && itensPendentesEntrada > 0
 
   function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files ? Array.from(e.target.files) : []
@@ -216,9 +222,37 @@ export function EntradaPanel({
           )}
 
           {activeNf && activeNf.status === 'em_andamento' && (
-            <button type="button" className="btn success full" onClick={onFinishEntrada}>
-              Finalizar entrada — NF {activeNf.numero}
-            </button>
+            <div className="entrada-acoes-finais">
+              {podeDeixarPendente && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-ghost full"
+                    onClick={() => void onDeixarPendente()}
+                  >
+                    Deixar pendente
+                  </button>
+                  <p className="muted entrada-pendente-hint">
+                    Salva o progresso e mantém a NF em{' '}
+                    <strong>Entradas em andamento</strong> ({itensPendentesEntrada}{' '}
+                    {itensPendentesEntrada === 1 ? 'item pendente' : 'itens pendentes'}).
+                  </p>
+                </>
+              )}
+              <button
+                type="button"
+                className="btn success full"
+                onClick={onFinishEntrada}
+                disabled={podeDeixarPendente}
+                title={
+                  podeDeixarPendente
+                    ? 'Enderece todos os itens antes de finalizar a entrada'
+                    : undefined
+                }
+              >
+                Finalizar entrada — NF {activeNf.numero}
+              </button>
+            </div>
           )}
           </div>
         </>

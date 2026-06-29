@@ -1433,6 +1433,24 @@
   flex-shrink: 0;
 }
 
+.entrada-acoes-finais {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entrada-pendente-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.entrada-acoes-finais .btn.success:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .badge-concluida {
   margin-top: 12px;
   padding: 8px 10px;

@@ -1429,6 +1429,20 @@ export default function App() {
     await saveNow(nextState)
   }
 
+  async function handleDeixarEntradaPendente() {
+    if (!activeNf || activeNf.status !== 'em_andamento') return
+
+    entradaPendenteDismissedRef.current = activeNf.id
+    setPendingSelection(new Set())
+    const nextState = {
+      ...stateRef.current,
+      activeNfId: null,
+      activeItemIndex: null,
+    }
+    setState(nextState)
+    await saveNow(nextState)
+  }
+
   async function handleManualNfConfirm(result: ManualNfModalResult) {
     setManualNfError(null)
 
@@ -2946,6 +2960,7 @@ export default function App() {
           onDesmembrarItem: handleDesmembrarItem,
           onConfirmItem: handleConfirmItem,
           onFinishEntrada: handleFinishEntrada,
+          onDeixarPendente: handleDeixarEntradaPendente,
           onCancelarEntrada: handleCancelarEntrada,
           onLimparSelecao: handleLimparSelecao,
           onCadastrarManual: () => {
