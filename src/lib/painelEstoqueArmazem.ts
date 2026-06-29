@@ -11,6 +11,8 @@ export type ResumoCamaraEstoque = {
   valorArmazenado: number
   valorPaletes: number
   ocupacaoPct: number
+  qtdItens: number
+  qtdNotas: number
 }
 
 export type ResumoTotalEstoque = {
@@ -37,10 +39,13 @@ function valorPorEndereco(item: NfeItem): number {
 }
 
 export function calcularResumoEstoqueArmazem(notas: NotaFiscal[]): ResumoEstoqueArmazem {
-  const porCamara = new Map<number, { total: number; ocupadas: Set<string>; valor: number }>()
+  const porCamara = new Map<
+    number,
+    { total: number; ocupadas: Set<string>; valor: number; itens: Set<string>; notas: Set<string> }
+  >()
 
   for (const cam of CAMARAS) {
-    porCamara.set(cam.id, { total: 0, ocupadas: new Set(), valor: 0 })
+    porCamara.set(cam.id, { total: 0, ocupadas: new Set(), valor: 0, itens: new Set(), notas: new Set() })
   }
 
   for (const slot of listAllAddresses()) {
@@ -67,6 +72,8 @@ export function calcularResumoEstoqueArmazem(notas: NotaFiscal[]): ResumoEstoque
       }
 
       const vEnd = valorPorEndereco(item)
+      const itemKey = `${nf.id}:${item.index}`
+      const camarasDoItem = new Set<number>()
       for (const addr of item.allocatedAddresses) {
         const p = parseAddressId(addr)
         if (!p) continue
@@ -75,6 +82,14 @@ export function calcularResumoEstoqueArmazem(notas: NotaFiscal[]): ResumoEstoque
         if (bucket) {
           bucket.ocupadas.add(addr)
           bucket.valor += vEnd
+          camarasDoItem.add(p.camara)
+        }
+      }
+      for (const camId of camarasDoItem) {
+        const bucket = porCamara.get(camId)
+        if (bucket) {
+          bucket.itens.add(itemKey)
+          bucket.notas.add(nf.id)
         }
       }
     }
@@ -94,6 +109,8 @@ export function calcularResumoEstoqueArmazem(notas: NotaFiscal[]): ResumoEstoque
       valorArmazenado: b.valor,
       valorPaletes: b.valor,
       ocupacaoPct: pct,
+      qtdItens: b.itens.size,
+      qtdNotas: b.notas.size,
     }
   })
 

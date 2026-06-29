@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import {
   CAMARAS,
   NIVEIS,
@@ -16,6 +24,8 @@ import { portaCamaraUrl } from '../lib/portaCamaraAsset'
 import { codigoProdutoExibicao } from '../lib/codigoProduto'
 import type { AddressId, AddressOccupancy, NotaFiscal } from '../types'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { calcularResumoEstoqueArmazem } from '../lib/painelEstoqueArmazem'
+import { CamaraStatsCards } from './CamaraStatsCards'
 import { StageSection } from './StageSection'
 
 const CELL_GAP = 0
@@ -443,8 +453,14 @@ function CamaraSection({
   cam,
   mobile,
   paint,
+  resumoCamara,
   ...props
-}: { cam: CamaraConfig; mobile: boolean; paint: PaintController } & Props) {
+}: {
+  cam: CamaraConfig
+  mobile: boolean
+  paint: PaintController
+  resumoCamara: ReturnType<typeof calcularResumoEstoqueArmazem>['camaras'][number]
+} & Props) {
   const ref = useRef<HTMLElement>(null)
   const [cellSize, setCellSize] = useState(mobile ? MOBILE_MIN_CELL : MIN_CELL)
 
@@ -470,6 +486,7 @@ function CamaraSection({
         <h2>Câmara {cam.id}</h2>
         <span>{cam.tipo}</span>
       </header>
+      <CamaraStatsCards resumo={resumoCamara} />
       <div className={`ruas-row ${mobile ? 'ruas-row--stacked' : ''}`}>
         {cam.ruas.map((rua) => (
           <RuaGrid
@@ -626,6 +643,14 @@ export function LayoutPanel(props: Props) {
   const paint = useCellPaint(paintMode, props.onCellPaint, props.onCellClick)
   useScrollToMapFocus(props.focusAddressId, props.focusStage, props.focusScrollToken)
 
+  const resumoPorCamara = useMemo(() => {
+    const map = new Map<number, ReturnType<typeof calcularResumoEstoqueArmazem>['camaras'][number]>()
+    for (const c of calcularResumoEstoqueArmazem(props.notas ?? []).camaras) {
+      map.set(c.camaraId, c)
+    }
+    return map
+  }, [props.notas])
+
   return (
     <div className={`layout-panel ${mobile ? 'layout-panel--mobile' : ''} ${paintMode ? 'layout-panel--paint' : ''}`}>
       {props.paletesTotal != null &&
@@ -658,7 +683,27 @@ export function LayoutPanel(props: Props) {
 
       <div className="camaras-stack">
         {CAMARAS.map((cam) => (
-          <CamaraSection key={cam.id} cam={cam} mobile={mobile} paint={paint} {...props} />
+          <CamaraSection
+            key={cam.id}
+            cam={cam}
+            mobile={mobile}
+            paint={paint}
+            resumoCamara={
+              resumoPorCamara.get(cam.id) ?? {
+                camaraId: cam.id,
+                label: `Cam. ${cam.id}`,
+                posicoesTotal: 0,
+                posicoesOcupadas: 0,
+                posicoesLivres: 0,
+                valorArmazenado: 0,
+                valorPaletes: 0,
+                ocupacaoPct: 0,
+                qtdItens: 0,
+                qtdNotas: 0,
+              }
+            }
+            {...props}
+          />
         ))}
         {props.notas && props.onStageOpen && (
           <StageSection

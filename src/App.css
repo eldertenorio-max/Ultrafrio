@@ -1794,6 +1794,78 @@
   font-size: 0.85rem;
 }
 
+.camara-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.camara-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  min-width: 0;
+}
+
+.camara-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.camara-stat-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.camara-stat-card--valor {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 18%, var(--bg-elevated)),
+    var(--bg-elevated)
+  );
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.camara-stat-card--valor .camara-stat-value {
+  font-size: 0.92rem;
+}
+
+.camara-stat-card--livre .camara-stat-value {
+  color: #0d9488;
+}
+
+.camara-stat-card--ocupada .camara-stat-value {
+  color: #6366f1;
+}
+
+.camara-stat-card--ocupacao {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #6366f1 10%, var(--bg-elevated)),
+    var(--bg-elevated)
+  );
+}
+
+.camara-stat-card--ocupacao .camara-stat-value {
+  color: #6366f1;
+}
+
 .ruas-row {
   display: flex;
   flex-wrap: nowrap;
@@ -1890,6 +1962,29 @@
 }
 
 .layout-panel--mobile .camara-header span {
+  font-size: 0.72rem;
+}
+
+.layout-panel--mobile .camara-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.layout-panel--mobile .camara-stat-card {
+  padding: 5px 6px;
+  border-radius: 6px;
+}
+
+.layout-panel--mobile .camara-stat-label {
+  font-size: 0.58rem;
+}
+
+.layout-panel--mobile .camara-stat-value {
+  font-size: 0.82rem;
+}
+
+.layout-panel--mobile .camara-stat-card--valor .camara-stat-value {
   font-size: 0.72rem;
 }
 
