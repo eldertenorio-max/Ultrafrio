@@ -115,6 +115,7 @@ type Options = {
   onConversationStart?: () => Promise<void>
   onConversationUtterance?: (text: string) => Promise<boolean>
   onError?: (message: string) => void
+  onVoiceRecognized?: (profile: { id: string; name: string }) => void
 }
 
 export function useVoiceAssistant({
@@ -127,6 +128,7 @@ export function useVoiceAssistant({
   onConversationStart,
   onConversationUtterance,
   onError,
+  onVoiceRecognized,
 }: Options) {
   const [supported, setSupported] = useState(false)
   const [phase, setPhase] = useState<VoiceAssistantPhase>('off')
@@ -148,6 +150,7 @@ export function useVoiceAssistant({
   const onConversationStartRef = useRef(onConversationStart)
   const onConversationUtteranceRef = useRef(onConversationUtterance)
   const onErrorRef = useRef(onError)
+  const onVoiceRecognizedRef = useRef(onVoiceRecognized)
   const interactiveRef = useRef(interactive)
   const wakePhraseRef = useRef(wakePhrase)
   const voiceProfilesRef = useRef(voiceProfiles)
@@ -183,6 +186,10 @@ export function useVoiceAssistant({
   useEffect(() => {
     onErrorRef.current = onError
   }, [onError])
+
+  useEffect(() => {
+    onVoiceRecognizedRef.current = onVoiceRecognized
+  }, [onVoiceRecognized])
 
   useEffect(() => {
     wakePhraseRef.current = wakePhrase
@@ -370,6 +377,7 @@ export function useVoiceAssistant({
       }
       if (profile) {
         setLastHint(`Voz de ${profile.name} reconhecida`)
+        onVoiceRecognizedRef.current?.({ id: profile.id, name: profile.name })
       }
       return true
     } catch {

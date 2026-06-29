@@ -212,11 +212,34 @@
   color: var(--text-muted);
 }
 
+.app-topbar-user-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .app-topbar-user {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  padding: 4px 6px 4px 10px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.app-topbar-user:hover,
+.app-topbar-user--open {
+  background: var(--btn-surface-hover-bg);
+  border-color: var(--btn-surface-border);
 }
 
 .app-topbar-user-text {
@@ -278,6 +301,148 @@
   object-fit: contain;
   object-position: center;
   padding: 3px;
+}
+
+.app-topbar-avatar-iniciais {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--text-muted);
+}
+
+.account-menu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  width: min(92vw, 280px);
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sidebar, 0 8px 28px rgb(0 0 0 / 0.12));
+}
+
+.account-menu-section-label {
+  margin: 0 0 6px;
+  padding: 0 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.account-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--btn-surface-fg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu-item:hover {
+  background: var(--btn-surface-hover-bg);
+}
+
+.account-menu-divider {
+  height: 1px;
+  margin: 8px 4px;
+  background: var(--border);
+}
+
+.account-menu-empty {
+  margin: 0;
+  padding: 4px 10px 8px;
+  font-size: 0.78rem;
+}
+
+.account-menu-users {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.account-menu-user:hover {
+  background: var(--btn-surface-hover-bg);
+}
+
+.account-menu-user--active {
+  border-color: var(--btn-surface-active-border);
+  background: var(--btn-surface-active-bg);
+}
+
+.account-menu-user-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-user-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.account-menu-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.account-menu-avatar--img {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.account-menu-avatar--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+}
+
+.account-menu-avatar--iniciais {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
 }
 
 .app-topbar .sidebar-layout-control--horizontal {

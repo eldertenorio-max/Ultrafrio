@@ -91,6 +91,14 @@ import { speakText, stopSpeaking } from './lib/voiceSpeech'
 import { getStoredVoicePrefs, storeVoicePrefs, type VoicePrefs } from './lib/voicePrefs'
 import { prepareVoiceCommandText } from './lib/voiceNormalize'
 import { hasRegisteredVoices } from './lib/voiceProfile'
+import {
+  CONTA_SISTEMA_ID,
+  getUsuarioAtivoId,
+  listarUsuariosSessao,
+  registrarAcessoUsuario,
+  setUsuarioAtivoId,
+  type ContaUsuario,
+} from './lib/contaSessao'
 import { useVoiceRegistry } from './hooks/useVoiceRegistry'
 import { findNotaByNumero, mensagemNfCanceladaDuplicada, mensagemNfDuplicada } from './lib/nfDuplicate'
 import { parseCanceladaXml } from './lib/parseCanceladaXml'
@@ -201,6 +209,8 @@ export default function App() {
     refresh: refreshVoiceRegistry,
   } = useVoiceRegistry()
   const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null)
+  const [contaUsuarios, setContaUsuarios] = useState<ContaUsuario[]>(() => listarUsuariosSessao())
+  const [contaUsuarioAtivoId, setContaUsuarioAtivoId] = useState(() => getUsuarioAtivoId())
   const [conversationLines, setConversationLines] = useState<
     { role: 'user' | 'assistant'; text: string }[]
   >([])
@@ -2647,6 +2657,38 @@ export default function App() {
     await speakText(VOICE_CONVERSATION_GREETING)
   }, [])
 
+  const handleVoiceRecognized = useCallback((profile: { id: string; name: string }) => {
+    setContaUsuarios(
+      registrarAcessoUsuario({
+        id: `voz-${profile.id}`,
+        nome: profile.name,
+      }),
+    )
+    setContaUsuarioAtivoId(getUsuarioAtivoId())
+  }, [])
+
+  const handleSelectContaUsuario = useCallback((id: string) => {
+    setUsuarioAtivoId(id)
+    setContaUsuarioAtivoId(id)
+    setContaUsuarios(listarUsuariosSessao())
+  }, [])
+
+  const handleOpenContaSection = useCallback(
+    (section: SidebarSectionId) => {
+      handleOpenSection(section)
+      if (sidebarMode === 'fullscreen') {
+        setSidebarMode('open')
+      }
+    },
+    [handleOpenSection, sidebarMode, setSidebarMode],
+  )
+
+  useEffect(() => {
+    setContaUsuarios(
+      registrarAcessoUsuario({ id: CONTA_SISTEMA_ID, nome: 'Doca Livre', tornarAtivo: false }),
+    )
+  }, [])
+
   const handleConversationUtterance = useCallback(
     async (text: string): Promise<boolean> => {
       const result = processConversationTurn(text, conversationStateRef.current)
@@ -2683,6 +2725,7 @@ export default function App() {
     onConversationStart: handleConversationStart,
     onConversationUtterance: handleConversationUtterance,
     onError: (message) => setVoiceFeedback(message),
+    onVoiceRecognized: handleVoiceRecognized,
   })
 
   useEffect(() => {
@@ -2724,6 +2767,10 @@ export default function App() {
               : saidaItemDestaqueAddresses,
           saidaFlaggedAddresses: editMode ? undefined : saidaFlaggedAddresses,
         }}
+        contaUsuarios={contaUsuarios}
+        contaUsuarioAtivoId={contaUsuarioAtivoId}
+        onSelectContaUsuario={handleSelectContaUsuario}
+        onOpenContaSection={handleOpenContaSection}
       />
       <div className="app-workspace">
       <AppSidebar
