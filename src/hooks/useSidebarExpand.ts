@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SidebarMode } from '../lib/sidebarMode'
 
-/** Tempo antes de recolher ao sair com o mouse (modo recolhido). */
-const CLOSE_DELAY_MS = 1600
+/** Tempo antes de recolher ao sair com o mouse (somente no modo recolhido). */
+const CLOSE_DELAY_MS = 450
 
 export function useSidebarExpand(sidebarMode: SidebarMode) {
   const [hoverExpanded, setHoverExpanded] = useState(false)
@@ -25,9 +25,10 @@ export function useSidebarExpand(sidebarMode: SidebarMode) {
   }, [clearCloseTimer])
 
   const expand = useCallback(() => {
+    if (pinnedOpen) return
     clearCloseTimer()
     setHoverExpanded(true)
-  }, [clearCloseTimer])
+  }, [clearCloseTimer, pinnedOpen])
 
   useEffect(() => {
     if (pinnedOpen) {
@@ -38,32 +39,9 @@ export function useSidebarExpand(sidebarMode: SidebarMode) {
 
   useEffect(() => () => clearCloseTimer(), [clearCloseTimer])
 
-  useEffect(() => {
-    if (!hoverExpanded || pinnedOpen) return
-
-    function handlePointerDown(e: PointerEvent) {
-      const el = sidebarRef.current
-      if (!el || el.contains(e.target as Node)) return
-      collapse()
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [hoverExpanded, pinnedOpen, collapse])
-
-  const onSidebarPointerDown = useCallback(
-    (e: ReactPointerEvent) => {
-      if (pinnedOpen || hoverExpanded) return
-      if (e.button !== 0) return
-      if ((e.target as HTMLElement).closest('.sidebar-layout-control')) return
-      expand()
-    },
-    [pinnedOpen, hoverExpanded, expand],
-  )
-
   const onMouseEnter = useCallback(() => {
-    clearCloseTimer()
-  }, [clearCloseTimer])
+    expand()
+  }, [expand])
 
   const onMouseLeave = useCallback(
     (e: React.MouseEvent) => {
@@ -80,5 +58,5 @@ export function useSidebarExpand(sidebarMode: SidebarMode) {
     [pinnedOpen, hoverExpanded, clearCloseTimer, collapse],
   )
 
-  return { expanded, sidebarRef, onSidebarPointerDown, onMouseEnter, onMouseLeave }
+  return { expanded, sidebarRef, onMouseEnter, onMouseLeave }
 }

@@ -71,7 +71,7 @@ export function AppSidebar({
     onBeforeLeaveEntrada(proceed)
   }
 
-  const { expanded, sidebarRef, onSidebarPointerDown, onMouseEnter, onMouseLeave } =
+  const { expanded, sidebarRef, onMouseEnter, onMouseLeave } =
     useSidebarExpand(sidebarMode)
 
   const wide = expanded
@@ -88,8 +88,7 @@ export function AppSidebar({
       ]
         .filter(Boolean)
         .join(' ')}
-      title={!pinnedOpen && !expanded ? 'Clique para abrir o menu' : undefined}
-      onPointerDown={onSidebarPointerDown}
+      title={!pinnedOpen && !expanded ? 'Passe o mouse para abrir o menu' : undefined}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

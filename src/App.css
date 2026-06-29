@@ -101,6 +101,15 @@
   background: color-mix(in srgb, var(--border) 50%, transparent);
 }
 
+.app-topbar-menu:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.app-topbar-menu:disabled:hover {
+  background: transparent;
+}
+
 .app-topbar-menu-icon {
   display: block;
   width: 18px;
@@ -292,7 +301,7 @@
 }
 
 .sidebar:not(.sidebar--wide) {
-  cursor: pointer;
+  cursor: default;
 }
 
 .sidebar.sidebar--wide:not(.sidebar--mode-fullscreen) {

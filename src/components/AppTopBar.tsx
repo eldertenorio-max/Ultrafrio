@@ -54,13 +54,7 @@ export function AppTopBar({
   function handleMenuClick() {
     if (sidebarMode === 'fullscreen') {
       onSidebarModeChange('open')
-      return
     }
-    if (sidebarMode === 'open') {
-      onSidebarModeChange('collapsed')
-      return
-    }
-    onSidebarModeChange('open')
   }
 
   return (
@@ -70,8 +64,9 @@ export function AppTopBar({
           type="button"
           className="app-topbar-menu"
           onClick={handleMenuClick}
-          aria-label={sidebarMode === 'open' || sidebarMode === 'fullscreen' ? 'Recolher menu' : 'Abrir menu'}
-          title={sidebarMode === 'open' || sidebarMode === 'fullscreen' ? 'Recolher menu' : 'Abrir menu'}
+          disabled={sidebarMode !== 'fullscreen'}
+          aria-label={sidebarMode === 'fullscreen' ? 'Voltar ao mapa' : 'Menu lateral'}
+          title={sidebarMode === 'fullscreen' ? 'Voltar ao mapa' : 'Use os botões de layout ao lado para o menu'}
         >
           <span className="app-topbar-menu-icon" aria-hidden />
         </button>
