@@ -2,6 +2,7 @@ import { itemNoStage } from '../layout/stage'
 import { todosItensEnderecados } from './excluirItemNf'
 import {
   contarEnderecosPersistidos,
+  nfTemEnderecosValidos,
   nfTemHistoricoEnderecos,
   upsertMovimentoEntrada,
 } from './movimentos'
@@ -10,26 +11,26 @@ import { normalizePersistedData } from './persistence'
 import type { MovimentoRegistro, NfeItem, NotaFiscal, PersistedData } from '../types'
 
 export function nfSemEnderecosNoMapa(nf: NotaFiscal): boolean {
-  return !nf.items.some((it) => it.allocatedAddresses.length > 0)
+  return !nfTemEnderecosValidos(nf)
 }
 
 export function nfTemEstoqueVisivel(nf: NotaFiscal): boolean {
-  return nf.items.some((it) => it.allocatedAddresses.length > 0 || itemNoStage(it))
+  return nfTemEnderecosValidos(nf) || nf.items.some((it) => itemNoStage(it))
 }
 
 export function nfPrecisaReparoEnderecos(
   nf: NotaFiscal,
   movimentos: MovimentoRegistro[],
 ): boolean {
-  return nfSemEnderecosNoMapa(nf) && nfTemHistoricoEnderecos(nf, movimentos)
+  return !nfTemEnderecosValidos(nf) && nfTemHistoricoEnderecos(nf, movimentos)
 }
 
-/** NF cadastrada mas invisível no painel, consulta e mapa. */
+/** NF cadastrada mas sem posição válida no mapa das câmaras. */
 export function nfPrecisaAtualizacao(
   nf: NotaFiscal,
   movimentos: MovimentoRegistro[],
 ): boolean {
-  if (nfTemEstoqueVisivel(nf)) return false
+  if (nfTemEnderecosValidos(nf)) return false
   if (nf.items.length === 0) return true
   if (nfPrecisaReparoEnderecos(nf, movimentos)) return true
   return true
@@ -133,7 +134,7 @@ export function reconciliarNfDuplicadaDoXml(
   const antes = contarEnderecosPersistidos(data)
   const mesclada = mesclarNfComXml(dupNota, xmlNf)
   const notas = data.notas.map((n) => (n.id === dupNota.id ? mesclada : n))
-  let next: PersistedData = normalizePersistedData({
+  const next: PersistedData = normalizePersistedData({
     ...data,
     notas,
     movimentos: upsertMovimentoEntrada(data.movimentos, mesclada),
@@ -145,7 +146,7 @@ export function reconciliarNfDuplicadaDoXml(
   let mensagem: string
   if (enderecosRecuperados > 0) {
     mensagem = `NF ${nota.numero}: ${enderecosRecuperados} posição(ões) restaurada(s).`
-  } else if (nfTemEstoqueVisivel(nota)) {
+  } else if (nfTemEnderecosValidos(nota)) {
     mensagem = `NF ${nota.numero}: dados sincronizados com o XML.`
   } else {
     mensagem =
@@ -188,7 +189,7 @@ export function repararNfDuplicadaDoXml(
   const notaAposHistorico =
     historico.data.notas.find((n) => n.id === dupNota.id) ?? dupNota
 
-  if (nfTemEstoqueVisivel(notaAposHistorico) && !nfPrecisaReparoEnderecos(notaAposHistorico, historico.data.movimentos)) {
+  if (!nfPrecisaAtualizacao(notaAposHistorico, historico.data.movimentos)) {
     if (!historico.reparado) return null
     return {
       data: historico.data,

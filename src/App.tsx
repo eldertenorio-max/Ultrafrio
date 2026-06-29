@@ -54,6 +54,7 @@ import {
   criarMovimentoSaida,
   enderecosAlterados,
   enderecosDaNf,
+  nfTemEnderecosValidos,
   nfTemHistoricoEnderecos,
   removerNfDoEstoque,
   removerMovimentoEntradaAtivo,
@@ -156,10 +157,19 @@ function buildOccupancyMap(notas: NotaFiscal[]): Map<AddressId, AddressOccupancy
 }
 
 function mensagemNfSemEstoqueVisivel(nf: NotaFiscal, movimentos: MovimentoRegistro[]): string {
+  const tinhaEnderecosInvalidos = nf.items.some(
+    (it) => it.allocatedAddresses.length > 0 && !nfTemEnderecosValidos({ ...nf, items: [it] }),
+  )
   if (nfTemHistoricoEnderecos(nf, movimentos)) {
     return (
       `NF ${nf.numero} existe no sistema, mas os endereços sumiram do mapa. ` +
       'Recarregue a página (F5) ou suba o XML de novo na Entrada para restaurar.'
+    )
+  }
+  if (tinhaEnderecosInvalidos) {
+    return (
+      `NF ${nf.numero} está cadastrada com posições inválidas no mapa. ` +
+      'Suba o XML na aba Entrada para corrigir.'
     )
   }
   if (nf.items.length === 0) {

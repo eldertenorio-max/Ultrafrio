@@ -9,7 +9,7 @@ import type {
   NotaFiscal,
   PersistedData,
 } from '../types'
-import { remapLegacyAddressId } from '../layout/camaras'
+import { parseAddressId, remapLegacyAddressId } from '../layout/camaras'
 import { itemNoStage } from '../layout/stage'
 import { syncVinculosNotas } from './nfCanceladas'
 import { buildNfResumo } from './nfResumo'
@@ -40,6 +40,46 @@ export function migrarRuasNosDados(data: PersistedData): PersistedData {
   }))
 
   return changed ? { ...data, notas, movimentos } : data
+}
+
+export function enderecoValidoNoMapa(addressId: AddressId): boolean {
+  return parseAddressId(remapLegacyAddressId(addressId)) != null
+}
+
+export function enderecosValidosItem(item: NfeItem): AddressId[] {
+  return item.allocatedAddresses
+    .map(remapLegacyAddressId)
+    .filter((a) => parseAddressId(a) != null)
+}
+
+export function nfTemEnderecosValidos(nf: NotaFiscal): boolean {
+  return nf.items.some((it) => enderecosValidosItem(it).length > 0)
+}
+
+/** Remove IDs de posição inválidos que impedem reparo e exibição nas câmaras. */
+export function sanitizarEnderecosInvalidos(data: PersistedData): PersistedData {
+  let changed = false
+  const notas = data.notas.map((nf) => {
+    const items = nf.items.map((it) => {
+      const validos = enderecosValidosItem(it)
+      if (validos.length === it.allocatedAddresses.length) return it
+      changed = true
+      if (validos.length > 0) {
+        return {
+          ...it,
+          allocatedAddresses: validos,
+          localizacao: 'armazem' as const,
+          paletes: it.paletes ?? validos.length,
+        }
+      }
+      if (itemNoStage(it)) return { ...it, allocatedAddresses: [] }
+      const { localizacao: _loc, ...rest } = it
+      return { ...rest, allocatedAddresses: [] as AddressId[] }
+    })
+    if (items.every((it, i) => it === nf.items[i])) return nf
+    return { ...nf, items }
+  })
+  return changed ? { ...data, notas } : data
 }
 
 export function nfTemEnderecos(nf: NotaFiscal): boolean {
@@ -181,13 +221,26 @@ export function recuperarEnderecosPerdidos(data: PersistedData): PersistedData {
   let changed = false
   const notas = data.notas.map((nf) => {
     const items = nf.items.map((it) => {
-      if (itemNoStage(it) || it.allocatedAddresses.length > 0) return it
+      if (itemNoStage(it)) return it
+      const validos = enderecosValidosItem(it)
+      if (validos.length > 0) {
+        if (validos.length === it.allocatedAddresses.length) return it
+        changed = true
+        return {
+          ...it,
+          allocatedAddresses: validos,
+          localizacao: 'armazem' as const,
+          paletes: it.paletes ?? validos.length,
+        }
+      }
 
       const candidatos = ultimoSnapshotEnderecosItem(data.movimentos, nf.id, it.index)
       if (candidatos.length === 0) return it
 
       const enderecos = candidatos.filter(
-        (addr) => !ocupacao.has(addr) || ocupacao.get(addr) === nf.id,
+        (addr) =>
+          enderecoValidoNoMapa(addr) &&
+          (!ocupacao.has(addr) || ocupacao.get(addr) === nf.id),
       )
       if (enderecos.length === 0) return it
 

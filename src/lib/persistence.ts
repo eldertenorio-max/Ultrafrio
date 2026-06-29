@@ -5,6 +5,7 @@ import {
   migrarRuasNosDados,
   recuperarEnderecosPerdidos,
   recuperarItensPerdidos,
+  sanitizarEnderecosInvalidos,
   sincronizarMovimentosEntrada,
 } from './movimentos'
 import { syncVinculosNotas } from './nfCanceladas'
@@ -26,7 +27,9 @@ export function normalizePersistedData(data: PersistedData): PersistedData {
   const base = limparMovimentosEntradaOrfaos(
     syncVinculosNotas(
       recuperarEnderecosPerdidos(
-        recuperarItensPerdidos(sincronizarMovimentosEntrada(migrarRuasNosDados(data))),
+        recuperarItensPerdidos(
+          sincronizarMovimentosEntrada(sanitizarEnderecosInvalidos(migrarRuasNosDados(data))),
+        ),
       ),
     ),
   )
