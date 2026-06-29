@@ -241,9 +241,12 @@ function ItemDetalhe({ item }: { item: EstoqueNfInventario['itens'][number] }) {
       </dl>
       <p className="consulta-inventario-enderecos-label">
         {item.enderecos.length} {item.enderecos.length === 1 ? 'posição' : 'posições'}
-        {item.paletes != null && item.paletes > 0
-          ? ` · ${item.paletes} ${item.paletes === 1 ? 'palete' : 'paletes'}`
-          : ''}
+        {(() => {
+          const paletes = Math.max(item.paletes ?? 0, item.enderecos.length)
+          return paletes > 0
+            ? ` · ${paletes} ${paletes === 1 ? 'palete' : 'paletes'}`
+            : ''
+        })()}
         :
       </p>
       <ul className="consulta-enderecos">

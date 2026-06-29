@@ -176,7 +176,7 @@ export function NfItensLeituraTable({
                 {item.allocatedAddresses.length > 0 && (
                   <tr className="nf-itens-row-addr">
                     <td colSpan={onSelectItem ? 9 : 8}>
-                      <p className="nf-itens-addr-resumo muted">
+                      <p className="nf-itens-addr-resumo">
                         {rotuloPosicoes(item.allocatedAddresses.length)}
                         {' · '}
                         {rotuloPaletes(contagemPaletesItem(item))}

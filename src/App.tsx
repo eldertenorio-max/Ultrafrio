@@ -2307,7 +2307,11 @@ export default function App() {
       ...nf,
       items: nf.items.map((it) => {
         if (nf.id === nfAtual.id && it.index === currentItemIndex) {
-          return { ...it, allocatedAddresses: addresses }
+          const paletesAtualizados =
+            addresses.length > 0
+              ? Math.max(it.paletes ?? 0, addresses.length)
+              : it.paletes
+          return { ...it, allocatedAddresses: addresses, paletes: paletesAtualizados }
         }
         return {
           ...it,

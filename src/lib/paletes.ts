@@ -24,10 +24,18 @@ export function podeAdicionarEndereco(limite: number, selecionados: number): boo
   return selecionados < limite
 }
 
-/** Paletes cadastrados do item ou, se ausente, quantidade de endereços alocados. */
+/** Paletes do item: no armazém, nunca menor que a quantidade de posições endereçadas. */
 export function contagemPaletesItem(item: NfeItem): number {
-  if (item.paletes != null && item.paletes > 0) return item.paletes
-  return item.allocatedAddresses.length
+  const posicoes = item.allocatedAddresses.length
+  const cadastrados =
+    item.paletes != null && item.paletes > 0 ? Math.floor(item.paletes) : 0
+
+  if (item.localizacao === 'stage') {
+    return cadastrados > 0 ? cadastrados : posicoes
+  }
+
+  if (posicoes > 0) return Math.max(cadastrados, posicoes)
+  return cadastrados
 }
 
 export function totalEnderecosNf(nf: NotaFiscal): number {
