@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at center, #0d1b2e 0%, #0f1419 55%, #0a0e14 100%);
+  background: #ffffff;
   animation: intro-fade-in 0.5s ease-out;
 }
 
@@ -18,13 +18,7 @@
 }
 
 .intro-glow {
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(249 219 0 / 0.28) 0%, transparent 70%);
-  pointer-events: none;
-  animation: intro-glow-pulse 2.4s ease-in-out infinite;
+  display: none;
 }
 
 .intro-content {
@@ -41,7 +35,7 @@
   width: min(360px, 88vw);
   height: auto;
   animation: intro-logo-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
-  filter: drop-shadow(0 12px 32px rgb(0 0 0 / 0.2));
+  filter: drop-shadow(0 8px 24px rgb(0 0 0 / 0.08));
 }
 
 .intro-progress-wrap {
@@ -57,36 +51,35 @@
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: #eef1f4;
+  border: 1px solid #dde1e6;
   overflow: hidden;
 }
 
 .intro-progress-bar {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #000000, #f9db00, #000000);
-  background-size: 200% 100%;
+  background: #6e7681;
   transition: width 0.12s linear;
-  animation: intro-bar-shine 1.8s linear infinite;
 }
 
 .intro-progress-label {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: #5c6670;
   letter-spacing: 0.04em;
 }
 
-[data-theme='light'] .intro-splash {
-  background: radial-gradient(ellipse at center, #dbeafe 0%, #eef2f6 55%, #e8edf2 100%);
+[data-theme='dark'] .intro-splash {
+  background: #ffffff;
 }
 
-[data-theme='light'] .intro-glow {
-  background: radial-gradient(circle, rgb(249 219 0 / 0.35) 0%, transparent 70%);
+[data-theme='dark'] .intro-progress-track {
+  background: #eef1f4;
+  border-color: #dde1e6;
 }
 
-[data-theme='light'] .intro-logo {
-  filter: drop-shadow(0 12px 32px rgb(0 0 0 / 0.15));
+[data-theme='dark'] .intro-progress-label {
+  color: #5c6670;
 }
 
 @keyframes intro-fade-in {
@@ -126,14 +119,4 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes intro-glow-pulse {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.08); }
-}
-
-@keyframes intro-bar-shine {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
 }

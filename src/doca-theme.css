@@ -333,24 +333,24 @@
 
 /* —— Splash —— */
 .intro-splash {
-  background: radial-gradient(ellipse at center, #fffef5 0%, #f9db00 120%, #000000 220%);
+  background: #ffffff;
 }
 
 .intro-glow {
-  background: radial-gradient(circle, rgb(249 219 0 / 0.35) 0%, transparent 70%);
+  display: none;
 }
 
 .intro-progress-bar {
-  background: linear-gradient(90deg, #000000, #f9db00, #000000);
-  background-size: 200% 100%;
+  background: #6e7681;
 }
 
 .intro-logo {
-  filter: drop-shadow(0 12px 32px rgb(0 0 0 / 0.2));
+  filter: drop-shadow(0 8px 24px rgb(0 0 0 / 0.08));
 }
 
-[data-theme='light'] .intro-splash {
-  background: radial-gradient(ellipse at center, #ffffff 0%, #fff9cc 45%, #eef1f4 100%);
+[data-theme='light'] .intro-splash,
+[data-theme='dark'] .intro-splash {
+  background: #ffffff;
 }
 
 /* —— HUD voz —— */
