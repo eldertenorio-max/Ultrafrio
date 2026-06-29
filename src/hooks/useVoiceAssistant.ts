@@ -44,11 +44,13 @@ type SpeechRecognitionErrorEvent = {
 export type VoiceAssistantPhase = 'off' | 'ouvindo' | 'armado' | 'conversando' | 'executando'
 
 const ARMED_TIMEOUT_MS = 12000
-const CONVERSATION_TIMEOUT_MS = 45000
+const CONVERSATION_TIMEOUT_MS = 120000
 const AUDIO_BUFFER_MS = 9000
-const SILENCE_AFTER_SPEECH_MS = 2400
-const POST_TTS_DELAY_MS = 900
-const REC_START_RETRY_DELAYS_MS = [0, 280, 650] as const
+const SILENCE_AFTER_SPEECH_MS = 2800
+const POST_TTS_DELAY_MS = 1100
+const TTS_ECHO_GUARD_MS = 1400
+const CONVERSATION_WATCHDOG_MS = 5000
+const REC_START_RETRY_DELAYS_MS = [0, 280, 650, 1200] as const
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -93,15 +95,14 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-function createRecognitionInstance(): SpeechRecognitionInstance | null {
+function createRecognitionInstance(continuous = false): SpeechRecognitionInstance | null {
   const Ctor = getSpeechRecognitionCtor()
   if (!Ctor) return null
   const rec = new Ctor()
   rec.lang = 'pt-BR'
   rec.interimResults = true
   rec.maxAlternatives = 5
-  // Modo não-contínuo é mais estável no Chrome/Edge (Windows) com o microfone compartilhado.
-  rec.continuous = false
+  rec.continuous = continuous
   return rec
 }
 
@@ -158,7 +159,9 @@ export function useVoiceAssistant({
   const stopRecognitionRef = useRef<() => void>(() => {})
   const scheduleRecognitionRestartRef = useRef<(mode?: 'soft' | 'hard') => void>(() => {})
   const restartingRef = useRef(false)
+  const processingUtteranceRef = useRef(false)
   const ttsHoldRef = useRef(false)
+  const ttsEchoGuardUntilRef = useRef(0)
   const localSpeechHoldRef = useRef(0)
   const pausedForLocalSpeechRef = useRef(false)
   const enabledRef = useRef(enabled)
@@ -424,8 +427,9 @@ export function useVoiceAssistant({
   const runConversationUtterance = useCallback(
     async (text: string) => {
       const trimmed = text.trim()
-      if (!trimmed || !onConversationUtteranceRef.current) return
+      if (!trimmed || !onConversationUtteranceRef.current || processingUtteranceRef.current) return
 
+      processingUtteranceRef.current = true
       clearSilenceTimer()
       clearRestartTimer()
       armedBufferRef.current = ''
@@ -441,6 +445,8 @@ export function useVoiceAssistant({
         continueSession = await onConversationUtteranceRef.current(trimmed)
       } catch {
         onErrorRef.current?.('Erro ao processar a fala.')
+      } finally {
+        processingUtteranceRef.current = false
       }
 
       if (!runningRef.current) {
@@ -467,9 +473,10 @@ export function useVoiceAssistant({
         ttsHoldRef.current = false
         return
       }
+      ttsEchoGuardUntilRef.current = Date.now() + TTS_ECHO_GUARD_MS
       resumeConversationListeningRef.current()
     },
-    [clearRestartTimer, clearSilenceTimer, endConversation, resetConversationTimer],
+    [clearRestartTimer, clearSilenceTimer, endConversation, resetConversationTimer, stopAudioCapture],
   )
 
   const startConversation = useCallback(
@@ -511,6 +518,7 @@ export function useVoiceAssistant({
         ttsHoldRef.current = false
         return
       }
+      ttsEchoGuardUntilRef.current = Date.now() + TTS_ECHO_GUARD_MS
       resumeConversationListeningRef.current()
     },
     [clearRestartTimer, clearSilenceTimer, resetConversationTimer, stopAudioCapture],
@@ -638,9 +646,12 @@ export function useVoiceAssistant({
   const bindRecognitionHandlers = useCallback(
     (rec: SpeechRecognitionInstance) => {
       rec.onresult = (ev) => {
+        if (Date.now() < ttsEchoGuardUntilRef.current) return
+
         const { interim, final, combined } = readIncrementalTranscript(ev)
 
         if (armedRef.current || conversingRef.current) {
+          if (conversingRef.current) resetConversationTimer()
           if (final) {
             armedBufferRef.current = `${armedBufferRef.current} ${final}`.replace(/\s+/g, ' ').trim()
           }
@@ -669,6 +680,16 @@ export function useVoiceAssistant({
         if (ev.error !== 'aborted' && ev.error !== 'no-speech') {
           onErrorRef.current?.('Erro no microfone. Tentando reconectar…')
         }
+        if (
+          runningRef.current &&
+          conversingRef.current &&
+          !ttsHoldRef.current &&
+          !processingUtteranceRef.current &&
+          ev.error !== 'not-allowed' &&
+          ev.error !== 'aborted'
+        ) {
+          scheduleRecognitionRestartRef.current('soft')
+        }
       }
 
       rec.onend = () => {
@@ -683,17 +704,21 @@ export function useVoiceAssistant({
         clearSilenceTimer()
         void flushAfterSilence().finally(() => {
           if (!runningRef.current || pausedForLocalSpeechRef.current || ttsHoldRef.current) return
-          // Modo conversa: runConversationUtterance reinicia o microfone sozinho.
-          if (conversingRef.current) return
+          if (conversingRef.current) {
+            if (!processingUtteranceRef.current && !recRef.current) {
+              resumeConversationListeningRef.current()
+            }
+            return
+          }
           scheduleRecognitionRestartRef.current('soft')
         })
       }
     },
-    [flushAfterSilence, handlePassiveTranscript, scheduleSilenceFlush],
+    [flushAfterSilence, handlePassiveTranscript, resetConversationTimer, scheduleSilenceFlush],
   )
 
   const resumeConversationListening = useCallback(() => {
-    if (!runningRef.current || pausedForLocalSpeechRef.current) return
+    if (!runningRef.current || pausedForLocalSpeechRef.current || processingUtteranceRef.current) return
 
     restartingRef.current = true
     stopAudioCapture()
@@ -705,7 +730,7 @@ export function useVoiceAssistant({
       /* ignore */
     }
 
-    const rec = createRecognitionInstance()
+    const rec = createRecognitionInstance(true)
     if (!rec) {
       restartingRef.current = false
       onErrorRef.current?.('Reconhecimento de voz indisponível neste navegador.')
@@ -761,7 +786,7 @@ export function useVoiceAssistant({
           setPhase('conversando')
         }
 
-        const rec = createRecognitionInstance()
+        const rec = createRecognitionInstance(conversingRef.current)
         if (!rec) return
         recRef.current = rec
         bindRecognitionHandlers(rec)
@@ -905,6 +930,28 @@ export function useVoiceAssistant({
   useEffect(() => {
     setSupported(getSpeechRecognitionCtor() != null)
   }, [])
+
+  useEffect(() => {
+    if (!enabled) return
+
+    const watchdog = setInterval(() => {
+      if (
+        !runningRef.current ||
+        !conversingRef.current ||
+        ttsHoldRef.current ||
+        processingUtteranceRef.current ||
+        restartingRef.current ||
+        pausedForLocalSpeechRef.current
+      ) {
+        return
+      }
+      if (!recRef.current) {
+        resumeConversationListeningRef.current()
+      }
+    }, CONVERSATION_WATCHDOG_MS)
+
+    return () => clearInterval(watchdog)
+  }, [enabled])
 
   useEffect(() => {
     if (enabled && supported) {

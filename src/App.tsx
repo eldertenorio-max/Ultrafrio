@@ -2781,6 +2781,16 @@ export default function App() {
           handleOpenSection(null)
           break
         }
+        case 'close_current_section': {
+          const current = openSectionRef.current
+          if (!current) {
+            setVoiceFeedback('Nenhuma aba aberta.')
+            break
+          }
+          if (current === 'painel') setSidebarMode('open')
+          handleOpenSection(null)
+          break
+        }
         case 'buscar_nota':
           handleOpenSection('editar')
           handleBuscarEditar(cmd.numero)
@@ -2794,6 +2804,10 @@ export default function App() {
           handleBuscarConsulta(filtros)
           break
         }
+        case 'limpar_consulta':
+          handleOpenSection('consulta')
+          handleBuscarConsulta({ ...CONSULTA_FILTROS_VAZIOS })
+          break
         case 'painel_periodo':
           handleOpenSection('painel')
           handlePainelFiltrosChange(painelFiltrosPorDias(cmd.dias))
@@ -2813,7 +2827,11 @@ export default function App() {
           setSidebarMode(cmd.mode)
           break
         case 'toggle_theme':
-          setTheme(cmd.theme)
+          if (cmd.theme === 'auto') {
+            toggleTheme()
+          } else {
+            setTheme(cmd.theme)
+          }
           break
         case 'endereco':
           handleOpenSection('editar')
@@ -2834,6 +2852,7 @@ export default function App() {
       handleOpenSection,
       setSidebarMode,
       setTheme,
+      toggleTheme,
       vozOrigemAddress,
     ],
   )
@@ -2897,12 +2916,17 @@ export default function App() {
 
   const handleConversationUtterance = useCallback(
     async (text: string): Promise<boolean> => {
-      const result = processConversationTurn(text, conversationStateRef.current)
+      const prepared = prepareVoiceCommandText(text, voicePrefs.wakePhrase)
+      if (!prepared) {
+        return true
+      }
+
+      const result = processConversationTurn(prepared, conversationStateRef.current)
       conversationStateRef.current = result.state
 
       setConversationLines((prev) => [
         ...prev,
-        { role: 'user', text: text.trim() },
+        { role: 'user', text: prepared },
         { role: 'assistant', text: result.reply },
       ])
       setVoiceFeedback(result.reply)
@@ -2918,7 +2942,7 @@ export default function App() {
 
       return !result.endSession
     },
-    [executeVoiceCommand],
+    [executeVoiceCommand, voicePrefs.wakePhrase],
   )
 
   const voiceAssistant = useVoiceAssistant({

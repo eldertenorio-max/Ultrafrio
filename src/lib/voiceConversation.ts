@@ -23,11 +23,15 @@ export function createConversationState(): ConversationState {
 }
 
 function isExitPhrase(norm: string): boolean {
+  if (/\b(fechar|ocultar|esconder|recolher)\b/.test(norm)) {
+    return false
+  }
+
   return (
-    /\b(sair|encerrar|cancelar|tchau|adeus|parar|desligar|fechar)\b/.test(norm) &&
-    (/\b(conversa|assistente|voz|estoque)\b/.test(norm) ||
-      /\b(nada mais|obrigad|valeu|pode parar|so isso|só isso)\b/.test(norm) ||
-      norm.length < 24)
+    /\b(sair|encerrar|tchau|adeus|desligar)\b/.test(norm) ||
+    /\b(encerrar|sair|desligar|parar)\s+(a\s+)?(conversa|assistente|voz)\b/.test(norm) ||
+    /\b(nada mais|obrigad|valeu|pode parar|so isso|só isso)\b/.test(norm) ||
+    /^(encerrar conversa|sair da conversa|cancelar conversa)$/.test(norm)
   )
 }
 
@@ -51,10 +55,14 @@ function commandLabel(cmd: VoiceCommand): string {
       return `Abri ${cmd.label}`
     case 'close_section':
       return cmd.section ? `Fechei ${cmd.label}` : 'Fechei as seções abertas'
+    case 'close_current_section':
+      return 'Fechei a aba atual'
     case 'buscar_nota':
       return `Buscando a nota ${cmd.numero}`
     case 'consultar':
       return 'Consultando o estoque'
+    case 'limpar_consulta':
+      return 'Filtros da consulta limpos'
     case 'painel_periodo':
       return `Painel: ${cmd.label}`
     case 'confirmar_movimentacao':

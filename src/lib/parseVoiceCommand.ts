@@ -25,12 +25,14 @@ const SPOKEN_DIGITS: Record<string, string> = {
 export type VoiceCommand =
   | { type: 'open_section'; section: SidebarSectionId; label: string }
   | { type: 'close_section'; section: SidebarSectionId | null; label: string }
+  | { type: 'close_current_section'; label: string }
   | { type: 'buscar_nota'; numero: string }
   | { type: 'consultar'; filtros: Partial<ConsultaEstoqueFiltros> }
+  | { type: 'limpar_consulta' }
   | { type: 'painel_periodo'; dias: number; label: string }
   | { type: 'confirmar_movimentacao' }
   | { type: 'sidebar_mode'; mode: SidebarMode; label: string }
-  | { type: 'toggle_theme'; theme: 'light' | 'dark'; label: string }
+  | { type: 'toggle_theme'; theme: 'light' | 'dark' | 'auto'; label: string }
   | { type: 'endereco'; addressId: AddressId }
   | { type: 'parar' }
   | { type: 'blocked'; message: string }
@@ -72,6 +74,7 @@ const VOICE_SECTIONS: SectionVoiceConfig[] = [
     ],
     closePatterns: [
       /\b(fechar|ocultar|esconder|recolher|sair)\s+(da\s+)?(a\s+)?consulta\b/,
+      /^fechar consulta$/,
     ],
   },
   {
@@ -95,7 +98,7 @@ const VOICE_SECTIONS: SectionVoiceConfig[] = [
     label: 'Entrada',
     openExample: 'abrir entrada',
     closeExample: 'fechar entrada',
-    openPatterns: [/\b(abrir|mostrar|ver|ir para)\s+(a\s+)?entrada\b/],
+    openPatterns: [/\b(abrir|mostrar|ver|ir para)\s+(a\s+)?entrada\b/, /^entrada$/],
     closePatterns: [
       /\b(fechar|ocultar|esconder|recolher|sair)\s+(da\s+)?(a\s+)?entrada\b/,
     ],
@@ -105,7 +108,7 @@ const VOICE_SECTIONS: SectionVoiceConfig[] = [
     label: 'Saída',
     openExample: 'abrir saída',
     closeExample: 'fechar saída',
-    openPatterns: [/\b(abrir|mostrar|ver|ir para)\s+(a\s+)?saida\b/],
+    openPatterns: [/\b(abrir|mostrar|ver|ir para)\s+(a\s+)?saida\b/, /^saida$/],
     closePatterns: [
       /\b(fechar|ocultar|esconder|recolher|sair)\s+(da\s+)?(a\s+)?saida\b/,
     ],
@@ -115,7 +118,7 @@ const VOICE_SECTIONS: SectionVoiceConfig[] = [
     label: 'Histórico',
     openExample: 'abrir histórico',
     closeExample: 'fechar histórico',
-    openPatterns: [/\b(abrir|mostrar|ver|ir para)\s+(o\s+)?historico\b/],
+    openPatterns: [/\b(abrir|mostrar|ver|ir para)\s+(o\s+)?historico\b/, /^historico$/],
     closePatterns: [
       /\b(fechar|ocultar|esconder|recolher|sair)\s+(do\s+)?(o\s+)?historico\b/,
     ],
@@ -128,6 +131,7 @@ const VOICE_SECTIONS: SectionVoiceConfig[] = [
     openPatterns: [
       /\b(abrir|mostrar|ver|ir para|gerar)\s+(o\s+)?relatorio\b/,
       /\brelatorio de estoque\b/,
+      /^relatorio$/,
     ],
     closePatterns: [
       /\b(fechar|ocultar|esconder|recolher|sair)\s+(do\s+)?(o\s+)?relatorio\b/,
@@ -227,7 +231,13 @@ function buildCommandExamples(): { frase: string; descricao: string }[] {
   return [
     { frase: wake, descricao: 'Ativa o assistente — depois fale o comando.' },
     ...sectionExamples,
+    { frase: `${wake} fechar aba`, descricao: 'Fecha a seção aberta no menu.' },
     { frase: `${wake} fechar tudo`, descricao: 'Fecha todas as seções abertas no menu.' },
+    { frase: `${wake} fechar consulta`, descricao: 'Fecha a consulta de estoque.' },
+    { frase: `${wake} limpar consulta`, descricao: 'Limpa os filtros da consulta.' },
+    { frase: `${wake} voltar ao mapa`, descricao: 'Volta ao mapa com menu aberto.' },
+    { frase: `${wake} alternar tema`, descricao: 'Alterna entre tema claro e escuro.' },
+    { frase: `${wake} consultar remetente ultrafrio`, descricao: 'Pesquisa por remetente na consulta.' },
     { frase: `${wake} buscar nota 20835`, descricao: 'Busca NF na movimentação.' },
     { frase: `${wake} consultar leite`, descricao: 'Pesquisa item no estoque.' },
     { frase: `${wake} consultar nota 20835`, descricao: 'Pesquisa NF na consulta.' },
@@ -329,6 +339,36 @@ function matchCloseSection(norm: string): VoiceCommand | null {
     return { type: 'close_section', section: null, label: 'Todas as seções' }
   }
 
+  if (
+    norm === 'fechar' ||
+    norm === 'recolher' ||
+    /\bfechar (esta |a )?aba\b/.test(norm) ||
+    /\bfechar secao\b/.test(norm) ||
+    /\bfechar secao atual\b/.test(norm)
+  ) {
+    return { type: 'close_current_section', label: 'Aba atual' }
+  }
+
+  const standaloneClose: Record<string, SidebarSectionId> = {
+    painel: 'painel',
+    consulta: 'consulta',
+    entrada: 'entrada',
+    saida: 'saida',
+    historico: 'historico',
+    relatorio: 'relatorio',
+    mapa: 'imprimir',
+    movimentacao: 'editar',
+    reposicionar: 'editar',
+    voz: 'cadastroVoz',
+  }
+  const closeDirect = standaloneClose[norm.replace(/^fechar\s+/, '')]
+  if (norm.startsWith('fechar ') && closeDirect) {
+    const entry = VOICE_SECTIONS.find((e) => e.section === closeDirect)
+    if (entry) {
+      return { type: 'close_section', section: entry.section, label: entry.label }
+    }
+  }
+
   for (const entry of VOICE_SECTIONS) {
     if (entry.closePatterns.some((p) => p.test(norm))) {
       return { type: 'close_section', section: entry.section, label: entry.label }
@@ -349,6 +389,8 @@ function matchOpenSection(norm: string): VoiceCommand | null {
     movimentacao: 'editar',
     reposicionar: 'editar',
     mapa: 'imprimir',
+    canceladas: 'canceladas',
+    voz: 'cadastroVoz',
   }
   const direct = standalone[norm]
   if (direct) {
@@ -382,6 +424,21 @@ export function parseVoiceCommand(text: string): VoiceCommand | null {
   }
   if (/^(tema claro|modo claro|light mode)$/.test(norm)) {
     return { type: 'toggle_theme', theme: 'light', label: 'Tema claro' }
+  }
+  if (/\b(alternar|trocar|mudar)\s+tema\b/.test(norm) || norm === 'alternar tema') {
+    return { type: 'toggle_theme', theme: 'auto', label: 'Alternar tema' }
+  }
+
+  if (
+    /\b(limpar|zerar)\s+(consulta|filtros?|pesquisa|busca)\b/.test(norm) ||
+    norm === 'limpar consulta' ||
+    norm === 'limpar filtros'
+  ) {
+    return { type: 'limpar_consulta' }
+  }
+
+  if (/\b(voltar|ir)\s+(ao|para o)\s+mapa\b/.test(norm) || norm === 'voltar ao mapa') {
+    return { type: 'sidebar_mode', mode: 'open', label: 'Voltar ao mapa' }
   }
 
   if (/\b(menu|sidebar)\s+(tela cheia|fullscreen|cheio)\b/.test(norm) || norm === 'tela cheia') {
@@ -418,6 +475,14 @@ export function parseVoiceCommand(text: string): VoiceCommand | null {
     const spoken = parseSpokenDigitSequence(consultaNota)
     const numero = compact.length >= 3 ? compact : spoken.length >= 3 ? spoken : ''
     if (numero) return { type: 'consultar', filtros: { nfNumero: numero } }
+  }
+
+  const consultaRemetente = extractAfter(
+    norm,
+    /\b(?:consultar|consulta|pesquisar)\s+(?:o\s+)?(?:remetente|emitente|fornecedor)\s+(.+)/,
+  )
+  if (consultaRemetente) {
+    return { type: 'consultar', filtros: { remetente: consultaRemetente.trim() } }
   }
 
   const consultaQuery =
@@ -465,10 +530,14 @@ export function describeVoiceCommand(cmd: VoiceCommand): string {
       return `Abrindo ${cmd.label}`
     case 'close_section':
       return cmd.section ? `Fechando ${cmd.label}` : 'Fechando seções abertas'
+    case 'close_current_section':
+      return 'Fechando aba atual'
     case 'buscar_nota':
       return `Buscando NF ${cmd.numero}`
     case 'consultar':
       return 'Consultando estoque'
+    case 'limpar_consulta':
+      return 'Limpando filtros da consulta'
     case 'painel_periodo':
       return `Painel: ${cmd.label}`
     case 'confirmar_movimentacao':
