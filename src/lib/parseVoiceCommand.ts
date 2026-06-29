@@ -453,18 +453,4 @@ export function describeVoiceCommand(cmd: VoiceCommand): string {
   }
 }
 
-export function painelFiltrosPorDias(dias: number) {
-  const fim = new Date()
-  const inicio = new Date()
-  if (dias <= 0) {
-    /* hoje */
-  } else {
-    inicio.setDate(inicio.getDate() - dias)
-  }
-  return {
-    dataInicio: inicio.toISOString().slice(0, 10),
-    horaInicio: '00:00',
-    dataFim: fim.toISOString().slice(0, 10),
-    horaFim: '23:59',
-  }
-}
+export { painelFiltrosPorDias } from './painelAnalytics'

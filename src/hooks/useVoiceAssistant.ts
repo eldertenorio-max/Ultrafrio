@@ -50,23 +50,31 @@ const SILENCE_AFTER_SPEECH_MS = 2400
 function readIncrementalTranscript(ev: SpeechRecognitionResultEvent): {
   interim: string
   final: string
+  combined: string
 } {
-  let interim = ''
-  let final = ''
-  for (let i = ev.resultIndex; i < ev.results.length; i++) {
+  const interimParts: string[] = []
+  const finalParts: string[] = []
+
+  for (let i = 0; i < ev.results.length; i++) {
     const result = ev.results[i]
-    if (!result) continue
+    if (!result?.length) continue
 
     let best = result[0]?.transcript ?? ''
     for (let a = 1; a < result.length; a++) {
       const alt = result[a]?.transcript ?? ''
       if (alt.length > best.length) best = alt
     }
+    const text = best.trim()
+    if (!text) continue
 
-    if (result.isFinal) final += best
-    else interim += best
+    if (result.isFinal) finalParts.push(text)
+    else interimParts.push(text)
   }
-  return { interim: interim.trim(), final: final.trim() }
+
+  const final = finalParts.join(' ').trim()
+  const interim = interimParts.join(' ').trim()
+  const combined = [final, interim].filter(Boolean).join(' ').trim()
+  return { interim, final, combined }
 }
 
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
@@ -85,7 +93,8 @@ function createRecognitionInstance(): SpeechRecognitionInstance | null {
   rec.lang = 'pt-BR'
   rec.interimResults = true
   rec.maxAlternatives = 5
-  rec.continuous = true
+  // Modo não-contínuo é mais estável no Chrome/Edge (Windows) com o microfone compartilhado.
+  rec.continuous = false
   return rec
 }
 
@@ -127,7 +136,7 @@ export function useVoiceAssistant({
   const voiceProfilesRef = useRef(voiceProfiles)
   const requireVoiceMatchRef = useRef(requireVoiceMatch)
   const stopRecognitionRef = useRef<() => void>(() => {})
-  const scheduleRecognitionRestartRef = useRef<() => void>(() => {})
+  const scheduleRecognitionRestartRef = useRef<(mode?: 'soft' | 'hard') => void>(() => {})
   const restartingRef = useRef(false)
   const localSpeechHoldRef = useRef(0)
   const pausedForLocalSpeechRef = useRef(false)
@@ -240,8 +249,16 @@ export function useVoiceAssistant({
       if (runningRef.current && !pausedForLocalSpeechRef.current) {
         void startAudioCapture()
       }
-    }, 700)
+    }, 1500)
   }, [clearAudioDeferredTimer, startAudioCapture])
+
+  const scheduleVoiceCaptureIfNeeded = useCallback(() => {
+    if (!requireVoiceMatchRef.current || voiceProfilesRef.current.length === 0) {
+      stopAudioCapture()
+      return
+    }
+    scheduleAudioCapture()
+  }, [scheduleAudioCapture, stopAudioCapture])
 
   const getRecentAudioBlob = useCallback((): Blob | null => {
     const chunks = audioChunksRef.current
@@ -366,13 +383,13 @@ export function useVoiceAssistant({
   }, [clearSilenceTimer, flushAfterSilence])
 
   const handlePassiveTranscript = useCallback(
-    async (final: string, interim: string) => {
+    async (final: string, interim: string, combined: string) => {
       if (final) {
         sessionAccumRef.current = `${sessionAccumRef.current} ${final}`.replace(/\s+/g, ' ').trim()
         if (await processWake(sessionAccumRef.current)) return
       }
 
-      const working = `${sessionAccumRef.current}${interim ? ` ${interim}` : ''}`.trim()
+      const working = combined || `${sessionAccumRef.current}${interim ? ` ${interim}` : ''}`.trim()
       if (working) {
         listeningBufferRef.current = working
         setLiveText(working)
@@ -389,7 +406,7 @@ export function useVoiceAssistant({
   const bindRecognitionHandlers = useCallback(
     (rec: SpeechRecognitionInstance) => {
       rec.onresult = (ev) => {
-        const { interim, final } = readIncrementalTranscript(ev)
+        const { interim, final, combined } = readIncrementalTranscript(ev)
 
         if (armedRef.current) {
           if (final) {
@@ -397,13 +414,18 @@ export function useVoiceAssistant({
           }
           armedInterimRef.current = interim
           const preview = `${armedBufferRef.current}${interim ? ` ${interim}` : ''}`.trim()
-          setLiveText(preview)
+          setLiveText(preview || combined)
           setPhase('armado')
-          if (preview) scheduleSilenceFlush()
+          if (preview || combined) scheduleSilenceFlush()
           return
         }
 
-        void handlePassiveTranscript(final, interim)
+        if (combined) {
+          setLiveText(combined)
+          setPhase('ouvindo')
+        }
+
+        void handlePassiveTranscript(final, interim, combined)
       }
 
       rec.onerror = (ev) => {
@@ -419,55 +441,67 @@ export function useVoiceAssistant({
 
       rec.onend = () => {
         if (!runningRef.current || restartingRef.current || pausedForLocalSpeechRef.current) return
-        scheduleRecognitionRestartRef.current()
+        clearSilenceTimer()
+        void flushAfterSilence().finally(() => {
+          if (!runningRef.current || pausedForLocalSpeechRef.current) return
+          scheduleRecognitionRestartRef.current('soft')
+        })
       }
     },
-    [handlePassiveTranscript, scheduleSilenceFlush],
+    [flushAfterSilence, handlePassiveTranscript, scheduleSilenceFlush],
   )
 
-  const scheduleRecognitionRestart = useCallback(() => {
-    if (!runningRef.current || pausedForLocalSpeechRef.current) return
-    clearRestartTimer()
-    restartTimerRef.current = setTimeout(() => {
-      restartTimerRef.current = null
-      if (!runningRef.current) return
+  const scheduleRecognitionRestart = useCallback(
+    (mode: 'soft' | 'hard' = 'hard') => {
+      if (!runningRef.current || pausedForLocalSpeechRef.current) return
+      clearRestartTimer()
+      const delayMs = mode === 'soft' ? 400 : 200
+      restartTimerRef.current = setTimeout(() => {
+        restartTimerRef.current = null
+        if (!runningRef.current) return
 
-      restartingRef.current = true
-      const oldRec = recRef.current
-      recRef.current = null
-      try {
-        oldRec?.abort()
-      } catch {
-        /* ignore */
-      }
+        restartingRef.current = true
+        const oldRec = recRef.current
+        recRef.current = null
+        try {
+          oldRec?.abort()
+        } catch {
+          /* ignore */
+        }
 
-      clearListeningBuffers()
-      armedRef.current = false
-      clearArmedTimer()
-      clearSilenceTimer()
-      setLastHint(null)
-      setPhase('ouvindo')
+        armedRef.current = false
+        clearArmedTimer()
+        clearSilenceTimer()
+        if (mode === 'hard') {
+          clearListeningBuffers()
+          setLastHint(null)
+        }
+        setPhase('ouvindo')
 
-      const rec = createRecognitionInstance()
-      if (!rec) return
-      recRef.current = rec
-      bindRecognitionHandlers(rec)
+        const rec = createRecognitionInstance()
+        if (!rec) return
+        recRef.current = rec
+        bindRecognitionHandlers(rec)
 
-      try {
-        rec.start()
-      } catch {
-        /* onend tenta de novo */
-      } finally {
-        restartingRef.current = false
-      }
-    }, 0)
-  }, [
-    bindRecognitionHandlers,
-    clearArmedTimer,
-    clearListeningBuffers,
-    clearRestartTimer,
-    clearSilenceTimer,
-  ])
+        try {
+          rec.start()
+          scheduleVoiceCaptureIfNeeded()
+        } catch {
+          /* onend tenta de novo */
+        } finally {
+          restartingRef.current = false
+        }
+      }, delayMs)
+    },
+    [
+      bindRecognitionHandlers,
+      clearArmedTimer,
+      clearListeningBuffers,
+      clearRestartTimer,
+      clearSilenceTimer,
+      scheduleVoiceCaptureIfNeeded,
+    ],
+  )
 
   useEffect(() => {
     scheduleRecognitionRestartRef.current = scheduleRecognitionRestart
@@ -522,7 +556,7 @@ export function useVoiceAssistant({
       return
     }
 
-    scheduleAudioCapture()
+    stopAudioCapture()
 
     recRef.current?.abort()
     const rec = createRecognitionInstance()
@@ -535,8 +569,14 @@ export function useVoiceAssistant({
     clearListeningBuffers()
     setPhase('ouvindo')
     setLastHint(null)
-    rec.start()
-  }, [bindRecognitionHandlers, clearListeningBuffers, scheduleAudioCapture])
+
+    try {
+      rec.start()
+      scheduleVoiceCaptureIfNeeded()
+    } catch {
+      onErrorRef.current?.('Não foi possível iniciar o microfone. Verifique permissões.')
+    }
+  }, [bindRecognitionHandlers, clearListeningBuffers, scheduleVoiceCaptureIfNeeded, stopAudioCapture])
 
   const suspendForLocalSpeech = useCallback(() => {
     localSpeechHoldRef.current += 1

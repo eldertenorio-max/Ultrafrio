@@ -155,9 +155,13 @@ function pad(n: number): string {
 }
 
 export function defaultPainelFiltros(): PainelFiltros {
+  return painelFiltrosPorDias(30)
+}
+
+export function painelFiltrosPorDias(dias: number): PainelFiltros {
   const fim = new Date()
   const inicio = new Date()
-  inicio.setDate(inicio.getDate() - 30)
+  if (dias > 0) inicio.setDate(inicio.getDate() - dias)
   return {
     dataInicio: inicio.toISOString().slice(0, 10),
     horaInicio: '00:00',

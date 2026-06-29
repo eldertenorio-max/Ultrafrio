@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import {
   PAINEL_SECOES,
   filtrarMovimentos,
+  painelFiltrosPorDias,
   resumoPeriodo,
   type PainelFiltros,
 } from '../lib/painelAnalytics'
@@ -16,23 +17,65 @@ type Props = {
   onFiltrosChange: (patch: Partial<PainelFiltros>) => void
 }
 
+const PERIODOS_RAPIDOS = [
+  { label: 'Hoje', dias: 0 },
+  { label: '7 dias', dias: 7 },
+  { label: '30 dias', dias: 30 },
+  { label: '90 dias', dias: 90 },
+] as const
+
+function filtrosAtivos(filtros: PainelFiltros, dias: number): boolean {
+  const ref = painelFiltrosPorDias(dias)
+  return (
+    filtros.dataInicio === ref.dataInicio &&
+    filtros.dataFim === ref.dataFim &&
+    filtros.horaInicio === ref.horaInicio &&
+    filtros.horaFim === ref.horaFim
+  )
+}
+
 export function PainelPanel({ filtros, movimentos, notas, onFiltrosChange }: Props) {
   const filtrados = useMemo(() => filtrarMovimentos(movimentos, filtros), [movimentos, filtros])
   const resumo = resumoPeriodo(filtros, filtrados.length)
 
   return (
-    <>
+    <div className="painel-root">
       <div className="sidebar-block painel-header-block">
-        <header className="painel-page-head">
-          <h3 className="painel-page-title">Painel analítico</h3>
-          <p className="muted painel-intro">
-            Visão consolidada do estoque e da movimentação. Ajuste o período para refinar os gráficos
-            históricos.
-          </p>
+        <header className="painel-hero">
+          <div className="painel-hero-text">
+            <span className="painel-hero-badge">Analytics</span>
+            <h3 className="painel-page-title">Painel analítico</h3>
+            <p className="muted painel-intro">
+              Visão consolidada do estoque e da movimentação. Ajuste o período para refinar os
+              gráficos históricos.
+            </p>
+          </div>
+          <div className="painel-hero-stats" aria-hidden>
+            <span className="painel-hero-stat">
+              <strong>{PAINEL_SECOES.length}</strong>
+              <small>seções</small>
+            </span>
+            <span className="painel-hero-stat">
+              <strong>{filtrados.length}</strong>
+              <small>movimentos</small>
+            </span>
+          </div>
         </header>
 
         <fieldset className="painel-filtros">
           <legend className="painel-filtros-title">Período de análise</legend>
+          <div className="painel-periodo-rapido">
+            {PERIODOS_RAPIDOS.map(({ label, dias }) => (
+              <button
+                key={label}
+                type="button"
+                className={`painel-periodo-btn${filtrosAtivos(filtros, dias) ? ' painel-periodo-btn--active' : ''}`}
+                onClick={() => onFiltrosChange(painelFiltrosPorDias(dias))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="painel-filtros-grid">
             <label className="painel-filtro-campo">
               <span>Data início</span>
@@ -79,13 +122,33 @@ export function PainelPanel({ filtros, movimentos, notas, onFiltrosChange }: Pro
       <PainelKpiCards notas={notas} />
 
       {PAINEL_SECOES.map((secao) => (
-        <section key={secao.id} className="sidebar-block painel-secao">
+        <section key={secao.id} className={`sidebar-block painel-secao painel-secao--${secao.id}`}>
           <header className={`painel-secao-head painel-secao-head--${secao.id}`}>
-            <span className="painel-secao-accent" aria-hidden />
+            <span className="painel-secao-icon" aria-hidden>
+              {secao.id === 'estoque' && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              )}
+              {secao.id === 'movimentacao' && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </svg>
+              )}
+              {secao.id === 'operacao' && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+                </svg>
+              )}
+            </span>
             <div>
               <h3 className="painel-secao-title">{secao.titulo}</h3>
               <p className="muted painel-secao-sub">{secao.subtitulo}</p>
             </div>
+            <span className="painel-secao-count">{secao.graficos.length} gráficos</span>
           </header>
           <div className="painel-secao-graficos">
             {secao.graficos.map((id) => (
@@ -101,6 +164,6 @@ export function PainelPanel({ filtros, movimentos, notas, onFiltrosChange }: Pro
           </div>
         </section>
       ))}
-    </>
+    </div>
   )
 }
