@@ -376,12 +376,27 @@ export default function App() {
   const nfEmEdicao = nfEditar != null
   const editMode = nfEmEdicao && editItemIndex != null
 
+  const mapaEmOperacaoAtiva =
+    editAdicionarPosicoesAlvo != null ||
+    allocateMode ||
+    consultaAguardandoEndereco ||
+    saidaModoPalete ||
+    editMode ||
+    (nfEmEdicao &&
+      (editMarcandoStage ||
+        editMoveOrigens.size > 0 ||
+        editMoveDestinos.size > 0 ||
+        editStagePending.size > 0))
+
   const displayOccupancy = useMemo(() => {
     const map = new Map(occupancy)
-    if (editMode) {
+    if (editMode && nfEditar) {
       for (const addr of editStagePending) map.delete(addr)
       if (!editMarcandoStage) {
-        for (const addr of editMoveOrigens) map.delete(addr)
+        for (const addr of editMoveOrigens) {
+          const occ = map.get(addr)
+          if (!occ || occ.nfId === nfEditar.id) map.delete(addr)
+        }
       }
       return map
     }
@@ -397,6 +412,7 @@ export default function App() {
     editMoveOrigens,
     allocateMode,
     activeNf,
+    nfEditar,
     state.activeItemIndex,
     pendingSelection,
   ])
@@ -426,6 +442,18 @@ export default function App() {
     if (!nfEditar) return new Set<AddressId>()
     return new Set(enderecosDaNf(nfEditar))
   }, [nfEditar])
+
+  /** Endereços da NF ou do item selecionado — destaque verde no mapa da movimentação. */
+  const editMapAddresses = useMemo(() => {
+    if (!nfEditar) return undefined
+    if (editItemIndex != null) {
+      const item = nfEditar.items.find((it) => it.index === editItemIndex)
+      if (!item || item.allocatedAddresses.length === 0) return undefined
+      return new Set(item.allocatedAddresses)
+    }
+    if (editNfAddresses.size === 0) return undefined
+    return editNfAddresses
+  }, [nfEditar, editItemIndex, editNfAddresses])
 
   const consultaAddresses = useMemo(
     () => new Set(consultaResultados.filter((r) => !r.isStage).map((r) => r.addressId)),
@@ -731,6 +759,12 @@ export default function App() {
   }
 
   function handleCellClick(addressId: AddressId, canInteract: boolean) {
+    const occ = occupancy.get(addressId)
+    if (occ && !mapaEmOperacaoAtiva) {
+      setDetailAddress(addressId)
+      return
+    }
+
     const saidaPending =
       saidaModoPalete &&
       (saidaPaletesSelecionados.has(addressId) ||
@@ -754,9 +788,13 @@ export default function App() {
   }
 
   function handleCellPaint(addressId: AddressId, mode: 'add' | 'remove', canInteract: boolean) {
-    if (!canInteract) return
-
     const occ = occupancy.get(addressId)
+    if (!canInteract) {
+      if (occ && !mapaEmOperacaoAtiva) {
+        setDetailAddress(addressId)
+      }
+      return
+    }
 
     if (nfEditar) {
       if (
@@ -1282,6 +1320,7 @@ export default function App() {
         (result.kind === 'existing' && result.nfId !== activeNf!.id))
 
     if (leavingIncomplete) {
+      setManualNfModalOpen(false)
       trySairEntradaIncompleta(() => void applyManual())
       return
     }
@@ -1754,12 +1793,25 @@ export default function App() {
     setBuscaErro(null)
   }
 
-  function iniciarEdicaoNf(nf: NotaFiscal) {
-    setNfEditarId(nf.id)
+  function limparEstadoMapaEditar() {
     setEditItemIndex(null)
     setEditPendingSelection(new Set())
     setEditStagePending(new Set())
+    setEditMoveOrigens(new Set())
+    setEditMoveDestinos(new Set())
+    editMoveOrigensRef.current = new Set()
+    editMoveDestinosRef.current = new Set()
+    setEditAdicionarPosicoesAlvo(null)
+    setEditNovasPosicoes(new Set())
+    setEditMarcandoStage(false)
+    setVozOrigemAddress(null)
+    setVozErro(null)
     editOriginalAddressesRef.current = new Set()
+  }
+
+  function iniciarEdicaoNf(nf: NotaFiscal) {
+    setNfEditarId(nf.id)
+    limparEstadoMapaEditar()
   }
 
   function handleBuscarEditar(numero: string) {
@@ -1768,10 +1820,7 @@ export default function App() {
     if (!nf) {
       setBuscaEditarErro('NF não encontrada.')
       setNfEditarId(null)
-      setEditItemIndex(null)
-      setEditPendingSelection(new Set())
-      setEditStagePending(new Set())
-      editOriginalAddressesRef.current = new Set()
+      limparEstadoMapaEditar()
       return
     }
     const temArmazem = nfTemEstoqueArmazem(nf)
@@ -1779,10 +1828,7 @@ export default function App() {
     if (!temArmazem && !temStage) {
       setBuscaEditarErro(mensagemNfSemEstoqueVisivel(nf, state.movimentos))
       setNfEditarId(null)
-      setEditItemIndex(null)
-      setEditPendingSelection(new Set())
-      setEditStagePending(new Set())
-      editOriginalAddressesRef.current = new Set()
+      limparEstadoMapaEditar()
       return
     }
     iniciarEdicaoNf(nf)
@@ -2118,17 +2164,7 @@ export default function App() {
 
   function handleCancelarEditar() {
     setNfEditarId(null)
-    setEditItemIndex(null)
-    setEditPendingSelection(new Set())
-    setEditStagePending(new Set())
-    setEditMoveOrigens(new Set())
-    setEditMoveDestinos(new Set())
-    setEditAdicionarPosicoesAlvo(null)
-    setEditNovasPosicoes(new Set())
-    setVozOrigemAddress(null)
-    setVozErro(null)
-    setEditMarcandoStage(false)
-    editOriginalAddressesRef.current = new Set()
+    limparEstadoMapaEditar()
     setBuscaEditarErro(null)
   }
 
@@ -2742,7 +2778,7 @@ export default function App() {
           editMoveDestinos={nfEditar ? editMoveDestinos : undefined}
           editMarcandoStage={nfEditar ? editMarcandoStage : false}
           editAdicionandoPosicoes={editAdicionarPosicoesAlvo != null}
-          editAddresses={nfEditar && editItemIndex == null ? editNfAddresses : undefined}
+          editAddresses={editMapAddresses}
           consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
           notas={state.notas}
           stageHighlighted={consultaStageHighlighted}
@@ -2760,8 +2796,8 @@ export default function App() {
             editAdicionarPosicoesAlvo != null ||
             (editMode && editMarcandoStage) ||
             (editMode && !editMarcandoStage) ||
-            (nfEmEdicao && !editMode) ||
             allocateMode ||
+            consultaAguardandoEndereco ||
             (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
           }
           onCellClick={handleCellClick}
@@ -2812,6 +2848,7 @@ export default function App() {
           notas={state.notas}
           emitentesSugeridos={emitentesSugeridos}
           serverError={manualNfError}
+          startInCreateMode
           onConfirm={handleManualNfConfirm}
           onClose={() => {
             setManualNfModalOpen(false)

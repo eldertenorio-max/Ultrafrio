@@ -26,6 +26,8 @@ type Props = {
   notas: NotaFiscal[]
   emitentesSugeridos: string[]
   serverError?: string | null
+  /** Abre direto no formulário de nova NF (botão da aba Entrada). */
+  startInCreateMode?: boolean
   onConfirm: (result: ManualNfModalResult) => void
   onClose: () => void
 }
@@ -58,14 +60,17 @@ export function ManualNfModal({
   notas,
   emitentesSugeridos,
   serverError,
+  startInCreateMode = false,
   onConfirm,
   onClose,
 }: Props) {
   const [numero, setNumero] = useState('')
   const [numeroCadastro, setNumeroCadastro] = useState('')
-  const [searched, setSearched] = useState<NotaFiscal | null | undefined>(undefined)
+  const [searched, setSearched] = useState<NotaFiscal | null | undefined>(
+    startInCreateMode ? null : undefined,
+  )
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
+  const [showCreate, setShowCreate] = useState(startInCreateMode)
   const [serie, setSerie] = useState('')
   const [emitente, setEmitente] = useState('')
   const [items, setItems] = useState<ManualItemDraft[]>(() => [createItemDraft()])
@@ -115,17 +120,17 @@ export function ManualNfModal({
   function handleConfirm() {
     setError(null)
 
-    if (searched === undefined) {
-      setError('Busque a NF pelo número antes de confirmar.')
-      return
-    }
-
     if (searched && !showCreate) {
       if (selectedItemIndex == null) {
         setError('Selecione o item da NF.')
         return
       }
       onConfirm({ kind: 'existing', nfId: searched.id, itemIndex: selectedItemIndex })
+      return
+    }
+
+    if (!showCreate && searched === undefined) {
+      setError('Busque a NF pelo número ou use o cadastro manual abaixo.')
       return
     }
 
@@ -144,6 +149,8 @@ export function ManualNfModal({
 
     onConfirm({ kind: 'new', input })
   }
+
+  const exibirFormularioCriacao = showCreate || (searched === null && searched !== undefined)
 
   return (
     <div className="modal-backdrop" onClick={onClose} role="presentation">
@@ -214,19 +221,38 @@ export function ManualNfModal({
                 </li>
               ))}
             </ul>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowCreate(true)}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setNumeroCadastro(searched.numero)
+                setShowCreate(true)
+              }}
+            >
               NF não encontrada? Cadastrar manualmente
             </button>
           </section>
         )}
 
-        {(showCreate || (searched === null && searched !== undefined)) && (
+        {exibirFormularioCriacao && (
           <section className="modal-section">
             <h3>{searched === null ? 'Cadastrar NF manual' : 'Nova NF manual'}</h3>
-            {searched === null && (
-              <p className="muted">NF {numeroCadastro.trim()} não está no sistema. Preencha os dados abaixo.</p>
+            {searched === null && numeroCadastro.trim() && (
+              <p className="muted">
+                NF {numeroCadastro.trim()} não está no sistema. Preencha os dados abaixo.
+              </p>
             )}
             <div className="manual-nf-form manual-nf-form--nf">
+              <label className="manual-nf-field">
+                <span>Número da NF</span>
+                <input
+                  type="text"
+                  className="input-nf"
+                  value={numeroCadastro}
+                  onChange={(e) => setNumeroCadastro(e.target.value)}
+                  placeholder="Obrigatório"
+                />
+              </label>
               <label className="manual-nf-field">
                 <span>Série</span>
                 <input type="text" className="input-nf" value={serie} onChange={(e) => setSerie(e.target.value)} />
@@ -363,8 +389,11 @@ export function ManualNfModal({
           </section>
         )}
 
-        {error && <p className="error manual-nf-error">{error}</p>}
-        {serverError && !error && <p className="error manual-nf-error">{serverError}</p>}
+        {(error || serverError) && (
+          <p className="error manual-nf-error" role="alert">
+            {error ?? serverError}
+          </p>
+        )}
 
         <div className="manual-nf-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>

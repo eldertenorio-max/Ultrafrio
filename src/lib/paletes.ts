@@ -1,4 +1,4 @@
-import type { NfeItem } from '../types'
+import type { NfeItem, NotaFiscal } from '../types'
 
 export function parsePaletesInput(value: string): number | undefined {
   const trimmed = value.trim()
@@ -22,6 +22,28 @@ export function paletesRestantes(limite: number, selecionados: number): number {
 export function podeAdicionarEndereco(limite: number, selecionados: number): boolean {
   if (limite <= 0) return false
   return selecionados < limite
+}
+
+/** Paletes cadastrados do item ou, se ausente, quantidade de endereços alocados. */
+export function contagemPaletesItem(item: NfeItem): number {
+  if (item.paletes != null && item.paletes > 0) return item.paletes
+  return item.allocatedAddresses.length
+}
+
+export function totalEnderecosNf(nf: NotaFiscal): number {
+  return nf.items.reduce((s, it) => s + it.allocatedAddresses.length, 0)
+}
+
+export function totalPaletesNf(nf: NotaFiscal): number {
+  return nf.items.reduce((s, it) => s + contagemPaletesItem(it), 0)
+}
+
+export function rotuloPosicoes(qtd: number): string {
+  return `${qtd} ${qtd === 1 ? 'posição' : 'posições'}`
+}
+
+export function rotuloPaletes(qtd: number): string {
+  return `${qtd} ${qtd === 1 ? 'palete' : 'paletes'}`
 }
 
 /** Item endereçado: stage conta como completo; armazém exige endereços/paletes. */

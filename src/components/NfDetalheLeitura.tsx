@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { NfeItem, NotaFiscal, AddressId } from '../types'
+import { rotuloPaletes, rotuloPosicoes, totalEnderecosNf, totalPaletesNf } from '../lib/paletes'
 import { NfResumoGrid } from './NfResumoGrid'
 import { NfItensLeituraTable } from './NfItensLeituraTable'
 import { NfLocalizacaoBadge } from './NfLocalizacaoBadge'
@@ -17,6 +18,8 @@ type Props = {
   itensIntro?: string
   showItensTitle?: boolean
   showItensTable?: boolean
+  /** Exibe totais de posições e paletes no armazém (consulta / movimentação). */
+  showEstoqueResumo?: boolean
 }
 
 function formatDate(raw: string): string {
@@ -39,8 +42,11 @@ export function NfDetalheLeitura({
   itensIntro,
   showItensTitle = true,
   showItensTable = true,
+  showEstoqueResumo = true,
 }: Props) {
   const lista = items ?? nf.items
+  const enderecosNf = totalEnderecosNf(nf)
+  const paletesNf = totalPaletesNf(nf)
 
   return (
     <>
@@ -51,6 +57,14 @@ export function NfDetalheLeitura({
         </h3>
         {actions}
       </div>
+
+      {showEstoqueResumo && (enderecosNf > 0 || paletesNf > 0) && (
+        <p className="nf-estoque-resumo">
+          {enderecosNf > 0 && <span>{rotuloPosicoes(enderecosNf)}</span>}
+          {enderecosNf > 0 && paletesNf > 0 && <span className="nf-estoque-resumo-sep"> · </span>}
+          {paletesNf > 0 && <span>{rotuloPaletes(paletesNf)}</span>}
+        </p>
+      )}
 
       <dl className="meta-list meta-list--nf">
         <div>

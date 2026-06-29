@@ -60,6 +60,10 @@ export function ConsultaEstoqueInventario({
           <strong>{inventario.totalEnderecos}</strong>{' '}
           {inventario.totalEnderecos === 1 ? 'posição' : 'posições'}
         </span>
+        <span>
+          <strong>{inventario.totalPaletes}</strong>{' '}
+          {inventario.totalPaletes === 1 ? 'palete' : 'paletes'}
+        </span>
       </div>
 
       <div className="consulta-inventario-toolbar">
@@ -124,7 +128,8 @@ export function ConsultaEstoqueInventario({
                   </p>
                   <p className="consulta-inventario-nf-stats">
                     {nf.itens.length} {nf.itens.length === 1 ? 'item' : 'itens'} · {nf.totalEnderecos}{' '}
-                    {nf.totalEnderecos === 1 ? 'posição' : 'posições'}
+                    {nf.totalEnderecos === 1 ? 'posição' : 'posições'} · {nf.totalPaletes}{' '}
+                    {nf.totalPaletes === 1 ? 'palete' : 'paletes'}
                     <StatusBadge status={nf.status} />
                   </p>
                 </div>
@@ -158,7 +163,7 @@ export function ConsultaEstoqueInventario({
                     <span className="muted"> · {nf.emitente}</span>
                   </p>
                   <p className="consulta-inventario-nf-stats">
-                    {nf.itens.length} itens · {nf.totalEnderecos} pos.
+                    {nf.itens.length} itens · {nf.totalEnderecos} pos. · {nf.totalPaletes} pal.
                     {nf.dataEmissao ? ` · Emissão ${formatDate(nf.dataEmissao)}` : ''}
                     <StatusBadge status={nf.status} />
                   </p>
@@ -235,7 +240,11 @@ function ItemDetalhe({ item }: { item: EstoqueNfInventario['itens'][number] }) {
         )}
       </dl>
       <p className="consulta-inventario-enderecos-label">
-        {item.enderecos.length} {item.enderecos.length === 1 ? 'posição' : 'posições'}:
+        {item.enderecos.length} {item.enderecos.length === 1 ? 'posição' : 'posições'}
+        {item.paletes != null && item.paletes > 0
+          ? ` · ${item.paletes} ${item.paletes === 1 ? 'palete' : 'paletes'}`
+          : ''}
+        :
       </p>
       <ul className="consulta-enderecos">
         {item.enderecos.map((addr) => (

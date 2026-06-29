@@ -482,6 +482,23 @@
   margin-bottom: 0;
 }
 
+.nf-estoque-resumo {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.nf-estoque-resumo-sep {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.nf-itens-addr-resumo {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+}
+
 .nf-itens-panel {
   padding-top: 4px;
   border-top: 2px solid var(--border);

@@ -1,5 +1,6 @@
 import type { AddressId, NotaFiscal } from '../types'
 import { STAGE_AREA_ID, itemNoStage } from '../layout/stage'
+import { contagemPaletesItem } from './paletes'
 import { normNumero } from './nfDuplicate'
 
 export type ConsultaOrigemEstoque = 'armazem' | 'stage' | 'ambos'
@@ -138,6 +139,7 @@ export type EstoqueNfInventario = {
   status: NotaFiscal['status']
   itens: EstoqueItemInventario[]
   totalEnderecos: number
+  totalPaletes: number
 }
 
 export type EstoqueInventario = {
@@ -145,6 +147,7 @@ export type EstoqueInventario = {
   totalNotas: number
   totalItens: number
   totalEnderecos: number
+  totalPaletes: number
 }
 
 /** Lista todas as NFs com itens endereçados (estoque armazenado). */
@@ -152,6 +155,7 @@ export function inventariarEstoque(notas: NotaFiscal[]): EstoqueInventario {
   const notasArmazenadas: EstoqueNfInventario[] = []
   let totalItens = 0
   let totalEnderecos = 0
+  let totalPaletes = 0
 
   const ordenadas = [...notas].sort((a, b) => {
     const na = Number(a.numero.replace(/\D/g, '') || 0)
@@ -170,7 +174,7 @@ export function inventariarEstoque(notas: NotaFiscal[]): EstoqueInventario {
         descricao: item.descricao,
         quantidade: item.quantidade,
         unidade: item.unidade,
-        ...(item.paletes != null ? { paletes: item.paletes } : {}),
+        paletes: contagemPaletesItem(item),
         ...(item.lote ? { lote: item.lote } : {}),
         ...(item.up ? { up: item.up } : {}),
         ...(item.dataFabricacao ? { dataFabricacao: item.dataFabricacao } : {}),
@@ -181,8 +185,10 @@ export function inventariarEstoque(notas: NotaFiscal[]): EstoqueInventario {
     if (itens.length === 0) continue
 
     const nfEnderecos = itens.reduce((s, it) => s + it.enderecos.length, 0)
+    const nfPaletes = itens.reduce((s, it) => s + (it.paletes ?? 0), 0)
     totalItens += itens.length
     totalEnderecos += nfEnderecos
+    totalPaletes += nfPaletes
 
     notasArmazenadas.push({
       nfId: nf.id,
@@ -193,6 +199,7 @@ export function inventariarEstoque(notas: NotaFiscal[]): EstoqueInventario {
       status: nf.status,
       itens,
       totalEnderecos: nfEnderecos,
+      totalPaletes: nfPaletes,
     })
   }
 
@@ -201,6 +208,7 @@ export function inventariarEstoque(notas: NotaFiscal[]): EstoqueInventario {
     totalNotas: notasArmazenadas.length,
     totalItens,
     totalEnderecos,
+    totalPaletes,
   }
 }
 

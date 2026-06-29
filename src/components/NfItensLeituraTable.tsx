@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { contagemPaletesItem, rotuloPaletes, rotuloPosicoes } from '../lib/paletes'
 import { pesoBrutoTotalItem, pesoLiquidoTotalItem } from '../lib/saidaParcial'
 import { quantidadeEstoqueItem, unidadeEstoqueItem } from '../lib/nfeUnidades'
 import { labelLocalizacaoItem, suffixLocalizacaoEndereco } from '../lib/localizacaoLabels'
@@ -175,6 +176,11 @@ export function NfItensLeituraTable({
                 {item.allocatedAddresses.length > 0 && (
                   <tr className="nf-itens-row-addr">
                     <td colSpan={onSelectItem ? 9 : 8}>
+                      <p className="nf-itens-addr-resumo muted">
+                        {rotuloPosicoes(item.allocatedAddresses.length)}
+                        {' · '}
+                        {rotuloPaletes(contagemPaletesItem(item))}
+                      </p>
                       <ul className="addr-mini nf-itens-addr-list">
                         {item.allocatedAddresses.map((a) => {
                           const vozSelecionavel =

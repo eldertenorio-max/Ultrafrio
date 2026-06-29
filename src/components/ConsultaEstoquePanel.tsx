@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { formatAddressLabel } from '../layout/camaras'
+import { contagemPaletesItem, rotuloPaletes, rotuloPosicoes } from '../lib/paletes'
 import {
   CONSULTA_FILTROS_VAZIOS,
   type ConsultaEstoqueFiltros,
@@ -276,7 +277,13 @@ export function ConsultaEstoquePanel({
                     Endereços na pesquisa
                   </h4>
                   <ul className="consulta-grupo-itens">
-                    {grupo.itens.map((item) => (
+                    {grupo.itens.map((item) => {
+                      const itemNf = nf?.items.find((it) => it.index === item.itemIndex)
+                      const paletesItem = itemNf
+                        ? contagemPaletesItem(itemNf)
+                        : item.enderecos.length
+
+                      return (
                       <li key={`${grupo.nfId}-${item.itemIndex}`}>
                         <span className="consulta-item-codigo">{item.codigo}</span>
                         <span className="muted"> — {item.descricao}</span>
@@ -284,6 +291,12 @@ export function ConsultaEstoquePanel({
                           <span className="consulta-item-meta">
                             {item.lote ? ` · Lote ${item.lote}` : ''}
                             {item.up ? ` · UP ${item.up}` : ''}
+                          </span>
+                        )}
+                        {!item.isStage && item.enderecos.length > 0 && (
+                          <span className="consulta-item-meta">
+                            {' '}
+                            · {rotuloPosicoes(item.enderecos.length)} · {rotuloPaletes(paletesItem)}
                           </span>
                         )}
                         <ul className="consulta-enderecos">
@@ -296,7 +309,8 @@ export function ConsultaEstoquePanel({
                           ))}
                         </ul>
                       </li>
-                    ))}
+                      )
+                    })}
                   </ul>
                 </li>
               )
@@ -389,7 +403,8 @@ export function ConsultaEstoquePanel({
                       {item.allocatedAddresses.length > 0 && (
                         <span className="consulta-item-meta">
                           {' '}
-                          · {item.allocatedAddresses.length} endereço(s)
+                          · {item.allocatedAddresses.length} endereço(s) ·{' '}
+                          {contagemPaletesItem(item)} palete(s)
                         </span>
                       )}
                     </div>
