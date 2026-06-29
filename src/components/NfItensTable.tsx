@@ -106,6 +106,7 @@ export function NfItensTable({
           {items.map((item) => {
             const st = itemStatus(item)
             const isActive = activeItemIndex === item.index
+            const camposEditaveis = canEdit && isActive
             const isStage = localizacaoItem(item) === 'stage'
             const showEnderecos = item.allocatedAddresses.length > 0
             const podeDesmembrar = canEdit && canDesmembrarNfeItem(item)
@@ -144,7 +145,26 @@ export function NfItensTable({
                   <td className="nf-itens-col-num">{formatValorNfe(item.valorUnitario)}</td>
                   <td className="nf-itens-col-num">{formatValorNfe(item.valorTotal)}</td>
                 </tr>
-                <tr className="nf-itens-row-campos" onClick={stopRowActivate}>
+                <tr
+                  className={`nf-itens-row-campos${isActive ? '' : ' nf-itens-row-campos--inativo'}`}
+                  onClick={
+                    isActive
+                      ? stopRowActivate
+                      : () => onSelectItem(item.index)
+                  }
+                  role={isActive ? undefined : 'button'}
+                  tabIndex={isActive ? undefined : 0}
+                  onKeyDown={
+                    isActive
+                      ? undefined
+                      : (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            onSelectItem(item.index)
+                          }
+                        }
+                  }
+                >
                   <td className="nf-itens-col-status" aria-hidden />
                   <td colSpan={8}>
                     <div className="nf-itens-campos-row">
@@ -154,7 +174,7 @@ export function NfItensTable({
                           type="text"
                           className="input-nf input-nf--compact"
                           value={item.up ?? ''}
-                          disabled={!canEdit}
+                          disabled={!camposEditaveis}
                           onChange={(e) => onUpdateItemCampos(item.index, { up: e.target.value })}
                           onClick={stopRowActivate}
                         />
@@ -165,7 +185,7 @@ export function NfItensTable({
                           type="text"
                           className="input-nf input-nf--compact"
                           value={item.lote ?? ''}
-                          disabled={!canEdit}
+                          disabled={!camposEditaveis}
                           onChange={(e) => onUpdateItemCampos(item.index, { lote: e.target.value })}
                           onClick={stopRowActivate}
                         />
@@ -177,7 +197,7 @@ export function NfItensTable({
                           className="input-nf input-nf--compact"
                           max={todayDateInputMax()}
                           value={item.dataFabricacao ?? ''}
-                          disabled={!canEdit}
+                          disabled={!camposEditaveis}
                           onChange={(e) =>
                             onUpdateItemCampos(item.index, {
                               dataFabricacao: normalizeDataFabricacao(e.target.value),
@@ -192,7 +212,7 @@ export function NfItensTable({
                           type="date"
                           className="input-nf input-nf--compact"
                           value={item.dataValidade ?? ''}
-                          disabled={!canEdit}
+                          disabled={!camposEditaveis}
                           onChange={(e) =>
                             onUpdateItemCampos(item.index, { dataValidade: e.target.value })
                           }
@@ -204,7 +224,7 @@ export function NfItensTable({
                         <select
                           className="input-select input-nf--compact"
                           value={localizacaoItem(item)}
-                          disabled={!canEdit || !onUpdateItemLocalizacao}
+                          disabled={!camposEditaveis || !onUpdateItemLocalizacao}
                           onChange={(e) =>
                             onUpdateItemLocalizacao?.(
                               item.index,
@@ -223,7 +243,7 @@ export function NfItensTable({
                           <PaletesItemInput
                             itemIndex={item.index}
                             value={item.paletes}
-                            disabled={!canEdit}
+                            disabled={!camposEditaveis}
                             onCommit={onUpdateItemPaletes}
                           />
                         </label>
@@ -239,13 +259,13 @@ export function NfItensTable({
                           step="any"
                           className="input-nf input-nf--compact"
                           value={item.quantidade}
-                          disabled={!canEdit}
+                          disabled={!camposEditaveis}
                           onChange={(e) => onUpdateItemQuantidade(item.index, e.target.value)}
                           onClick={stopRowActivate}
                         />
                       </label>
                     </div>
-                    {canEdit && (
+                    {camposEditaveis && (
                       <div className="nf-itens-campos-actions">
                         <button
                           type="button"
