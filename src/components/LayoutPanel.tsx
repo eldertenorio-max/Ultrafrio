@@ -242,6 +242,7 @@ function RuaGrid({
   editMoveDestinos,
   editMarcandoStage = false,
   editItemIndex = null,
+  editItemNoStage = false,
   editAdicionandoPosicoes = false,
   saidaAddresses,
   saidaItemDestaqueAddresses,
@@ -363,6 +364,13 @@ function RuaGrid({
                     )
                     const origensCount = editMoveOrigens?.size ?? 0
                     const adicionandoPosicoes = editAdicionandoPosicoes
+                    const tirandoDoStage =
+                      editMode &&
+                      editItemNoStage &&
+                      !editMarcandoStage &&
+                      !adicionandoPosicoes &&
+                      clickable &&
+                      !occ
                     const occMarcavelStage =
                       editMarcandoStage &&
                       activeNfId &&
@@ -371,6 +379,7 @@ function RuaGrid({
                       (editItemIndex == null || occ.itemIndex === editItemIndex)
                     const canInteract = Boolean(
                       (adicionandoPosicoes && clickable && !occ) ||
+                        tirandoDoStage ||
                         pending ||
                         editMoveOrigens?.has(addressId) ||
                         editMoveDestinos?.has(addressId) ||
@@ -378,6 +387,7 @@ function RuaGrid({
                         occMarcavelStage ||
                         (editMode &&
                           !editMarcandoStage &&
+                          !editItemNoStage &&
                           !adicionandoPosicoes &&
                           (occ ||
                             (origensCount > 0 && clickable && !occ))) ||
@@ -390,14 +400,22 @@ function RuaGrid({
                     )
                     if (
                       adicionandoPosicoes ||
-                      (editMode && !editMarcandoStage && !adicionandoPosicoes && (occ || origensCount > 0)) ||
+                      tirandoDoStage ||
+                      (editMode &&
+                        !editMarcandoStage &&
+                        !editItemNoStage &&
+                        !adicionandoPosicoes &&
+                        (occ || origensCount > 0)) ||
                       occMarcavelStage ||
                       stagePending ||
                       (!editItemAtivo && editAddresses && occ)
                     ) {
                       className += ' cell--alocavel'
                     }
-                    if (paintMode && (clickable || pending || occMarcavelStage || stagePending)) {
+                    if (
+                      paintMode &&
+                      (clickable || pending || occMarcavelStage || stagePending || tirandoDoStage)
+                    ) {
                       className += ' cell--pintavel'
                     }
 

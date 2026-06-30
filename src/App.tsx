@@ -14,6 +14,7 @@ import { PrintLayoutDocument } from './components/PrintLayoutDocument'
 import { CAMARAS } from './layout/camaras'
 import { listarItensStage, itemNoStage } from './layout/stage'
 import { EntradaPendenteAlert } from './components/EntradaPendenteAlert'
+import { MovimentacaoPendenteAlert } from './components/MovimentacaoPendenteAlert'
 import { OcupadoAlert } from './components/OcupadoAlert'
 import { PaletesLimiteAlert } from './components/PaletesLimiteAlert'
 import { BuscaEncontradaToast } from './components/BuscaEncontradaToast'
@@ -292,6 +293,10 @@ export default function App() {
     nfNumero: string
     itensPendentes: number
     onConfirmLeave?: () => void
+  } | null>(null)
+  const [movimentacaoPendenteAlert, setMovimentacaoPendenteAlert] = useState<{
+    nfNumero: string
+    onConfirmLeave: () => void
   } | null>(null)
   const entradaPendenteDismissedRef = useRef<string | null>(null)
   const editOriginalAddressesRef = useRef<Set<AddressId>>(new Set())
@@ -1090,7 +1095,14 @@ export default function App() {
           const origensSize = editMoveOrigensRef.current.size
           if (mode === 'add') {
             if (next.has(addressId)) return prev
-            if (next.size >= origensSize) return prev
+            if (next.size >= origensSize) {
+              setVozErro(
+                origensSize === 0
+                  ? 'Marque primeiro os endereços ocupados (origens) no mapa.'
+                  : `Você já marcou ${origensSize} destino(s). Desmarque uma origem para mover menos paletes, ou marque mais origens antes de adicionar destinos.`,
+              )
+              return prev
+            }
             next.add(addressId)
           } else {
             next.delete(addressId)
@@ -2027,6 +2039,8 @@ export default function App() {
   }
 
   function handleEditModoMovimentacao(modo: ModoMovimentacao) {
+    if (modo === editModoMovimentacao) return
+
     setEditModoMovimentacao(modo)
     setEditAdicionarPosicoesAlvo(null)
     setEditNovasPosicoes(new Set())
@@ -2081,6 +2095,8 @@ export default function App() {
 
   function handleSelectItemEditar(index: number) {
     if (!nfEditar) return
+    if (editItemIndex === index && editAdicionarPosicoesAlvo == null) return
+
     setEditAdicionarPosicoesAlvo(null)
     setEditNovasPosicoes(new Set())
     const item = nfEditar.items.find((it) => it.index === index)
@@ -2710,6 +2726,44 @@ export default function App() {
     })
   }
 
+  const temMovimentacaoEmAndamento = useCallback(() => {
+    if (!nfEditarId) return false
+    return (
+      editMoveOrigens.size > 0 ||
+      editMoveDestinos.size > 0 ||
+      editPendingSelection.size > 0 ||
+      editStagePending.size > 0 ||
+      editNovasPosicoes.size > 0 ||
+      editAdicionarPosicoesAlvo != null
+    )
+  }, [
+    nfEditarId,
+    editMoveOrigens,
+    editMoveDestinos,
+    editPendingSelection,
+    editStagePending,
+    editNovasPosicoes,
+    editAdicionarPosicoesAlvo,
+  ])
+
+  const trySairMovimentacaoIncompleta = useCallback(
+    (action: () => void) => {
+      if (!temMovimentacaoEmAndamento() || !nfEditar) {
+        action()
+        return
+      }
+      setMovimentacaoPendenteAlert({
+        nfNumero: nfEditar.numero,
+        onConfirmLeave: () => {
+          limparEstadoMapaEditar()
+          setMovimentacaoPendenteAlert(null)
+          action()
+        },
+      })
+    },
+    [temMovimentacaoEmAndamento, nfEditar],
+  )
+
   const handleOpenSection = useCallback(
     (id: SidebarSectionId | null) => {
       const apply = () => {
@@ -2722,11 +2776,13 @@ export default function App() {
       }
       if (openSectionRef.current === 'entrada' && id !== 'entrada') {
         trySairEntradaIncompleta(apply)
+      } else if (openSectionRef.current === 'editar' && id !== 'editar') {
+        trySairMovimentacaoIncompleta(apply)
       } else {
         apply()
       }
     },
-    [trySairEntradaIncompleta, setSidebarMode, sidebarMode],
+    [trySairEntradaIncompleta, trySairMovimentacaoIncompleta, setSidebarMode, sidebarMode],
   )
 
   const handleVoicePrefsChange = useCallback((patch: Partial<VoicePrefs>) => {
@@ -3293,6 +3349,14 @@ export default function App() {
           itensPendentes={entradaPendenteAlert.itensPendentes}
           onClose={() => setEntradaPendenteAlert(null)}
           onConfirmLeave={entradaPendenteAlert.onConfirmLeave}
+        />
+      )}
+
+      {movimentacaoPendenteAlert && (
+        <MovimentacaoPendenteAlert
+          nfNumero={movimentacaoPendenteAlert.nfNumero}
+          onClose={() => setMovimentacaoPendenteAlert(null)}
+          onConfirmLeave={movimentacaoPendenteAlert.onConfirmLeave}
         />
       )}
 
