@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { coletarInventarioCamara } from '../lib/camaraInventario'
 import { formatValorNfe, formatQuantidadeNfe } from '../lib/formatNfeItem'
@@ -50,7 +51,7 @@ export function CamaraInfoModal({ camaraId, tipo, notas, movimentos, onClose }: 
     [camaraId, tipo, notas, movimentos],
   )
 
-  return (
+  return createPortal(
     <div className="modal-backdrop modal-backdrop--fullscreen" onClick={onClose} role="presentation">
       <div
         className="modal camara-info-modal"
@@ -159,6 +160,7 @@ export function CamaraInfoModal({ camaraId, tipo, notas, movimentos, onClose }: 
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

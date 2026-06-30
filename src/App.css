@@ -2207,6 +2207,7 @@
   padding: 0;
   align-items: stretch;
   justify-content: stretch;
+  z-index: 220;
 }
 
 .modal-backdrop--fullscreen .camara-info-modal {
@@ -2226,6 +2227,7 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  background: var(--bg-panel);
 }
 
 .camara-info-modal-header {
@@ -2234,7 +2236,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 18px 12px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-panel);
 }
 
 .camara-info-modal-header h2 {
@@ -2261,7 +2266,8 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px 18px 18px;
+  padding: 12px 18px max(18px, env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
 }
 
 .camara-info-empty {
@@ -2314,12 +2320,17 @@
   margin: 0;
   font-size: 0.82rem;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .camara-info-table-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .modal-backdrop--fullscreen .camara-info-table-wrap {
@@ -2327,7 +2338,8 @@
 }
 
 .camara-info-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
 }
@@ -2361,6 +2373,15 @@
 
 .modal-backdrop--fullscreen .camara-info-table td:nth-child(3) {
   max-width: none;
+  min-width: 180px;
+}
+
+.modal-backdrop--fullscreen .camara-info-nf-meta {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.modal-backdrop--fullscreen .camara-stats {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .camara-info-table tbody tr:hover {
@@ -2982,7 +3003,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  z-index: 100;
+  z-index: 210;
   overscroll-behavior: contain;
 }
 
