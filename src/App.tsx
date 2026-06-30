@@ -80,9 +80,9 @@ import {
 import {
   describeVoiceCommand,
   painelFiltrosPorDias,
-  parseVoiceCommand,
   type VoiceCommand,
 } from './lib/parseVoiceCommand'
+import { resolveVoiceCommandAsync } from './lib/voiceAiInterpret'
 import {
   createConversationState,
   processConversationTurn,
@@ -2857,17 +2857,28 @@ export default function App() {
     ],
   )
 
+  const resolveVoiceCommand = useCallback(
+    async (text: string): Promise<VoiceCommand | null> => {
+      return resolveVoiceCommandAsync(text, {
+        aiEnabled: voicePrefs.aiInterpretation,
+        geminiApiKey: voicePrefs.geminiApiKey,
+      })
+    },
+    [voicePrefs.aiInterpretation, voicePrefs.geminiApiKey],
+  )
+
   const handleVoiceCommandText = useCallback(
     (text: string) => {
       const cleaned = prepareVoiceCommandText(text, voicePrefs.wakePhrase)
-      const cmd = parseVoiceCommand(cleaned || text)
-      if (!cmd) {
-        setVoiceFeedback('Comando vazio ou não reconhecido. Tente: "abrir consulta" ou "buscar nota 12345".')
-        return
-      }
-      executeVoiceCommand(cmd)
+      void resolveVoiceCommand(cleaned || text).then((cmd) => {
+        if (!cmd) {
+          setVoiceFeedback('Comando vazio ou não reconhecido. Fale naturalmente, ex.: "quero ver o painel".')
+          return
+        }
+        executeVoiceCommand(cmd)
+      })
     },
-    [executeVoiceCommand, voicePrefs.wakePhrase],
+    [executeVoiceCommand, resolveVoiceCommand, voicePrefs.wakePhrase],
   )
 
   const handleConversationStart = useCallback(async () => {
@@ -2921,7 +2932,11 @@ export default function App() {
         return true
       }
 
-      const result = processConversationTurn(prepared, conversationStateRef.current)
+      const result = await processConversationTurn(
+        prepared,
+        conversationStateRef.current,
+        resolveVoiceCommand,
+      )
       conversationStateRef.current = result.state
 
       setConversationLines((prev) => [
@@ -2942,7 +2957,7 @@ export default function App() {
 
       return !result.endSession
     },
-    [executeVoiceCommand, voicePrefs.wakePhrase],
+    [executeVoiceCommand, resolveVoiceCommand, voicePrefs.wakePhrase],
   )
 
   const voiceAssistant = useVoiceAssistant({

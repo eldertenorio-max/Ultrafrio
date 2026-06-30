@@ -6,6 +6,10 @@ export type VoicePrefs = {
   voiceLocked: boolean
   /** Após "ok estoque", conversa por voz perguntando o que fazer. */
   interactiveMode: boolean
+  /** Interpreta linguagem natural (local + IA opcional). */
+  aiInterpretation: boolean
+  /** Chave Gemini opcional para interpretação avançada (Google AI Studio). */
+  geminiApiKey: string
 }
 
 export const VOICE_PREFS_KEY = 'ultrafrio-voice-prefs'
@@ -18,6 +22,8 @@ export function defaultVoicePrefs(): VoicePrefs {
     calibrated: false,
     voiceLocked: false,
     interactiveMode: true,
+    aiInterpretation: true,
+    geminiApiKey: '',
   }
 }
 
@@ -30,6 +36,8 @@ export function getStoredVoicePrefs(): VoicePrefs {
         ...defaultVoicePrefs(),
         ...parsed,
         wakePhrase: (parsed.wakePhrase ?? DEFAULT_WAKE_PHRASE).trim() || DEFAULT_WAKE_PHRASE,
+        aiInterpretation: parsed.aiInterpretation !== false,
+        geminiApiKey: (parsed.geminiApiKey ?? '').trim(),
       }
     }
   } catch {

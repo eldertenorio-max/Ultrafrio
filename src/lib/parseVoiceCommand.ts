@@ -229,7 +229,10 @@ function buildCommandExamples(): { frase: string; descricao: string }[] {
   ])
 
   return [
-    { frase: wake, descricao: 'Ativa o assistente — depois fale o comando.' },
+    { frase: `${wake} quero ver o painel`, descricao: 'Abre o painel (linguagem natural).' },
+    { frase: `${wake} tem leite no estoque?`, descricao: 'Consulta item por descrição.' },
+    { frase: `${wake} onde está a nota 20835`, descricao: 'Busca NF na movimentação.' },
+    { frase: `${wake} fecha essa aba`, descricao: 'Fecha a seção aberta.' },
     ...sectionExamples,
     { frase: `${wake} fechar aba`, descricao: 'Fecha a seção aberta no menu.' },
     { frase: `${wake} fechar tudo`, descricao: 'Fecha todas as seções abertas no menu.' },
@@ -315,6 +318,12 @@ function extractNumeroNota(norm: string): string | null {
 export function isDestructiveVoiceCommand(text: string): boolean {
   const norm = normalizeVoiceText(text)
   if (!norm) return false
+  if (
+    /\b(apagar|limpar|zerar)\s+(filtros?|consulta|pesquisa|busca)\b/.test(norm) &&
+    !/\b(nota|estoque|dados|tudo|sistema|nf|item|palete)\b/.test(norm)
+  ) {
+    return false
+  }
   return DESTRUCTIVE_RULES.some((rule) => rule.pattern.test(norm))
 }
 

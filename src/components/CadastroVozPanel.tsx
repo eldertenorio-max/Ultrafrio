@@ -202,8 +202,8 @@ export function CadastroVozPanel({
         {assistantActive && (
           <p className="cadastro-voz-status cadastro-voz-status--on">
             {prefs.interactiveMode
-              ? `Microfone aguardando "${wake}". Ao falar, o assistente conversa com você e executa as ações no sistema. Diga "sair" para encerrar.`
-              : `Microfone aguardando "${wake}" — diga tudo junto, por exemplo: "${wake} abrir consulta".`}
+              ? `Microfone aguardando "${wake}". Fale naturalmente — ex.: "quero ver o painel", "tem leite no estoque?", "fecha essa aba". Diga "sair" para encerrar.`
+              : `Microfone aguardando "${wake}" — fale o pedido em linguagem natural após a frase de ativação.`}
           </p>
         )}
 
@@ -216,8 +216,8 @@ export function CadastroVozPanel({
             {prefs.voiceLocked && !temVozCadastrada
               ? 'Cadastre uma voz abaixo ou desmarque "Exigir voz cadastrada" para testar só com a frase de ativação.'
               : prefs.interactiveMode
-                ? `Toque em Ativar voz e fale "${wake}" — o assistente conversa com você e pergunta o que deseja fazer.`
-                : `Toque em Ativar voz e fale "${wake}" seguido do comando (pode ser na mesma frase).`}
+                ? `Toque em Ativar voz e fale "${wake}" — depois diga o que precisa em linguagem natural.`
+                : `Toque em Ativar voz e fale "${wake}" seguido do que deseja fazer.`}
           </p>
         )}
 
@@ -241,6 +241,34 @@ export function CadastroVozPanel({
           />
           <span>Modo conversa interativa (assistente pergunta e responde por voz)</span>
         </label>
+
+        <label className="cadastro-voz-toggle">
+          <input
+            type="checkbox"
+            checked={prefs.aiInterpretation}
+            disabled={!supported || assistantActive}
+            onChange={(e) => onPrefsChange({ aiInterpretation: e.target.checked })}
+          />
+          <span>Interpretação livre — entende frases naturais sem decorar comandos</span>
+        </label>
+
+        {prefs.aiInterpretation && (
+          <label className="cadastro-voz-field">
+            <span>Chave Gemini (opcional, interpretação avançada)</span>
+            <input
+              type="password"
+              className="input-nf"
+              value={prefs.geminiApiKey}
+              disabled={!supported || assistantActive}
+              onChange={(e) => onPrefsChange({ geminiApiKey: e.target.value.trim() })}
+              placeholder="Cole a chave do Google AI Studio (opcional)"
+              autoComplete="off"
+            />
+            <span className="muted cadastro-voz-field-hint">
+              Sem chave, o sistema já entende frases comuns. Com chave Gemini, fica ainda mais flexível.
+            </span>
+          </label>
+        )}
 
         <label className="cadastro-voz-toggle">
           <input
@@ -388,7 +416,8 @@ export function CadastroVozPanel({
       <div className="sidebar-block">
         <h4 className="cadastro-voz-subtitle">Comandos disponíveis</h4>
         <p className="muted cadastro-voz-comandos-hint">
-          Com a voz cadastrada, fale <strong>{wake}</strong> e em seguida o comando.
+          Fale <strong>{wake}</strong> e diga o que precisa em linguagem natural — não precisa decorar
+          frases exatas. Exemplos abaixo.
         </p>
         <ul className="cadastro-voz-comandos">
           {VOICE_COMMAND_EXAMPLES.map((ex) => (

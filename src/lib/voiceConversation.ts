@@ -1,4 +1,4 @@
-import { parseVoiceCommand, type VoiceCommand } from './parseVoiceCommand'
+import type { VoiceCommand } from './parseVoiceCommand'
 import { normalizeVoiceText } from './voiceNormalize'
 
 export const VOICE_CONVERSATION_GREETING = 'Em que posso ajudar?'
@@ -82,10 +82,16 @@ function commandLabel(cmd: VoiceCommand): string {
 }
 
 function tryPartialIntent(norm: string): ConversationPending | null {
-  if (/\b(buscar|procurar|achar|localizar)\b/.test(norm) && /\b(nota|nf)\b/.test(norm)) {
+  if (
+    (/\b(buscar|procurar|achar|localizar|onde)\b/.test(norm) && /\b(nota|nf)\b/.test(norm)) ||
+    /\bonde esta a nota\b/.test(norm)
+  ) {
     return { kind: 'buscar_nota' }
   }
-  if (/\b(consultar|consulta|pesquisar)\b/.test(norm)) {
+  if (
+    /\b(consultar|consulta|pesquisar|procurar|tem|existe|quanto)\b/.test(norm) ||
+    /\bno estoque\b/.test(norm)
+  ) {
     if (/\b(nota|nf)\b/.test(norm)) return { kind: 'consultar', campo: 'nf' }
     if (/\b(item|produto|codigo|código)\b/.test(norm)) return { kind: 'consultar', campo: 'item' }
     if (/\b(remetente|emitente|fornecedor)\b/.test(norm)) return { kind: 'consultar', campo: 'remetente' }
@@ -94,7 +100,11 @@ function tryPartialIntent(norm: string): ConversationPending | null {
   return null
 }
 
-function resolvePending(text: string, pending: ConversationPending): ConversationTurnResult {
+async function resolvePending(
+  text: string,
+  pending: ConversationPending,
+  resolveCommand: (text: string) => Promise<VoiceCommand | null>,
+): Promise<ConversationTurnResult> {
   const norm = normalizeVoiceText(text)
   const state = createConversationState()
 
@@ -118,7 +128,7 @@ function resolvePending(text: string, pending: ConversationPending): Conversatio
   }
 
   if (pending.kind === 'consultar') {
-    const cmd = parseVoiceCommand(text)
+    const cmd = await resolveCommand(text)
     if (cmd && cmd.type === 'consultar') {
       return {
         reply: followUpAfterCommand(commandLabel(cmd)),
@@ -175,10 +185,11 @@ function resolvePending(text: string, pending: ConversationPending): Conversatio
   }
 }
 
-export function processConversationTurn(
+export async function processConversationTurn(
   text: string,
   state: ConversationState,
-): ConversationTurnResult {
+  resolveCommand: (text: string) => Promise<VoiceCommand | null>,
+): Promise<ConversationTurnResult> {
   const trimmed = text.trim()
   const norm = normalizeVoiceText(trimmed)
 
@@ -210,10 +221,10 @@ export function processConversationTurn(
   }
 
   if (state.pending) {
-    return resolvePending(trimmed, state.pending)
+    return resolvePending(trimmed, state.pending, resolveCommand)
   }
 
-  const cmd = parseVoiceCommand(trimmed)
+  const cmd = await resolveCommand(trimmed)
 
   if (cmd?.type === 'parar') {
     return {
