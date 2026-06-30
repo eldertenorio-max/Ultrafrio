@@ -21,7 +21,7 @@ export type CamaraConfig = {
 export const CAMARAS: CamaraConfig[] = [
   {
     id: 6,
-    tipo: 'Refrigerado',
+    tipo: 'Congelado',
     ruas: [
       { rua: 1, colunas: 15 },
       {
@@ -42,7 +42,7 @@ export const CAMARAS: CamaraConfig[] = [
   },
   {
     id: 8,
-    tipo: 'Refrigerado',
+    tipo: 'Congelado',
     ruas: [
       { rua: 1, colunas: 15, porta: { cols: [2, 3], niveis: [1, 3] } },
       { rua: 2, colunas: 15 },
@@ -50,7 +50,7 @@ export const CAMARAS: CamaraConfig[] = [
   },
   {
     id: 9,
-    tipo: 'Refrigerado',
+    tipo: 'Congelado',
     ruas: [
       { rua: 1, colunas: 15, celulasBloqueadas: [{ col: 1, nivel: 4 }] },
       { rua: 2, colunas: 15, celulasBloqueadas: [{ col: 1, nivel: 4 }] },
@@ -58,7 +58,7 @@ export const CAMARAS: CamaraConfig[] = [
   },
   {
     id: 10,
-    tipo: 'Refrigerado',
+    tipo: 'Congelado',
     ruas: [
       { rua: 1, colunas: 15 },
       { rua: 2, colunas: 15 },
