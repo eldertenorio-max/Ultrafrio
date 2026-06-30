@@ -1249,6 +1249,10 @@
   color: var(--text-muted);
 }
 
+.nf-itens-status--muted {
+  opacity: 0.45;
+}
+
 .nf-itens-status--ok {
   color: #3fb950;
   font-weight: 700;

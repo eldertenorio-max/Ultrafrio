@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { contagemPaletesItem, rotuloPaletes, rotuloPosicoes } from '../lib/paletes'
+import { itemMovimentavel } from '../lib/movimentacaoItens'
 import { pesoBrutoTotalItem, pesoLiquidoTotalItem } from '../lib/saidaParcial'
 import { quantidadeEstoqueItem, unidadeEstoqueItem } from '../lib/nfeUnidades'
 import { labelLocalizacaoItem, suffixLocalizacaoEndereco } from '../lib/localizacaoLabels'
@@ -69,8 +70,10 @@ export function NfItensLeituraTable({
         <tbody>
           {items.map((item) => {
             const isActive = activeItemIndex === item.index
+            const movimentavel = itemMovimentavel(item)
             const selectable =
               onSelectItem != null &&
+              movimentavel &&
               (selectablePredicate ? selectablePredicate(item) : true)
             const temMeta =
               item.up ||
@@ -107,8 +110,15 @@ export function NfItensLeituraTable({
                         <span className="nf-itens-status nf-itens-status--ok">
                           {isActive ? '✎' : '○'}
                         </span>
-                      ) : (
+                      ) : movimentavel ? (
                         <span className="nf-itens-status nf-itens-status--ok">✓</span>
+                      ) : (
+                        <span
+                          className="nf-itens-status nf-itens-status--muted"
+                          title="Sem estoque no armazém nem no stage — enderece na Entrada"
+                        >
+                          —
+                        </span>
                       )}
                     </td>
                   )}

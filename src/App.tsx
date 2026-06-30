@@ -126,6 +126,7 @@ import {
   nfTemEstoqueStage,
   snapshotSaidaStage,
 } from './lib/stageEstoque'
+import { itemMovimentavel, proximoItemMovimentavel } from './lib/movimentacaoItens'
 import type { ModoMovimentacao } from './components/EditarPosicaoPanel'
 import type { EntradaItemCampos } from './lib/entradaCampos'
 import { quantidadeEstoqueItem } from './lib/nfeUnidades'
@@ -2070,6 +2071,10 @@ export default function App() {
   function iniciarEdicaoNf(nf: NotaFiscal) {
     setNfEditarId(nf.id)
     limparEstadoMapaEditar()
+    const primeiro = proximoItemMovimentavel(nf, null)
+    if (primeiro) {
+      aplicarSelecaoItemEditar(nf, primeiro.index)
+    }
   }
 
   function handleBuscarEditar(numero: string) {
@@ -2093,15 +2098,25 @@ export default function App() {
     focarMapaBuscaEncontrado(primeiroEnderecoNf(nf), avisoNfEncontrada(nf, 'movimentacao'))
   }
 
-  function handleSelectItemEditar(index: number) {
-    if (!nfEditar) return
-    if (editItemIndex === index && editAdicionarPosicoesAlvo == null) return
+  function limparDraftMovimentacaoMapa() {
+    setEditPendingSelection(new Set())
+    setEditStagePending(new Set())
+    setEditMoveOrigens(new Set())
+    setEditMoveDestinos(new Set())
+    editMoveOrigensRef.current = new Set()
+    editMoveDestinosRef.current = new Set()
+    setEditAdicionarPosicoesAlvo(null)
+    setEditNovasPosicoes(new Set())
+    setVozOrigemAddress(null)
+    setVozErro(null)
+  }
+
+  function aplicarSelecaoItemEditar(nf: NotaFiscal, index: number) {
+    const item = nf.items.find((it) => it.index === index)
+    if (!item) return
 
     setEditAdicionarPosicoesAlvo(null)
     setEditNovasPosicoes(new Set())
-    const item = nfEditar.items.find((it) => it.index === index)
-    if (!item) return
-
     setEditStagePending(new Set())
 
     if (itemNoStage(item)) {
@@ -2110,6 +2125,8 @@ export default function App() {
       setEditPendingSelection(new Set())
       setEditMoveOrigens(new Set())
       setEditMoveDestinos(new Set())
+      editMoveOrigensRef.current = new Set()
+      editMoveDestinosRef.current = new Set()
       setVozOrigemAddress(null)
       setVozErro(null)
       setEditModoMovimentacao('tirar-stage')
@@ -2118,20 +2135,66 @@ export default function App() {
       return
     }
 
-  if (item.allocatedAddresses.length === 0) return
-  const original = new Set(item.allocatedAddresses)
-  editOriginalAddressesRef.current = original
-  setEditItemIndex(index)
-  setEditPendingSelection(new Set())
-  setEditMoveOrigens(new Set())
-  setEditMoveDestinos(new Set())
-  setVozOrigemAddress(null)
-  setVozErro(null)
-  if (editModoMovimentacao !== 'enviar-stage') {
-    setEditModoMovimentacao('reposicionar')
+    if (item.allocatedAddresses.length === 0) return
+
+    const original = new Set(item.allocatedAddresses)
+    editOriginalAddressesRef.current = original
+    setEditItemIndex(index)
+    setEditPendingSelection(new Set())
+    setEditMoveOrigens(new Set())
+    setEditMoveDestinos(new Set())
+    editMoveOrigensRef.current = new Set()
+    editMoveDestinosRef.current = new Set()
+    setVozOrigemAddress(null)
+    setVozErro(null)
+    if (editModoMovimentacao !== 'enviar-stage') {
+      setEditModoMovimentacao('reposicionar')
+    }
+    setDetailAddress(null)
+    focarMapaDestaque(primeiroEnderecoIds(item.allocatedAddresses))
   }
-  setDetailAddress(null)
-  focarMapaDestaque(primeiroEnderecoIds(item.allocatedAddresses))
+
+  function avancarParaProximoItemEditar(nf: NotaFiscal, afterIndex: number) {
+    const next = proximoItemMovimentavel(nf, afterIndex)
+    if (next) {
+      aplicarSelecaoItemEditar(nf, next.index)
+      return
+    }
+    setEditItemIndex(null)
+    limparDraftMovimentacaoMapa()
+    editOriginalAddressesRef.current = new Set()
+  }
+
+  function handleSelectItemEditar(index: number) {
+    if (!nfEditar) return
+    if (editItemIndex === index && editAdicionarPosicoesAlvo == null) return
+
+    const item = nfEditar.items.find((it) => it.index === index)
+    if (!item || !itemMovimentavel(item)) return
+
+    const trocar = () => aplicarSelecaoItemEditar(nfEditar, index)
+
+    const temDraft =
+      editMoveOrigens.size > 0 ||
+      editMoveDestinos.size > 0 ||
+      editPendingSelection.size > 0 ||
+      editStagePending.size > 0 ||
+      editNovasPosicoes.size > 0 ||
+      editAdicionarPosicoesAlvo != null
+
+    if (editItemIndex != null && editItemIndex !== index && temDraft) {
+      setMovimentacaoPendenteAlert({
+        nfNumero: nfEditar.numero,
+        onConfirmLeave: () => {
+          limparDraftMovimentacaoMapa()
+          setMovimentacaoPendenteAlert(null)
+          trocar()
+        },
+      })
+      return
+    }
+
+    trocar()
   }
 
   function handleSelectVozOrigem(addressId: AddressId, index: number) {
@@ -2254,10 +2317,10 @@ export default function App() {
       editOriginalAddressesRef.current = new Set(updatedItem.allocatedAddresses)
       setEditMoveOrigens(new Set())
       setEditMoveDestinos(new Set())
+      editMoveOrigensRef.current = new Set()
+      editMoveDestinosRef.current = new Set()
     } else {
-      setEditItemIndex(null)
-      setEditPendingSelection(new Set())
-      editOriginalAddressesRef.current = new Set()
+      avancarParaProximoItemEditar(updatedNf, currentItemIndex)
     }
   }
 
@@ -2299,10 +2362,10 @@ export default function App() {
         setEditPendingSelection(new Set())
         editOriginalAddressesRef.current = new Set(addresses)
         setState(nextState)
-        setEditItemIndex(null)
         setEditSalvando(false)
         setVozErro(null)
         void saveNow(nextState)
+        avancarParaProximoItemEditar(updatedNf, currentItemIndex)
         return true
       }
     }
@@ -2411,6 +2474,7 @@ export default function App() {
     setState(nextState)
     setEditSalvando(false)
     void saveNow(nextState)
+    avancarParaProximoItemEditar(updatedNf, currentItemIndex)
     return true
   }
 

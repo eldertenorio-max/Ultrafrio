@@ -4,6 +4,7 @@ import { MOTIVOS_REMOCAO_ESTOQUE } from '../lib/motivoRemocaoEstoque'
 import { parsePaletesInput } from '../lib/paletes'
 import type { AddressId, MotivoRemocaoEstoqueId, NotaFiscal } from '../types'
 import { itemNoStage } from '../layout/stage'
+import { itemMovimentavel, itensMovimentaveisDaNf } from '../lib/movimentacaoItens'
 import { nfTemEstoqueArmazem, nfTemEstoqueStage, itensStageDaNf } from '../lib/stageEstoque'
 import { NfDetalheLeitura } from './NfDetalheLeitura'
 import { EnderecoDestinoForm } from './EnderecoDestinoForm'
@@ -45,10 +46,6 @@ type Props = {
   onConfirmarAdicionarPosicoes: () => void | Promise<void>
   onCancelarAdicionarPosicoes: () => void
   buscaErro: string | null
-}
-
-function itemMovimentavel(item: { localizacao?: string; allocatedAddresses: string[] }): boolean {
-  return itemNoStage(item as Parameters<typeof itemNoStage>[0]) || item.allocatedAddresses.length > 0
 }
 
 export function EditarPosicaoPanel({
@@ -184,6 +181,12 @@ export function EditarPosicaoPanel({
   const distribuicaoCompleta =
     moveOrigensCount > 0 && moveOrigensCount === moveDestinosCount
 
+  const itensMovimentaveis = nfBusca ? itensMovimentaveisDaNf(nfBusca) : []
+  const itensIntroMovimentacao =
+    itensMovimentaveis.length > 1
+      ? 'Selecione um item na tabela (○). Após confirmar a movimentação, o próximo item é liberado automaticamente.'
+      : 'Selecione um item no armazém ou no stage para movimentar.'
+
   return (
     <>
       <div className="sidebar-block">
@@ -219,7 +222,7 @@ export function EditarPosicaoPanel({
             onSelectVozOrigem={
               !marcandoStage && itemIndex != null && !itemStage ? onSelectVozOrigem : undefined
             }
-            itensIntro="Selecione um item no armazém ou no stage para movimentar."
+            itensIntro={itensIntroMovimentacao}
           />
 
           {itemAtivo && itemStage && (
