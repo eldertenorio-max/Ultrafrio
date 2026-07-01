@@ -28,9 +28,10 @@ const emptyState: AppState = {
 
 const SAVE_DEBOUNCE_MS = 400
 const SAVE_DEBOUNCE_SUPABASE_MS = 50
-const REMOTE_RELOAD_DEBOUNCE_MS = 300
-const IGNORE_REMOTE_AFTER_SAVE_MS = 8000
-const POLL_INTERVAL_MS = 5000
+const REMOTE_RELOAD_DEBOUNCE_MS = 200
+/** Ignora eco do próprio save no Realtime; não bloqueia updates de outros navegadores por muito tempo. */
+const IGNORE_REMOTE_AFTER_SAVE_MS = 1500
+const POLL_INTERVAL_MS = 2000
 const PERSIST_RETRY_MS = 600
 const PERSIST_AUTO_RETRY_MS = 2500
 const PERSIST_AUTO_RETRY_MAX = 5
@@ -56,8 +57,14 @@ function pickRepository(): EnderecamentoRepository {
   return isSupabaseConfigured() ? getRepository() : localRepository
 }
 
-function preserveUi(prev: AppState, data: PersistedData): AppState {
-  let notas = protegerNotasContraRegressao(prev.notas, data.notas)
+function preserveUi(
+  prev: AppState,
+  data: PersistedData,
+  options?: { trustRemote?: boolean },
+): AppState {
+  let notas = options?.trustRemote
+    ? data.notas
+    : protegerNotasContraRegressao(prev.notas, data.notas)
   let activeNfId = prev.activeNfId
 
   if (activeNfId) {
@@ -116,6 +123,10 @@ export function useEnderecamentoStore() {
   const stateRef = useRef(state)
   const autoRetryCountRef = useRef(0)
   const autoRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const remoteReloadQueuedRef = useRef(false)
+  const scheduleRemoteReloadRef = useRef<() => void>(() => {})
+  const [syncingRemote, setSyncingRemote] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
 
   useEffect(() => {
     stateRef.current = state
@@ -136,7 +147,6 @@ export function useEnderecamentoStore() {
     const repo = repoRef.current
     savingRef.current = true
     setSaving(true)
-    ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
 
     const runLocalSave = async () => {
       if (repo.mode !== 'supabase') {
@@ -195,6 +205,12 @@ export function useEnderecamentoStore() {
           lastPersistedRef.current = dataToSave
           pendingSaveRef.current = null
           ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
+          window.setTimeout(() => {
+            if (remoteReloadQueuedRef.current) {
+              remoteReloadQueuedRef.current = false
+              scheduleRemoteReloadRef.current()
+            }
+          }, IGNORE_REMOTE_AFTER_SAVE_MS + 100)
           autoRetryCountRef.current = 0
           if (autoRetryTimerRef.current) {
             clearTimeout(autoRetryTimerRef.current)
@@ -241,6 +257,10 @@ export function useEnderecamentoStore() {
     } finally {
       savingRef.current = false
       setSaving(false)
+      if (remoteReloadQueuedRef.current) {
+        remoteReloadQueuedRef.current = false
+        scheduleRemoteReloadRef.current()
+      }
     }
   }, [applyPersistedToState])
 
@@ -267,10 +287,24 @@ export function useEnderecamentoStore() {
     [persist],
   )
 
+  const requestRemoteReload = useCallback(() => {
+    if (savingRef.current || Date.now() < ignoreRemoteUntil.current) {
+      remoteReloadQueuedRef.current = true
+      return
+    }
+    scheduleRemoteReloadRef.current()
+  }, [])
+
   const reloadFromRemote = useCallback(async () => {
     if (repoRef.current.mode !== 'supabase') return
-    if (savingRef.current) return
-    if (Date.now() < ignoreRemoteUntil.current) return
+    if (savingRef.current) {
+      remoteReloadQueuedRef.current = true
+      return
+    }
+    if (Date.now() < ignoreRemoteUntil.current) {
+      remoteReloadQueuedRef.current = true
+      return
+    }
     if (
       hasPendingLocalChanges(
         stateRef.current,
@@ -283,22 +317,32 @@ export function useEnderecamentoStore() {
     }
 
     skipSave.current = true
+    setSyncingRemote(true)
     try {
       const remote = await repoRef.current.loadData()
       const { data, dadosReparados } = prepareLoadedDataWithRepair(remote)
       const base = lastPersistedRef.current
+      const localNow = pickPersisted(stateRef.current)
+      const trustRemote = base !== null && persistedEquals(localNow, base)
 
       setState((prev) => {
         const local = pickPersisted(prev)
-        const merged = base ? mergePersistedData(base, local, data) : data
-        const protegido = protegerPersistedContraRegressao(local, merged)
+        const merged = trustRemote
+          ? data
+          : base
+            ? mergePersistedData(base, local, data)
+            : data
+        const protegido = trustRemote
+          ? merged
+          : protegerPersistedContraRegressao(local, merged)
         const normalized = normalizePersistedData(protegido)
         lastPersistedRef.current = normalized
-        const next = preserveUi(prev, normalized)
+        const next = preserveUi(prev, normalized, { trustRemote })
         if (persistedEquals(pickPersisted(prev), pickPersisted(next))) return prev
         return next
       })
       setError(null)
+      setLastSyncedAt(Date.now())
 
       const merged = lastPersistedRef.current
       const precisaSalvarReparo = dadosReparados || (merged && !persistedEquals(merged, data))
@@ -329,6 +373,7 @@ export function useEnderecamentoStore() {
           : 'Erro ao sincronizar com a nuvem.',
       )
     } finally {
+      setSyncingRemote(false)
       setTimeout(() => {
         skipSave.current = false
       }, 200)
@@ -341,6 +386,10 @@ export function useEnderecamentoStore() {
       void reloadFromRemote()
     }, REMOTE_RELOAD_DEBOUNCE_MS)
   }, [reloadFromRemote])
+
+  useEffect(() => {
+    scheduleRemoteReloadRef.current = scheduleRemoteReload
+  }, [scheduleRemoteReload])
 
   useEffect(() => {
     let cancelled = false
@@ -365,6 +414,7 @@ export function useEnderecamentoStore() {
           lastPersistedRef.current = data
           setState({ ...data, ...ui })
           setError(null)
+          setLastSyncedAt(Date.now())
 
           if (repo.mode === 'supabase' && dadosReparados) {
             skipSave.current = true
@@ -417,13 +467,12 @@ export function useEnderecamentoStore() {
     if (loading || storageMode !== 'supabase' || !isSupabaseConfigured()) return
 
     const unsubscribe = subscribeEnderecamentoChanges(() => {
-      if (Date.now() < ignoreRemoteUntil.current) return
-      scheduleRemoteReload()
+      requestRemoteReload()
     })
-    const poll = window.setInterval(scheduleRemoteReload, POLL_INTERVAL_MS)
+    const poll = window.setInterval(() => requestRemoteReload(), POLL_INTERVAL_MS)
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible') scheduleRemoteReload()
+      if (document.visibilityState === 'visible') requestRemoteReload()
     }
     document.addEventListener('visibilitychange', onVisible)
 
@@ -433,7 +482,7 @@ export function useEnderecamentoStore() {
       document.removeEventListener('visibilitychange', onVisible)
       if (reloadTimer.current) clearTimeout(reloadTimer.current)
     }
-  }, [loading, scheduleRemoteReload, storageMode])
+  }, [loading, requestRemoteReload, storageMode])
 
   useEffect(() => {
     if (skipSave.current || loading) return
@@ -465,7 +514,6 @@ export function useEnderecamentoStore() {
         saveTimer.current = null
       }
       pendingSaveRef.current = null
-      ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
       void persist(pending)
     }
 
@@ -508,7 +556,10 @@ export function useEnderecamentoStore() {
     registrarEmitente,
     loading,
     saving,
+    syncingRemote,
+    lastSyncedAt,
     error,
     clearError: () => setError(null),
+    storageMode,
   }
 }

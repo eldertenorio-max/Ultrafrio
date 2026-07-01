@@ -272,6 +272,16 @@
   border-radius: 4px;
 }
 
+.app-topbar-syncing {
+  font-size: 0.68rem;
+  font-style: normal;
+  color: #fff;
+  font-weight: 700;
+  background: #2563eb;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
 .app-topbar-error {
   font-size: 0.68rem;
   font-style: normal;

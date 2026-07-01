@@ -23,7 +23,7 @@ export function subscribeEnderecamentoChanges(onChange: () => void): () => void 
   }
 
   channel.subscribe((status) => {
-    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+    if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
       onChange()
     }
   })

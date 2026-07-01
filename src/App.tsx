@@ -216,6 +216,8 @@ export default function App() {
     registrarEmitente,
     loading,
     saving,
+    syncingRemote,
+    storageMode,
     error,
     clearError,
   } = useEnderecamentoStore()
@@ -3116,6 +3118,8 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         saving={saving}
+        syncingRemote={syncingRemote}
+        cloudSync={storageMode === 'supabase'}
         persistError={error}
         mapLegend={{
           allocateMode: panelAllocateMode,
