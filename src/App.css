@@ -7458,6 +7458,45 @@ html.scroll-locked .sidebar.sidebar--wide {
   color: var(--accent-hover);
 }
 
+.recuperacao-estoque-banner {
+  margin: 0 12px 12px;
+  padding: 16px 18px;
+  border: 2px solid #c62828;
+  border-radius: 10px;
+  background: color-mix(in srgb, #c62828 8%, var(--surface));
+}
+
+.recuperacao-estoque-banner h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: #c62828;
+}
+
+.recuperacao-estoque-banner p {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+}
+
+.recuperacao-estoque-banner__hint {
+  font-size: 0.9rem;
+}
+
+.recuperacao-estoque-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.recuperacao-estoque-banner__details {
+  font-size: 0.85rem;
+}
+
+.recuperacao-estoque-banner__details ol {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
+}
+
 .alert-address {
   font-weight: 600;
   color: var(--cell-sel);

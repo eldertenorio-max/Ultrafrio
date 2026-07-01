@@ -655,11 +655,54 @@ export function useEnderecamentoStore() {
     }))
   }, [])
 
+  const recuperarDoNavegador = useCallback(async (): Promise<boolean> => {
+    const empty: PersistedData = {
+      notas: [],
+      movimentos: [],
+      notasCanceladas: [],
+      emitentes: [],
+    }
+    const { data: best, recoveredFromLocal } = recoverBestPersisted(empty)
+    if (!recoveredFromLocal || persistedRichness(best) === 0) {
+      setError(
+        'Nenhum backup encontrado neste navegador. Restaure pelo Supabase (Database → Backups) ou importe um arquivo .json de backup.',
+      )
+      return false
+    }
+
+    const normalized = normalizePersistedData(prepareLoadedDataWithRepair(best).data)
+    const ui = repoRef.current.loadUiPrefs()
+    const nextState: AppState = { ...normalized, ...ui }
+
+    skipSave.current = true
+    setState(nextState)
+    lastPersistedRef.current = pickPersisted(nextState)
+    syncWriteLocalDraft(pickPersisted(nextState))
+    syncWriteLocalSyncBase(pickPersisted(nextState))
+    skipSave.current = false
+
+    try {
+      await saveNow(nextState)
+      setError(
+        `Estoque recuperado: ${nextState.notas.length} NF(s), ${contarEnderecosPersistidos(pickPersisted(nextState))} posição(ões) restauradas e salvas na nuvem.`,
+      )
+      return true
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `Backup local encontrado, mas falhou ao salvar na nuvem: ${e.message}`
+          : 'Backup local encontrado, mas falhou ao salvar na nuvem.',
+      )
+      return false
+    }
+  }, [saveNow])
+
   return {
     state,
     setState: updateState,
     saveNow,
     registrarEmitente,
+    recuperarDoNavegador,
     loading,
     saving,
     error,

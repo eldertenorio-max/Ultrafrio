@@ -11,6 +11,10 @@ import { StageModal } from './components/StageModal'
 import { EntradaDestinoModal } from './components/EntradaDestinoModal'
 import { EscolhaEstoqueModal } from './components/EscolhaEstoqueModal'
 import { PrintLayoutDocument } from './components/PrintLayoutDocument'
+import {
+  RecuperacaoEstoqueBanner,
+  exportarBackupNavegador,
+} from './components/RecuperacaoEstoqueBanner'
 import { CAMARAS } from './layout/camaras'
 import { listarItensStage, itemNoStage } from './layout/stage'
 import { EntradaPendenteAlert } from './components/EntradaPendenteAlert'
@@ -225,6 +229,7 @@ export default function App() {
     setState,
     saveNow,
     registrarEmitente,
+    recuperarDoNavegador,
     loading,
     saving,
     error,
@@ -3233,6 +3238,11 @@ export default function App() {
     return () => clearTimeout(t)
   }, [voiceFeedback])
 
+  const enderecosPersistidos = useMemo(
+    () => state.notas.reduce((s, nf) => s + nf.items.reduce((a, it) => a + it.allocatedAddresses.length, 0), 0),
+    [state.notas],
+  )
+
   const stageItens = useMemo(() => listarItensStage(state.notas), [state.notas])
 
   const detailOcc = detailAddress ? occupancy.get(detailAddress) : null
@@ -3275,6 +3285,14 @@ export default function App() {
         onOpenContaSection={handleOpenContaSection}
       />
       <div className="app-workspace">
+      {!loading && (
+        <RecuperacaoEstoqueBanner
+          notasCount={state.notas.length}
+          enderecosCount={enderecosPersistidos}
+          onRecuperar={recuperarDoNavegador}
+          onExportarBackup={exportarBackupNavegador}
+        />
+      )}
       <AppSidebar
         sidebarMode={sidebarMode}
         onSidebarModeChange={setSidebarMode}
