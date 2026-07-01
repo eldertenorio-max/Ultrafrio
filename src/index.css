@@ -60,6 +60,11 @@
   --cell-destaque-verde-ocup: var(--cell-ocup);
   --cell-destaque-overlay: rgb(110 231 183 / 0.62);
   --cell-destaque-borda: #22c55e;
+  --move-origem-borda: #ea580c;
+  --move-origem-overlay: rgb(234 88 12 / 0.52);
+  --move-destino-bg: #bfdbfe;
+  --move-destino-borda: #2563eb;
+  --move-destino-overlay: rgb(37 99 235 / 0.28);
   --sel-outline: #f9db00;
   --swatch-outline: #ffffff;
   --sidebar-w: 50vw;
@@ -124,6 +129,11 @@
   --cell-destaque-verde: #86efac;
   --cell-destaque-overlay: rgb(74 222 128 / 0.58);
   --cell-destaque-borda: #16a34a;
+  --move-origem-borda: #c2410c;
+  --move-origem-overlay: rgb(234 88 12 / 0.48);
+  --move-destino-bg: #dbeafe;
+  --move-destino-borda: #1d4ed8;
+  --move-destino-overlay: rgb(37 99 235 / 0.32);
   --sel-outline: #ca8a04;
   --swatch-outline: #000000;
   --content-bg: #eef1f4;

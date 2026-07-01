@@ -3131,6 +3131,9 @@ export default function App() {
               ? undefined
               : saidaItemDestaqueAddresses,
           saidaFlaggedAddresses: editMode ? undefined : saidaFlaggedAddresses,
+          movimentacaoDistribuicao:
+            nfEditar != null &&
+            (editMoveOrigens.size > 0 || editMoveDestinos.size > 0),
         }}
         contaUsuarios={contaUsuarios}
         contaUsuarioAtivoId={contaUsuarioAtivoId}

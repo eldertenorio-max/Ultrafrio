@@ -1548,6 +1548,17 @@
   outline: 2px solid var(--cell-destaque-borda);
   outline-offset: -1px;
 }
+.swatch--move-origem {
+  background: var(--cell-ocup);
+  outline: 3px solid var(--move-origem-borda);
+  outline-offset: -1px;
+  box-shadow: inset 0 0 0 6px var(--move-origem-overlay);
+}
+.swatch--move-destino {
+  background: var(--move-destino-bg);
+  outline: 3px solid var(--move-destino-borda);
+  outline-offset: -1px;
+}
 .swatch--porta {
   background-color: #1d4ed8;
 }
@@ -1835,6 +1846,16 @@
 .movimentacao-distribuicao-ok {
   color: var(--success);
   font-weight: 600;
+}
+
+.movimentacao-cor-origem {
+  color: var(--move-origem-borda);
+  font-weight: 700;
+}
+
+.movimentacao-cor-destino {
+  color: var(--move-destino-borda);
+  font-weight: 700;
 }
 
 .movimentacao-voz {
@@ -2804,6 +2825,36 @@
   text-shadow: 0 0 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.35);
 }
 
+.cell--move-origem {
+  outline: 3px solid var(--move-origem-borda);
+  outline-offset: -2px;
+  z-index: 4;
+  box-shadow: inset 0 0 0 100vmax var(--move-origem-overlay);
+}
+
+.cell--ocupado.cell--move-origem {
+  background-color: var(--cell-ocup);
+  filter: none;
+}
+
+.cell--ocupado.cell--move-origem:hover,
+.cell--ocupado.cell--move-origem:focus-visible {
+  background-color: var(--cell-ocup);
+  filter: brightness(1.08);
+}
+
+.cell--move-destino {
+  background-color: var(--move-destino-bg);
+  outline: 3px solid var(--move-destino-borda);
+  outline-offset: -2px;
+  z-index: 4;
+  box-shadow: inset 0 0 0 100vmax var(--move-destino-overlay);
+}
+
+.cell--ocupado.cell--move-destino {
+  background-color: var(--cell-ocup);
+}
+
 .cell-mark {
   position: absolute;
   inset: 0;
@@ -2822,6 +2873,18 @@
 .cell--selecionado .cell-mark,
 .cell--destaque-verde .cell-mark {
   background: rgb(255 255 255 / 0.22);
+}
+
+.cell-mark--origem {
+  color: #7c2d12;
+  background: rgb(251 146 60 / 0.42);
+  font-size: max(0.85rem, calc(var(--cell-mark-size, 14px) * 0.72));
+  font-weight: 900;
+}
+
+.cell-mark--destino {
+  color: #1e3a8a;
+  background: rgb(147 197 253 / 0.55);
 }
 
 .cell--ocupado .cell-mark {

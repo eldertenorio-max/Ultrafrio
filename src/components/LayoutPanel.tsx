@@ -337,15 +337,26 @@ function RuaGrid({
                       !!activeNfId &&
                       occ.nfId === activeNfId
                     if (occ) className += ' cell--ocupado'
-                    if (editMoveOrigens?.has(addressId)) className += ' cell--selecionado'
-                    else if (editMoveDestinos?.has(addressId)) className += ' cell--destaque-verde'
+                    const moveOrigem = editMoveOrigens?.has(addressId) ?? false
+                    const moveDestino = editMoveDestinos?.has(addressId) ?? false
+                    const distribuindoMove =
+                      (editMoveOrigens?.size ?? 0) > 0 || (editMoveDestinos?.size ?? 0) > 0
+                    if (moveOrigem) className += ' cell--move-origem'
+                    else if (moveDestino) className += ' cell--move-destino'
                     else if (focusAddressId === addressId) className += ' cell--selecionado'
                     if (pulseAddressId === addressId) className += ' cell--busca-pulse'
                     else if (stagePending) className += ' cell--stage-pending'
                     else if (pending) className += editMode ? ' cell--destaque-verde' : ' cell--selecionado'
                     else if (confirmed) className += ' cell--confirmado'
-                    if (editAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
-                    else if (consultaAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
+                    if (
+                      editAddresses?.has(addressId) &&
+                      !pending &&
+                      !distribuindoMove &&
+                      !moveOrigem &&
+                      !moveDestino
+                    ) {
+                      className += ' cell--destaque-verde'
+                    } else if (consultaAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
                     else if (saidaFlaggedAddresses?.has(addressId)) className += ' cell--saida-flag'
                     else if (saidaItemDestaqueAddresses?.has(addressId) && !pending)
                       className += ' cell--destaque-verde'
@@ -428,11 +439,10 @@ function RuaGrid({
                       if (edge) className += ` ${edge}`
                     }
 
-                    const showMark =
-                      pending ||
-                      stagePending ||
-                      editMoveOrigens?.has(addressId) ||
-                      editMoveDestinos?.has(addressId)
+                    const showMarkOrigem = moveOrigem
+                    const showMarkDestino = moveDestino
+                    const showMarkOther =
+                      (pending || stagePending) && !moveOrigem && !moveDestino
 
                     return (
                       <button
@@ -453,7 +463,17 @@ function RuaGrid({
                         onPointerDown={(e) => paint.handlePointerDown(addressId, canInteract, pending, e)}
                         onPointerEnter={() => paint.handlePointerEnter(addressId, canInteract)}
                       >
-                        {showMark && (
+                        {showMarkOrigem && (
+                          <span className="cell-mark cell-mark--origem" aria-hidden>
+                            −
+                          </span>
+                        )}
+                        {showMarkDestino && (
+                          <span className="cell-mark cell-mark--destino" aria-hidden>
+                            ✓
+                          </span>
+                        )}
+                        {showMarkOther && (
                           <span className="cell-mark" aria-hidden>
                             ✓
                           </span>

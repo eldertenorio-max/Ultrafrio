@@ -349,7 +349,8 @@ export function EditarPosicaoPanel({
                         {moveOrigensCount === 0 ? (
                           <p className="muted">
                             <strong>Passo 1:</strong> clique ou arraste nos quadrados{' '}
-                            <strong>ocupados</strong> no mapa para marcar o que vai tirar.
+                            <strong>ocupados</strong> no mapa para marcar o que vai tirar{' '}
+                            <span className="movimentacao-cor-origem">(laranja −)</span>.
                           </p>
                         ) : (
                           <>
@@ -367,7 +368,8 @@ export function EditarPosicaoPanel({
                               <p className="movimentacao-distribuicao-restante">
                                 Restam <strong>{restantesDistribuir}</strong> quadrado
                                 {restantesDistribuir !== 1 ? 's' : ''} branco
-                                {restantesDistribuir !== 1 ? 's' : ''} para distribuir
+                                {restantesDistribuir !== 1 ? 's' : ''} para colocar{' '}
+                                <span className="movimentacao-cor-destino">(azul ✓)</span>
                               </p>
                             ) : (
                               <p className="movimentacao-distribuicao-ok">

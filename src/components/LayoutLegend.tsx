@@ -8,6 +8,7 @@ export type LayoutLegendProps = {
   activeNfNumero: string | null
   editItemAtivo?: boolean
   editAddresses?: Set<AddressId>
+  movimentacaoDistribuicao?: boolean
   consultaAddresses?: Set<AddressId>
   saidaAddresses?: Set<AddressId>
   saidaItemDestaqueAddresses?: Set<AddressId>
@@ -37,8 +38,11 @@ function buildLegendItems(props: LayoutLegendProps): LegendItem[] {
   if (consultaAtiva) {
     items.push({ swatch: 'swatch--consulta', label: 'Consulta' })
   }
-  if (movimentacaoAtiva) {
-    items.push({ swatch: 'swatch--destaque', label: 'Movimentação' })
+  if (props.movimentacaoDistribuicao) {
+    items.push({ swatch: 'swatch--move-origem', label: 'Tirar (origem)' })
+    items.push({ swatch: 'swatch--move-destino', label: 'Colocar (destino)' })
+  } else if (movimentacaoAtiva) {
+    items.push({ swatch: 'swatch--destaque', label: 'Item no mapa' })
   }
 
   if (props.saidaItemDestaqueAddresses != null && props.saidaItemDestaqueAddresses.size > 0) {
