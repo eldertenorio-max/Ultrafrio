@@ -26,7 +26,7 @@ export const CAMARAS: CamaraConfig[] = [
       { rua: 1, colunas: 15 },
       {
         rua: 2,
-        colunas: 13,
+        colunas: 15,
         colunasBloqueadas: [1, 3],
         porta: { cols: [2, 3], niveis: [1, 2] },
       },
