@@ -1,10 +1,11 @@
 import type { AppState, MovimentoRegistro, NotaFiscal, NotaFiscalCancelada } from '../../types'
 import { emitenteKey, normalizarEmitente } from '../emitentesRegistry'
 import { limparMovimentosEntradaOrfaos } from '../movimentos'
+import { loadUiSession, saveUiSession } from '../uiSession'
 import { getSupabase, type CanceladaRow, type EmitenteRow, type EndRow, type ItemRow, type MovRow, type NfRow } from '../supabaseClient'
 import type { EnderecamentoRepository } from './types'
 
-/** Preferências de UI ficam só na sessão (não no localStorage). */
+/** Preferências de UI na sessão do navegador (sobrevivem ao F5). */
 const uiPrefsMemory: Pick<AppState, 'activeNfId' | 'activeItemIndex'> = {
   activeNfId: null,
   activeItemIndex: null,
@@ -504,11 +505,18 @@ export const supabaseRepository: EnderecamentoRepository = {
   },
 
   loadUiPrefs() {
+    const session = loadUiSession()
+    uiPrefsMemory.activeNfId = session.activeNfId
+    uiPrefsMemory.activeItemIndex = session.activeItemIndex
     return { ...uiPrefsMemory }
   },
 
   saveUiPrefs(prefs) {
     uiPrefsMemory.activeNfId = prefs.activeNfId
     uiPrefsMemory.activeItemIndex = prefs.activeItemIndex
+    saveUiSession({
+      activeNfId: prefs.activeNfId,
+      activeItemIndex: prefs.activeItemIndex,
+    })
   },
 }

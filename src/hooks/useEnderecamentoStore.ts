@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getRepository, getStorageMode, type EnderecamentoRepository } from '../lib/repository'
-import { clearLocalPersistedData, localRepository } from '../lib/repository/localRepository'
+import {
+  loadLocalPersistedData,
+  loadLocalSyncBase,
+  localRepository,
+  syncWriteLocalDraft,
+  syncWriteLocalSyncBase,
+} from '../lib/repository/localRepository'
 import { ensureSupabaseConfig } from '../lib/supabaseConfig'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { subscribeEnderecamentoChanges } from '../lib/supabaseRealtime'
@@ -57,6 +63,14 @@ const PERSIST_MAX_ATTEMPTS = 3
 
 function pickRepository(): EnderecamentoRepository {
   return isSupabaseConfigured() ? getRepository() : localRepository
+}
+
+function mergeLoadedWithLocalDraft(remote: PersistedData): PersistedData {
+  const draft = loadLocalPersistedData()
+  const base = loadLocalSyncBase() ?? remote
+  const merged = mergePersistedData(base, draft, remote)
+  const protegido = protegerPersistedContraRegressao(draft, merged)
+  return consolidarRemocoesLocais(base, draft, protegido)
 }
 
 function preserveUi(
@@ -160,6 +174,8 @@ export function useEnderecamentoStore() {
           activeNfId: next.activeNfId,
           activeItemIndex: next.activeItemIndex,
         })
+        syncWriteLocalDraft(dataToSave)
+        syncWriteLocalSyncBase(dataToSave)
         lastPersistedRef.current = dataToSave
         pendingSaveRef.current = null
         return dataToSave
@@ -186,6 +202,8 @@ export function useEnderecamentoStore() {
         activeNfId: next.activeNfId,
         activeItemIndex: next.activeItemIndex,
       })
+      syncWriteLocalDraft(dataToSave)
+      syncWriteLocalSyncBase(dataToSave)
 
       if (!persistedEquals(dataToSave, pickPersisted(next))) {
         const localPick = pickPersisted(next)
@@ -403,25 +421,27 @@ export function useEnderecamentoStore() {
     async function load() {
       await ensureSupabaseConfig()
 
-      if (isSupabaseConfigured()) {
-        clearLocalPersistedData()
-      }
-
       const repo = pickRepository()
       repoRef.current = repo
       setStorageMode(repo.mode)
 
       try {
-        const remote = await repo.loadData()
-        const { data, dadosReparados } = prepareLoadedDataWithRepair(remote)
-        const ui = repo.mode === 'supabase' ? { activeNfId: null, activeItemIndex: null } : repo.loadUiPrefs()
+        const remoteRaw = await repo.loadData()
+        const { data: remotePrepared, dadosReparados } = prepareLoadedDataWithRepair(remoteRaw)
+        const data =
+          repo.mode === 'supabase'
+            ? normalizePersistedData(mergeLoadedWithLocalDraft(remotePrepared))
+            : remotePrepared
+        const ui = repo.loadUiPrefs()
 
         if (!cancelled) {
           lastPersistedRef.current = data
+          syncWriteLocalDraft(data)
+          syncWriteLocalSyncBase(data)
           setState({ ...data, ...ui })
           setError(null)
 
-          if (repo.mode === 'supabase' && dadosReparados) {
+          if (repo.mode === 'supabase' && (dadosReparados || !persistedEquals(data, remotePrepared))) {
             skipSave.current = true
             try {
               await repo.saveData({
@@ -430,12 +450,13 @@ export function useEnderecamentoStore() {
                 notasCanceladas: data.notasCanceladas,
               })
               lastPersistedRef.current = data
+              syncWriteLocalSyncBase(data)
               ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
             } catch (e) {
               setError(
                 e instanceof Error
-                  ? `Dados recuperados do histórico, mas falhou ao salvar na nuvem: ${e.message}`
-                  : 'Dados recuperados do histórico, mas falhou ao salvar na nuvem.',
+                  ? `Alterações locais recuperadas, mas falhou ao sincronizar na nuvem: ${e.message}`
+                  : 'Alterações locais recuperadas, mas falhou ao sincronizar na nuvem.',
               )
             } finally {
               skipSave.current = false
@@ -493,6 +514,8 @@ export function useEnderecamentoStore() {
     if (skipSave.current || loading) return
 
     const persisted = pickPersisted(state)
+    syncWriteLocalDraft(persisted)
+
     if (lastPersistedRef.current && persistedEquals(persisted, lastPersistedRef.current)) {
       return
     }
@@ -514,6 +537,11 @@ export function useEnderecamentoStore() {
     const flushPendingSave = () => {
       if (skipSave.current || savingRef.current) return
       const pending = pendingSaveRef.current ?? stateRef.current
+      syncWriteLocalDraft(pickPersisted(pending))
+      repoRef.current.saveUiPrefs({
+        activeNfId: pending.activeNfId,
+        activeItemIndex: pending.activeItemIndex,
+      })
       if (saveTimer.current) {
         clearTimeout(saveTimer.current)
         saveTimer.current = null

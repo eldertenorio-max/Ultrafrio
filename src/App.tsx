@@ -39,6 +39,11 @@ import {
   type ItemManualInput,
 } from './lib/adicionarItemNf'
 import { contarItensSemEndereco, nfEntradaIncompleta } from './lib/entradaPendente'
+import {
+  clearEntradaDestinoPendente,
+  loadEntradaDestinoPendente,
+  saveEntradaDestinoPendente,
+} from './lib/entradaDestinoSession'
 import { mesclarEmitentesSugeridos } from './lib/emitentesRegistry'
 import {
   aplicarSaidaPaletes,
@@ -91,6 +96,7 @@ import {
 } from './lib/voiceConversation'
 import { speakText, stopSpeaking } from './lib/voiceSpeech'
 import { getStoredVoicePrefs, storeVoicePrefs, type VoicePrefs } from './lib/voicePrefs'
+import { loadUiSession, saveUiSession } from './lib/uiSession'
 import { prepareVoiceCommandText } from './lib/voiceNormalize'
 import { hasRegisteredVoices } from './lib/voiceProfile'
 import {
@@ -221,7 +227,9 @@ export default function App() {
   } = useEnderecamentoStore()
   const { theme, toggleTheme, setTheme } = useTheme()
   const { sidebarMode, setSidebarMode } = useSidebarMode()
-  const [openSection, setOpenSection] = useState<SidebarSectionId | null>(null)
+  const [openSection, setOpenSection] = useState<SidebarSectionId | null>(
+    () => loadUiSession().openSection,
+  )
   const [voicePrefs, setVoicePrefs] = useState<VoicePrefs>(() => getStoredVoicePrefs())
   const {
     registry: voiceRegistry,
@@ -309,6 +317,7 @@ export default function App() {
   const lastEntradaClickRef = useRef<string | null>(null)
   const stateRef = useRef(state)
   const [stageModalOpen, setStageModalOpen] = useState(false)
+  const entradaDestinoRestauradoRef = useRef(false)
   const [entradaDestinoPendente, setEntradaDestinoPendente] = useState<{
     imported: NotaFiscal[]
     movimentos: MovimentoRegistro[]
@@ -350,6 +359,24 @@ export default function App() {
   useEffect(() => {
     openSectionRef.current = openSection
   }, [openSection])
+
+  useEffect(() => {
+    if (loading) return
+    saveUiSession({
+      openSection,
+      activeNfId: state.activeNfId,
+      activeItemIndex: state.activeItemIndex,
+    })
+  }, [loading, openSection, state.activeNfId, state.activeItemIndex])
+
+  useEffect(() => {
+    if (loading || entradaDestinoRestauradoRef.current) return
+    entradaDestinoRestauradoRef.current = true
+    const pending = loadEntradaDestinoPendente()
+    if (!pending) return
+    setEntradaDestinoPendente(pending)
+    setOpenSection('entrada')
+  }, [loading])
 
   useEffect(() => {
     editMoveOrigensRef.current = editMoveOrigens
@@ -714,7 +741,9 @@ export default function App() {
 
     if (imported.length > 0) {
       const askDestino = () => {
-        setEntradaDestinoPendente({ imported, movimentos })
+        const pending = { imported, movimentos }
+        saveEntradaDestinoPendente(pending)
+        setEntradaDestinoPendente(pending)
       }
 
       const switchingAway =
@@ -754,10 +783,11 @@ export default function App() {
   async function handleEntradaDestinoConfirm(localizacao: LocalizacaoEstoque) {
     if (!entradaDestinoPendente) return
     const { imported, movimentos } = entradaDestinoPendente
+    const snapshot = stateRef.current
     const nfsComDestino = imported.map((nf) => aplicarLocalizacaoNf(nf, localizacao))
     const nextState = {
-      ...state,
-      notas: [...nfsComDestino, ...state.notas],
+      ...snapshot,
+      notas: [...nfsComDestino, ...snapshot.notas],
       movimentos,
       activeNfId: nfsComDestino[0].id,
       activeItemIndex: nfsComDestino[0].items[0]?.index ?? 0,
@@ -767,11 +797,14 @@ export default function App() {
     setSelectedEntradaIds(nfsComDestino.map((nf) => nf.id))
     lastEntradaClickRef.current = nfsComDestino[0].id
     setEntradaDestinoPendente(null)
+    clearEntradaDestinoPendente()
+    setOpenSection('entrada')
     await saveNow(nextState)
   }
 
   function handleEntradaDestinoCancel() {
     setEntradaDestinoPendente(null)
+    clearEntradaDestinoPendente()
   }
 
   async function handleUploadCancelada(file: File) {
