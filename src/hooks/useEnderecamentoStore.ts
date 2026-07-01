@@ -11,6 +11,11 @@ import { ensureSupabaseConfig } from '../lib/supabaseConfig'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { subscribeEnderecamentoChanges } from '../lib/supabaseRealtime'
 import { normalizePersistedData, prepareLoadedDataWithRepair } from '../lib/persistence'
+import {
+  persistedRichness,
+  recoverBestPersisted,
+  wouldWipePersistedStock,
+} from '../lib/localBackupRecovery'
 import { contarEnderecosPersistidos } from '../lib/movimentos'
 import { mesclarEmitentesSugeridos, normalizarEmitente } from '../lib/emitentesRegistry'
 import {
@@ -65,12 +70,31 @@ function pickRepository(): EnderecamentoRepository {
   return isSupabaseConfigured() ? getRepository() : localRepository
 }
 
-function mergeLoadedWithLocalDraft(remote: PersistedData): PersistedData {
+function mergeLoadedWithLocalDraft(remote: PersistedData): {
+  data: PersistedData
+  recoveredFromLocal: boolean
+} {
+  const { data: best, recoveredFromLocal } = recoverBestPersisted(remote)
   const draft = loadLocalPersistedData()
+  const draftEmpty = draft.notas.length === 0 && draft.movimentos.length === 0
+
+  if (draftEmpty || persistedRichness(draft) === 0) {
+    return { data: best, recoveredFromLocal }
+  }
+
   const base = loadLocalSyncBase() ?? remote
   const merged = mergePersistedData(base, draft, remote)
   const protegido = protegerPersistedContraRegressao(draft, merged)
-  return consolidarRemocoesLocais(base, draft, protegido)
+  const consolidado = consolidarRemocoesLocais(base, draft, protegido)
+  const result = normalizePersistedData(consolidado)
+
+  if (persistedRichness(result) >= persistedRichness(best)) {
+    return { data: result, recoveredFromLocal }
+  }
+  return {
+    data: best,
+    recoveredFromLocal: recoveredFromLocal || persistedRichness(best) > persistedRichness(remote),
+  }
 }
 
 function preserveUi(
@@ -192,6 +216,15 @@ export function useEnderecamentoStore() {
       }
 
       dataToSave = normalizePersistedData(dataToSave)
+
+      if (
+        lastPersistedRef.current &&
+        wouldWipePersistedStock(lastPersistedRef.current, dataToSave)
+      ) {
+        throw new Error(
+          'Operação bloqueada: tentativa de apagar todo o estoque. Recarregue a página (F5) para recuperar do backup local.',
+        )
+      }
 
       await repo.saveData({
         notas: dataToSave.notas,
@@ -348,8 +381,9 @@ export function useEnderecamentoStore() {
       const { data, dadosReparados } = prepareLoadedDataWithRepair(remote)
       const remoteMerged =
         repoRef.current.mode === 'supabase'
-          ? normalizePersistedData(mergeLoadedWithLocalDraft(data))
+          ? mergeLoadedWithLocalDraft(data).data
           : data
+      const remoteMergedNormalized = normalizePersistedData(remoteMerged)
       const base = lastPersistedRef.current
       const localNow = pickPersisted(stateRef.current)
       const trustRemote = base !== null && persistedEquals(localNow, base)
@@ -358,10 +392,10 @@ export function useEnderecamentoStore() {
         const local = pickPersisted(prev)
         const draft = repoRef.current.mode === 'supabase' ? loadLocalPersistedData() : local
         const merged = trustRemote
-          ? remoteMerged
+          ? remoteMergedNormalized
           : base
-            ? mergePersistedData(base, local, remoteMerged)
-            : remoteMerged
+            ? mergePersistedData(base, local, remoteMergedNormalized)
+            : remoteMergedNormalized
         const protegido = trustRemote
           ? merged
           : protegerPersistedContraRegressao(draft, merged)
@@ -379,7 +413,9 @@ export function useEnderecamentoStore() {
         syncWriteLocalDraft(merged)
         syncWriteLocalSyncBase(merged)
       }
-      const precisaSalvarReparo = dadosReparados || (merged && !persistedEquals(merged, remoteMerged))
+      const precisaSalvarReparo =
+        dadosReparados ||
+        (merged && !persistedEquals(merged, remoteMergedNormalized) && !wouldWipePersistedStock(data, merged))
 
       if (precisaSalvarReparo && merged) {
         skipSave.current = true
@@ -437,10 +473,16 @@ export function useEnderecamentoStore() {
       try {
         const remoteRaw = await repo.loadData()
         const { data: remotePrepared, dadosReparados } = prepareLoadedDataWithRepair(remoteRaw)
-        const data =
+        const mergedLoad =
           repo.mode === 'supabase'
-            ? normalizePersistedData(mergeLoadedWithLocalDraft(remotePrepared))
-            : remotePrepared
+            ? mergeLoadedWithLocalDraft(remotePrepared)
+            : { data: remotePrepared, recoveredFromLocal: false }
+        let data = normalizePersistedData(mergedLoad.data)
+
+        if (wouldWipePersistedStock(remotePrepared, data)) {
+          data = normalizePersistedData(remotePrepared)
+        }
+
         const ui = repo.loadUiPrefs()
 
         if (!cancelled) {
@@ -448,9 +490,26 @@ export function useEnderecamentoStore() {
           syncWriteLocalDraft(data)
           syncWriteLocalSyncBase(data)
           setState({ ...data, ...ui })
-          setError(null)
 
-          if (repo.mode === 'supabase' && (dadosReparados || !persistedEquals(data, remotePrepared))) {
+          if (mergedLoad.recoveredFromLocal && persistedRichness(data) > 0) {
+            setError(
+              'Estoque recuperado do backup local do navegador. Sincronizando com a nuvem…',
+            )
+          } else if (persistedRichness(data) === 0 && persistedRichness(remotePrepared) === 0) {
+            setError(null)
+          } else {
+            setError(null)
+          }
+
+          const podeSalvarNaNuvem =
+            repo.mode === 'supabase' &&
+            persistedRichness(data) > 0 &&
+            !wouldWipePersistedStock(remotePrepared, data) &&
+            (dadosReparados ||
+              mergedLoad.recoveredFromLocal ||
+              !persistedEquals(data, remotePrepared))
+
+          if (podeSalvarNaNuvem) {
             skipSave.current = true
             try {
               await repo.saveData({
@@ -461,6 +520,11 @@ export function useEnderecamentoStore() {
               lastPersistedRef.current = data
               syncWriteLocalSyncBase(data)
               ignoreRemoteUntil.current = Date.now() + IGNORE_REMOTE_AFTER_SAVE_MS
+              if (mergedLoad.recoveredFromLocal) {
+                setError('Estoque restaurado e salvo na nuvem com sucesso.')
+              } else {
+                setError(null)
+              }
             } catch (e) {
               setError(
                 e instanceof Error

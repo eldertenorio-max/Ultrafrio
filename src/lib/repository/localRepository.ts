@@ -1,5 +1,6 @@
 import type { AppState, PersistedData } from '../../types'
 import { emitentesFromPersisted } from '../emitentesRegistry'
+import { shouldSkipLocalWrite } from '../localBackupRecovery'
 import { loadUiSession, saveUiSession } from '../uiSession'
 import type { EnderecamentoRepository } from './types'
 
@@ -34,9 +35,34 @@ export function loadLocalPersistedData(): PersistedData {
 /** Grava rascunho local de forma síncrona — protege contra F5 antes do Supabase concluir. */
 export function syncWriteLocalDraft(data: Omit<PersistedData, 'emitentes'>): void {
   try {
+    const current = loadRawKeyOnly(DATA_KEY)
+    const next = {
+      ...data,
+      emitentes: emitentesFromPersisted({
+        notas: data.notas,
+        notasCanceladas: data.notasCanceladas,
+      }),
+    }
+    if (shouldSkipLocalWrite(current, next)) return
     localStorage.setItem(DATA_KEY, JSON.stringify(data))
   } catch {
     /* ignore */
+  }
+}
+
+function loadRawKeyOnly(key: string): PersistedData | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<PersistedData>
+    const base = {
+      notas: parsed.notas ?? [],
+      movimentos: parsed.movimentos ?? [],
+      notasCanceladas: parsed.notasCanceladas ?? [],
+    }
+    return { ...base, emitentes: emitentesFromPersisted(base) }
+  } catch {
+    return null
   }
 }
 
@@ -61,6 +87,15 @@ export function loadLocalSyncBase(): PersistedData | null {
 
 export function syncWriteLocalSyncBase(data: Omit<PersistedData, 'emitentes'>): void {
   try {
+    const current = loadRawKeyOnly(SYNC_BASE_KEY)
+    const next = {
+      ...data,
+      emitentes: emitentesFromPersisted({
+        notas: data.notas,
+        notasCanceladas: data.notasCanceladas,
+      }),
+    }
+    if (shouldSkipLocalWrite(current, next)) return
     localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(data))
   } catch {
     /* ignore */

@@ -104,11 +104,11 @@ function mergeSingleNotaFiscal(
   r: NotaFiscal | undefined,
 ): NotaFiscal | undefined {
   if (entityJson(b) !== entityJson(l)) {
-    return l
+    if (l !== undefined) return l
   }
 
   if (entityJson(b) !== entityJson(r)) {
-    if (r === undefined) return l
+    if (r === undefined) return l ?? b
     const fallback = l ?? b
     if (!fallback) return r
     const fromRemote = preserveOptionalNfFields(r, fallback)
@@ -116,7 +116,7 @@ function mergeSingleNotaFiscal(
     return pickBestNf(fromFallback, fromRemote)
   }
 
-  return l
+  return l ?? b ?? r
 }
 
 function mergeNotaFiscal(base: NotaFiscal[], local: NotaFiscal[], remote: NotaFiscal[]): NotaFiscal[] {
@@ -326,6 +326,11 @@ export function consolidarRemocoesLocais(
 
   const removidas = nfIdsRemovidosDesde(base, local)
   if (removidas.size === 0) return candidate
+
+  /** Rascunho vazio não significa remoção intencional de todas as NFs. */
+  if (local.notas.length === 0 && base.notas.length > 0) {
+    return candidate
+  }
 
   const localMovById = new Map(local.movimentos.map((m) => [m.id, m]))
   const movimentos = candidate.movimentos.map((m) => {
