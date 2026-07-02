@@ -43,10 +43,12 @@ const emptyState: AppState = {
 const SAVE_DEBOUNCE_MS = 400
 /** Supabase: salva no próximo frame (sem espera perceptível). */
 const SAVE_DEBOUNCE_SUPABASE_MS = 0
-const REMOTE_RELOAD_DEBOUNCE_MS = 500
-/** Ignora eco do próprio save no Realtime; não bloqueia updates de outros navegadores por muito tempo. */
-const IGNORE_REMOTE_AFTER_SAVE_MS = 2500
-const POLL_INTERVAL_MS = 2000
+/** Coalesce curto para agrupar o burst de eventos Realtime de um mesmo save. */
+const REMOTE_RELOAD_DEBOUNCE_MS = 120
+/** Ignora eco do próprio save no Realtime; curto para captar mudanças de outros quase na hora. */
+const IGNORE_REMOTE_AFTER_SAVE_MS = 900
+/** Fallback caso o Realtime não esteja habilitado. */
+const POLL_INTERVAL_MS = 1500
 const PERSIST_RETRY_MS = 600
 const PERSIST_AUTO_RETRY_MS = 2500
 const PERSIST_AUTO_RETRY_MAX = 5
