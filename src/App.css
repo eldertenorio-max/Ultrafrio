@@ -7499,6 +7499,28 @@ html.scroll-locked .sidebar.sidebar--wide {
   color: var(--accent);
 }
 
+/* Notebooks e telas médias: a barra lateral e a tabela de itens cabem sem cortar */
+@media (min-width: 901px) and (max-width: 1440px) {
+  .sidebar.sidebar--wide:not(.sidebar--mode-fullscreen) {
+    width: min(58vw, 900px);
+  }
+
+  .nf-itens-table {
+    min-width: 0;
+    font-size: 0.8rem;
+  }
+
+  .nf-itens-table th,
+  .nf-itens-table td {
+    padding: 7px 8px;
+    font-size: 0.78rem;
+  }
+
+  .nf-itens-col-descricao {
+    max-width: 150px;
+  }
+}
+
 @media (max-width: 900px) {
   .app-shell {
     overflow-x: clip;
