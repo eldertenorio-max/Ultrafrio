@@ -1,4 +1,4 @@
-import { sanitizarNotasEntrada, todosItensEnderecados } from './excluirItemNf'
+import { sanitizarNotasEntrada } from './excluirItemNf'
 import {
   contarEnderecosPersistidos,
   limparMovimentosEntradaOrfaos,
@@ -13,14 +13,10 @@ import { emitentesFromPersisted } from './emitentesRegistry'
 import type { NotaFiscal, PersistedData } from '../types'
 
 function normalizarStatusNotas(notas: NotaFiscal[]): NotaFiscal[] {
-  return sanitizarNotasEntrada(
-    notas.map((nf) => {
-      if (nf.status === 'em_andamento' && todosItensEnderecados(nf)) {
-        return { ...nf, status: 'concluida' as const }
-      }
-      return nf
-    }),
-  )
+  // Não concluir entradas automaticamente: a conclusão deve ocorrer só por ação
+  // explícita (confirmar item / finalizar entrada). Assim, escolher "stage" no
+  // destino do item não some com o painel da entrada em andamento.
+  return sanitizarNotasEntrada(notas)
 }
 
 export function normalizePersistedData(data: PersistedData): PersistedData {
