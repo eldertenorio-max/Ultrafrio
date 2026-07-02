@@ -46,7 +46,7 @@ const SAVE_DEBOUNCE_SUPABASE_MS = 0
 const REMOTE_RELOAD_DEBOUNCE_MS = 500
 /** Ignora eco do próprio save no Realtime; não bloqueia updates de outros navegadores por muito tempo. */
 const IGNORE_REMOTE_AFTER_SAVE_MS = 2500
-const POLL_INTERVAL_MS = 5000
+const POLL_INTERVAL_MS = 2000
 const PERSIST_RETRY_MS = 600
 const PERSIST_AUTO_RETRY_MS = 2500
 const PERSIST_AUTO_RETRY_MAX = 5
