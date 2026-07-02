@@ -5149,9 +5149,9 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .saida-referencia-acao {
-  margin-left: auto;
-  font-weight: 600;
-  color: var(--accent, #d29922);
+  margin-left: 8px;
+  font-weight: 700;
+  color: var(--text);
   white-space: nowrap;
 }
 

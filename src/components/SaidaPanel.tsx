@@ -267,6 +267,7 @@ export function SaidaPanel({
                       >
                         <span className="saida-referencia-num">NF {ref.numero}</span>
                         <span className="muted saida-referencia-emit"> · {ref.nf.emitente || '—'}</span>
+                        <NfLocalizacaoBadge nf={ref.nf} />
                         <span className="saida-referencia-acao">Dar saída ›</span>
                       </button>
                     ) : (
