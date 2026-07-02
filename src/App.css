@@ -5785,6 +5785,10 @@ html.scroll-locked .sidebar.sidebar--wide {
   color: #3fb950;
 }
 
+.saida-valor--disponivel {
+  color: var(--text);
+}
+
 .saida-totais-resumo {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));

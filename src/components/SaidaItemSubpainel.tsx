@@ -121,6 +121,12 @@ export function SaidaItemSubpainel({
           </label>
         )}
         <div className="saida-item-campo saida-item-campo--calc">
+          <span className="muted">Caixas disponíveis</span>
+          <strong className="saida-valor--disponivel">
+            {formatQuantidadeNfe(Math.max(0, maxCaixas))} {unidadeEstoqueItem(item)}
+          </strong>
+        </div>
+        <div className="saida-item-campo saida-item-campo--calc">
           <span className="muted">Caixas saindo</span>
           <strong className={totaisExibicao.caixas > 0 ? 'saida-valor--saindo' : undefined}>
             {totaisExibicao.caixas > 0 || isActive
