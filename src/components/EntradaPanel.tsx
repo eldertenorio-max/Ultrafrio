@@ -181,6 +181,9 @@ export function EntradaPanel({
               onUpdateItemPaletes={onUpdateItemPaletes}
               onUpdateItemLocalizacao={onUpdateItemLocalizacao}
               onDesmembrarItem={onDesmembrarItem}
+              onConfirmItem={onConfirmItem}
+              paletesRestantes={paletesRestantes}
+              pendingCount={pendingCount}
               canEdit={activeNf.status === 'em_andamento'}
             />
 

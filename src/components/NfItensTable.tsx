@@ -24,7 +24,18 @@ type Props = {
   onUpdateItemPaletes: (itemIndex: number, paletes: string) => void
   onUpdateItemLocalizacao?: (itemIndex: number, localizacao: LocalizacaoEstoque) => void
   onDesmembrarItem: (itemIndex: number) => void
+  onConfirmItem?: () => void
+  paletesRestantes?: number | null
+  pendingCount?: number
   canEdit?: boolean
+}
+
+function resumoItemInativo(item: NfeItem, isStage: boolean): string {
+  const parts: string[] = [isStage ? 'Stage' : 'Armazém']
+  if (item.up) parts.push(`UP ${item.up}`)
+  if (item.lote) parts.push(`Lote ${item.lote}`)
+  if (!isStage && item.paletes) parts.push(`${item.paletes} pal.`)
+  return parts.join(' · ')
 }
 
 function itemStatus(item: NfeItem): 'pendente' | 'parcial' | 'ok' {
@@ -84,6 +95,9 @@ export function NfItensTable({
   onUpdateItemPaletes,
   onUpdateItemLocalizacao,
   onDesmembrarItem,
+  onConfirmItem,
+  paletesRestantes = null,
+  pendingCount = 0,
   canEdit = true,
 }: Props) {
   return (
@@ -110,6 +124,13 @@ export function NfItensTable({
             const isStage = localizacaoItem(item) === 'stage'
             const showEnderecos = item.allocatedAddresses.length > 0
             const podeDesmembrar = canEdit && canDesmembrarNfeItem(item)
+            const podeSalvar =
+              isStage || (pendingCount > 0 && (paletesRestantes == null || paletesRestantes <= 0))
+            const salvarTitulo = isStage
+              ? 'Confirma o item no stage e minimiza a linha'
+              : podeSalvar
+                ? 'Confirma os endereços do item e minimiza a linha'
+                : 'Selecione os endereços no mapa antes de salvar'
 
             return (
               <Fragment key={item.index}>
@@ -182,6 +203,26 @@ export function NfItensTable({
                 >
                   <td className="nf-itens-col-status" aria-hidden />
                   <td colSpan={8}>
+                    {!isActive ? (
+                      <div className="nf-itens-campos-collapsed">
+                        <span className="nf-itens-collapsed-resumo">
+                          {resumoItemInativo(item, isStage)}
+                        </span>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-ghost nf-itens-editar"
+                            onClick={(e) => {
+                              stopRowActivate(e)
+                              onSelectItem(item.index)
+                            }}
+                          >
+                            Editar
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                    <>
                     <div className="nf-itens-campos-row">
                       <label className="nf-itens-campo">
                         <span>UP</span>
@@ -298,7 +339,23 @@ export function NfItensTable({
                         >
                           Desmembrar
                         </button>
+                        {onConfirmItem && (
+                          <button
+                            type="button"
+                            className="btn btn-sm primary nf-itens-salvar"
+                            disabled={!podeSalvar}
+                            title={salvarTitulo}
+                            onClick={(e) => {
+                              stopRowActivate(e)
+                              onConfirmItem()
+                            }}
+                          >
+                            Salvar
+                          </button>
+                        )}
                       </div>
+                    )}
+                    </>
                     )}
                   </td>
                 </tr>

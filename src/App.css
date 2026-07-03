@@ -1107,12 +1107,40 @@
 .nf-itens-campos-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 6px;
 }
 
 .nf-itens-desmembrar {
   font-size: 0.72rem;
   padding: 3px 8px;
+}
+
+.nf-itens-salvar {
+  font-size: 0.74rem;
+  padding: 4px 14px;
+  font-weight: 700;
+}
+
+.nf-itens-campos-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nf-itens-collapsed-resumo {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nf-itens-editar {
+  font-size: 0.72rem;
+  padding: 3px 12px;
+  flex-shrink: 0;
 }
 
 .nf-itens-campo {
