@@ -11,6 +11,7 @@ export type SidebarSectionId =
   | 'canceladas'
   | 'imprimir'
   | 'cadastroVoz'
+  | 'financeiro'
 
 type Props = {
   id: SidebarSectionId
@@ -288,6 +289,29 @@ function SectionIcon({ id }: { id: SidebarSectionId }) {
           strokeWidth="1.75"
           strokeLinecap="round"
           opacity="0.45"
+        />
+      </svg>
+    )
+  }
+
+  if (id === 'financeiro') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x="3"
+          y="6"
+          width="18"
+          height="12"
+          rx="2"
+          stroke="currentColor"
+          strokeWidth="1.75"
+        />
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75" />
+        <path
+          d="M12 9v6M10.5 10.5h2.25a1.125 1.125 0 1 0 0-2.25H10.5M13.5 13.5H10.5a1.125 1.125 0 1 0 0 2.25h3"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeLinecap="round"
         />
       </svg>
     )

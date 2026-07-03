@@ -24,6 +24,7 @@ const VALID_SECTIONS = new Set<SidebarSectionId>([
   'imprimir',
   'canceladas',
   'cadastroVoz',
+  'financeiro',
 ])
 
 const SECTION_LABELS: Record<SidebarSectionId, string> = {
@@ -37,6 +38,7 @@ const SECTION_LABELS: Record<SidebarSectionId, string> = {
   imprimir: 'Mapa',
   canceladas: 'NF cancelada',
   cadastroVoz: 'Comando de voz',
+  financeiro: 'Financeiro',
 }
 
 type AiPayload = {

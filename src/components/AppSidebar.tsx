@@ -4,6 +4,7 @@ import { ConsultaEstoquePanel } from './ConsultaEstoquePanel'
 import { CanceladasPanel } from './CanceladasPanel'
 import { EditarPosicaoPanel } from './EditarPosicaoPanel'
 import { EntradaPanel } from './EntradaPanel'
+import { FinanceiroPanel } from './FinanceiroPanel'
 import { HistoricoPanel } from './HistoricoPanel'
 import { ImprimirPanel } from './ImprimirPanel'
 import { PainelPanel } from './PainelPanel'
@@ -28,6 +29,7 @@ type Props = {
   canceladas: ComponentProps<typeof CanceladasPanel>
   imprimir: ComponentProps<typeof ImprimirPanel>
   cadastroVoz: ComponentProps<typeof CadastroVozPanel>
+  financeiro: ComponentProps<typeof FinanceiroPanel>
   onBeforeLeaveEntrada?: (proceed: () => void) => void
 }
 
@@ -46,6 +48,7 @@ export function AppSidebar({
   canceladas,
   imprimir,
   cadastroVoz,
+  financeiro,
   onBeforeLeaveEntrada,
 }: Props) {
   function sectionOpenChange(id: SidebarSectionId, open: boolean) {
@@ -172,6 +175,16 @@ export function AppSidebar({
         onBeforeToggle={guardOtherSection}
       >
         <PainelPanel {...painel} />
+      </CollapsibleSidebarSection>
+
+      <CollapsibleSidebarSection
+        id="financeiro"
+        title="Financeiro"
+        open={openSection === 'financeiro'}
+        onOpenChange={(open) => sectionOpenChange('financeiro', open)}
+        onBeforeToggle={guardOtherSection}
+      >
+        <FinanceiroPanel {...financeiro} />
       </CollapsibleSidebarSection>
 
       <CollapsibleSidebarSection

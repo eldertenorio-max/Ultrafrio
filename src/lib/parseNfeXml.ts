@@ -156,6 +156,7 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
   const serie = textOf(ide, 'serie')
   const chave = inf.getAttribute('Id')?.replace(/^NFe/, '') ?? ''
   const emitente = textOf(emit, 'xNome') || textOf(emit, 'xFant')
+  const emitenteCnpj = (textOf(emit, 'CNPJ') || textOf(emit, 'CPF')).replace(/\D/g, '')
   const dataEmissao = textOf(ide, 'dhEmi') || textOf(ide, 'dEmi')
 
   const transp = inf.getElementsByTagName('transp')[0]
@@ -200,6 +201,7 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
     serie,
     chave,
     emitente,
+    ...(emitenteCnpj ? { emitenteCnpj } : {}),
     dataEmissao,
     items,
     status: 'em_andamento',

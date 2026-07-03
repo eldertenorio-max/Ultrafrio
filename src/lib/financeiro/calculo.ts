@@ -1,0 +1,290 @@
+import type { MovimentoRegistro, NotaFiscal } from '../../types'
+import type { ContratoCliente, RegraTempo, TabelaCobranca } from './types'
+
+export type ResumoNfArmazenada = {
+  nfId: string
+  nfNumero: string
+  emitente: string
+  emitenteCnpj?: string
+  dataEntrada: string
+  dataSaida: string | null
+  diasArmazenados: number
+  pesoBruto: number
+  pesoLiquido: number
+  totalItens: number
+  totalCaixas: number
+  totalPaletes: number
+  valorMercadoria: number
+  status: 'armazenada' | 'finalizada'
+}
+
+export type DetalheCobranca = {
+  label: string
+  valor: number
+}
+
+export type CobrancaNf = {
+  nfId: string
+  nfNumero: string
+  detalhes: DetalheCobranca[]
+  total: number
+}
+
+export type ResumoClienteFinanceiro = {
+  cnpj: string
+  razaoSocial: string
+  contrato: ContratoCliente | null
+  tabela: TabelaCobranca | null
+  nfsArmazenadas: ResumoNfArmazenada[]
+  nfsFinalizadas: ResumoNfArmazenada[]
+  cobrancas: CobrancaNf[]
+  totalArmazenado: number
+  totalFinalizado: number
+  totalGeral: number
+}
+
+const MS_DIA = 86_400_000
+
+export function normalizarCnpj(raw: string): string {
+  return raw.replace(/\D/g, '')
+}
+
+export function formatarCnpj(cnpj: string): string {
+  const d = normalizarCnpj(cnpj)
+  if (d.length === 14) {
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
+  }
+  if (d.length === 11) {
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+  }
+  return cnpj
+}
+
+function parseDate(iso: string): Date {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? new Date() : d
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+/** Dias entre duas datas (inclusivo no dia de entrada). */
+export function diasArmazenados(dataEntrada: string, dataSaida: string | null, agora = new Date()): number {
+  const inicio = startOfDay(parseDate(dataEntrada))
+  const fim = startOfDay(dataSaida ? parseDate(dataSaida) : agora)
+  const diff = Math.floor((fim.getTime() - inicio.getTime()) / MS_DIA)
+  return Math.max(1, diff + 1)
+}
+
+function diasNoPeriodo(ciclo: 'mensal' | 'quinzenal'): number {
+  return ciclo === 'quinzenal' ? 15 : 30
+}
+
+function fatorTempo(dias: number, ciclo: 'mensal' | 'quinzenal', regra: RegraTempo): number {
+  const periodo = diasNoPeriodo(ciclo)
+  if (regra === 'cheia') return Math.max(1, Math.ceil(dias / periodo))
+  return dias / periodo
+}
+
+function pesoTotalNf(nf: NotaFiscal): number {
+  if (nf.pesoLiquido != null && nf.pesoLiquido > 0) return nf.pesoLiquido
+  if (nf.pesoBruto != null && nf.pesoBruto > 0) return nf.pesoBruto
+  return nf.items.reduce((s, it) => s + (it.pesoLiquido ?? it.pesoBruto ?? 0), 0)
+}
+
+function totalPaletesNf(nf: NotaFiscal): number {
+  const fromItems = nf.items.reduce((s, it) => {
+    if (it.paletes != null && it.paletes > 0) return s + it.paletes
+    return s + it.allocatedAddresses.length
+  }, 0)
+  return fromItems
+}
+
+function totalPosicoesNf(nf: NotaFiscal): number {
+  return nf.items.reduce((s, it) => s + it.allocatedAddresses.length, 0)
+}
+
+function totalCaixasNf(nf: NotaFiscal): number {
+  return nf.items.reduce((s, it) => {
+    const u = it.unidade.trim().toUpperCase()
+    if (u === 'CX' || u === 'CAIXA' || u === 'FD' || u === 'FARDO') return s + it.quantidade
+    return s
+  }, 0)
+}
+
+function dataEntradaNf(nf: NotaFiscal, movimentos: MovimentoRegistro[]): string {
+  const mov = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id)
+  return mov?.createdAt ?? nf.createdAt
+}
+
+function dataSaidaNf(nfId: string, movimentos: MovimentoRegistro[]): string | null {
+  const saidas = movimentos.filter((m) => m.tipo === 'saida' && m.nfId === nfId && !m.excluido)
+  if (saidas.length === 0) return null
+  return saidas.reduce((latest, m) => (m.createdAt > latest ? m.createdAt : latest), saidas[0].createdAt)
+}
+
+function nfTemEstoque(nf: NotaFiscal): boolean {
+  return nf.items.some((it) => it.quantidade > 1e-9 || it.allocatedAddresses.length > 0)
+}
+
+export function resumirNfArmazenada(
+  nf: NotaFiscal,
+  movimentos: MovimentoRegistro[],
+  agora = new Date(),
+): ResumoNfArmazenada {
+  const entrada = dataEntradaNf(nf, movimentos)
+  const saida = dataSaidaNf(nf.id, movimentos)
+  const armazenada = nfTemEstoque(nf)
+  return {
+    nfId: nf.id,
+    nfNumero: nf.numero,
+    emitente: nf.emitente,
+    ...(nf.emitenteCnpj ? { emitenteCnpj: nf.emitenteCnpj } : {}),
+    dataEntrada: entrada,
+    dataSaida: armazenada ? null : saida,
+    diasArmazenados: diasArmazenados(entrada, armazenada ? null : saida, agora),
+    pesoBruto: nf.pesoBruto ?? pesoTotalNf(nf),
+    pesoLiquido: nf.pesoLiquido ?? pesoTotalNf(nf),
+    totalItens: nf.items.length,
+    totalCaixas: totalCaixasNf(nf),
+    totalPaletes: totalPaletesNf(nf),
+    valorMercadoria: nf.valorTotalNota ?? nf.items.reduce((s, it) => s + (it.valorTotal ?? 0), 0),
+    status: armazenada ? 'armazenada' : 'finalizada',
+  }
+}
+
+export function calcularCobrancaNf(
+  nf: NotaFiscal,
+  contrato: ContratoCliente,
+  tabela: TabelaCobranca,
+  movimentos: MovimentoRegistro[],
+  agora = new Date(),
+): CobrancaNf {
+  const resumo = resumirNfArmazenada(nf, movimentos, agora)
+  const detalhes: DetalheCobranca[] = []
+  const fator = fatorTempo(resumo.diasArmazenados, contrato.ciclo, contrato.regraTempo)
+  const posicoes = totalPosicoesNf(nf)
+  const paletes = totalPaletesNf(nf)
+  const peso = resumo.pesoLiquido || resumo.pesoBruto
+
+  if (contrato.cobrarPosicaoPalete && tabela.custoPosicaoPalete > 0 && posicoes > 0) {
+    detalhes.push({
+      label: `Posição palete (${posicoes} × ${formatMoeda(tabela.custoPosicaoPalete)} × ${formatFator(fator)})`,
+      valor: posicoes * tabela.custoPosicaoPalete * fator,
+    })
+  }
+
+  if (contrato.cobrarPalete && tabela.custoPorPalete > 0 && paletes > 0) {
+    detalhes.push({
+      label: `Palete (${paletes} × ${formatMoeda(tabela.custoPorPalete)} × ${formatFator(fator)})`,
+      valor: paletes * tabela.custoPorPalete * fator,
+    })
+  }
+
+  if (contrato.cobrarKilo && tabela.custoPorKilo > 0 && peso > 0) {
+    const mult = contrato.kiloPorDia ? resumo.diasArmazenados : fator
+    const labelMult = contrato.kiloPorDia
+      ? `${peso.toLocaleString('pt-BR')} kg × ${formatMoeda(tabela.custoPorKilo)}/dia × ${resumo.diasArmazenados} dias`
+      : `${peso.toLocaleString('pt-BR')} kg × ${formatMoeda(tabela.custoPorKilo)} × ${formatFator(fator)}`
+    detalhes.push({
+      label: `Kilo (${labelMult})`,
+      valor: peso * tabela.custoPorKilo * mult,
+    })
+  }
+
+  if (contrato.cobrarEntrada && tabela.custoEntrada > 0) {
+    detalhes.push({
+      label: `Entrada (${formatMoeda(tabela.custoEntrada)})`,
+      valor: tabela.custoEntrada,
+    })
+  }
+
+  if (contrato.cobrarSaida && tabela.custoSaida > 0 && resumo.status === 'finalizada') {
+    detalhes.push({
+      label: `Saída (${formatMoeda(tabela.custoSaida)})`,
+      valor: tabela.custoSaida,
+    })
+  }
+
+  const total = detalhes.reduce((s, d) => s + d.valor, 0)
+  return { nfId: nf.id, nfNumero: nf.numero, detalhes, total }
+}
+
+function formatMoeda(v: number): string {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function formatFator(f: number): string {
+  if (Math.abs(f - Math.round(f)) < 0.01) return String(Math.round(f))
+  return f.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+}
+
+export function resumirClienteFinanceiro(
+  cnpj: string,
+  razaoSocial: string,
+  contrato: ContratoCliente | null,
+  tabela: TabelaCobranca | null,
+  notas: NotaFiscal[],
+  movimentos: MovimentoRegistro[],
+  agora = new Date(),
+): ResumoClienteFinanceiro {
+  const nfsCliente = notas.filter((nf) => {
+    const nfCnpj = nf.emitenteCnpj ? normalizarCnpj(nf.emitenteCnpj) : ''
+    if (nfCnpj && nfCnpj === cnpj) return true
+    return !nfCnpj && nf.emitente.trim().toLowerCase() === razaoSocial.trim().toLowerCase()
+  })
+
+  const resumos = nfsCliente.map((nf) => resumirNfArmazenada(nf, movimentos, agora))
+  const nfsArmazenadas = resumos.filter((r) => r.status === 'armazenada')
+  const nfsFinalizadas = resumos.filter((r) => r.status === 'finalizada')
+
+  let cobrancas: CobrancaNf[] = []
+  if (contrato && tabela) {
+    cobrancas = nfsCliente.map((nf) => calcularCobrancaNf(nf, contrato, tabela, movimentos, agora))
+  }
+
+  const totalArmazenado = cobrancas
+    .filter((c) => nfsArmazenadas.some((r) => r.nfId === c.nfId))
+    .reduce((s, c) => s + c.total, 0)
+  const totalFinalizado = cobrancas
+    .filter((c) => nfsFinalizadas.some((r) => r.nfId === c.nfId))
+    .reduce((s, c) => s + c.total, 0)
+
+  return {
+    cnpj,
+    razaoSocial,
+    contrato,
+    tabela,
+    nfsArmazenadas,
+    nfsFinalizadas,
+    cobrancas,
+    totalArmazenado,
+    totalFinalizado,
+    totalGeral: totalArmazenado + totalFinalizado,
+  }
+}
+
+export function formatarDataBr(iso: string): string {
+  const d = parseDate(iso)
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+export function formatarDataHoraBr(iso: string): string {
+  const d = parseDate(iso)
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export function formatMoedaFinanceiro(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}

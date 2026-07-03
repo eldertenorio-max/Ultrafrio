@@ -19,6 +19,7 @@ import { OcupadoAlert } from './components/OcupadoAlert'
 import { PaletesLimiteAlert } from './components/PaletesLimiteAlert'
 import { BuscaEncontradaToast } from './components/BuscaEncontradaToast'
 import { useEnderecamentoStore } from './hooks/useEnderecamentoStore'
+import { useFinanceiro } from './hooks/useFinanceiro'
 import { useTheme } from './hooks/useTheme'
 import { useSidebarMode } from './hooks/useSidebarMode'
 import { useVoiceAssistant } from './hooks/useVoiceAssistant'
@@ -232,6 +233,7 @@ export default function App() {
     error,
     clearError,
   } = useEnderecamentoStore()
+  const financeiro = useFinanceiro(state.notas)
   const { theme, toggleTheme, setTheme } = useTheme()
   const { sidebarMode, setSidebarMode } = useSidebarMode()
   const [openSection, setOpenSection] = useState<SidebarSectionId | null>(
@@ -798,6 +800,7 @@ export default function App() {
         acumulado.unshift(nf)
         movimentos = upsertMovimentoEntrada(movimentos, nf)
         registrarEmitente(nf.emitente)
+        financeiro.registrarClienteFromNf(nf)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Erro ao ler XML.'
         errors.push(`${file.name}: ${msg}`)
@@ -864,6 +867,9 @@ export default function App() {
     setEntradaDestinoPendente(null)
     clearEntradaDestinoPendente()
     setOpenSection('entrada')
+    for (const nf of nfsComDestino) {
+      financeiro.registrarClienteFromNf(nf)
+    }
     await saveNow(nextState)
   }
 
@@ -3501,6 +3507,16 @@ export default function App() {
           onRefreshVoiceRegistry: refreshVoiceRegistry,
           onTestWakePhrase: voiceAssistant.testPhrase,
           sectionOpen: openSection === 'cadastroVoz',
+        }}
+        financeiro={{
+          data: financeiro.data,
+          notas: state.notas,
+          movimentos: movimentosHistorico,
+          loading: financeiro.loading,
+          saving: financeiro.saving,
+          error: financeiro.error,
+          onUpdate: financeiro.updateData,
+          onSaveNow: financeiro.saveNow,
         }}
       />
 

@@ -30,6 +30,8 @@ export type NotaFiscal = {
   serie: string
   chave: string
   emitente: string
+  /** CNPJ (ou CPF) do emitente da NF — usado para vincular ao cliente no Financeiro. */
+  emitenteCnpj?: string
   dataEmissao: string
   items: NfeItem[]
   status: 'em_andamento' | 'concluida'

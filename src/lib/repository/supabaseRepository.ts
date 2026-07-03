@@ -13,6 +13,7 @@ const uiPrefsMemory: Pick<AppState, 'activeNfId' | 'activeItemIndex'> = {
 
 /** Quando o Supabase ainda não tem as colunas comerciais/entrada, salva só o básico. */
 let omitNfCommercialFields = false
+let omitNfCnpjField = false
 let omitItemExtendedFields = false
 let omitItemLocalizacaoField = false
 
@@ -21,7 +22,7 @@ function missingColumnError(message: string): boolean {
 }
 
 function nfUpsertRow(nf: NotaFiscal) {
-  const row = {
+  const base = {
     id: nf.id,
     numero: nf.numero,
     serie: nf.serie,
@@ -30,6 +31,7 @@ function nfUpsertRow(nf: NotaFiscal) {
     data_emissao: nf.dataEmissao,
     status: nf.status,
   }
+  const row = omitNfCnpjField ? base : { ...base, emitente_cnpj: nf.emitenteCnpj ?? null }
   if (omitNfCommercialFields) return row
   return {
     ...row,
@@ -73,6 +75,10 @@ async function upsertNf(
   nf: NotaFiscal,
 ): Promise<{ error: { message: string } | null }> {
   let result = await sb.from('ultrafrio_notas_fiscais').upsert(nfUpsertRow(nf))
+  if (result.error && missingColumnError(result.error.message) && !omitNfCnpjField) {
+    omitNfCnpjField = true
+    result = await sb.from('ultrafrio_notas_fiscais').upsert(nfUpsertRow(nf))
+  }
   if (result.error && missingColumnError(result.error.message) && !omitNfCommercialFields) {
     omitNfCommercialFields = true
     result = await sb.from('ultrafrio_notas_fiscais').upsert(nfUpsertRow(nf))
@@ -217,6 +223,7 @@ function mapNotas(
     serie: nf.serie,
     chave: nf.chave,
     emitente: nf.emitente,
+    ...(nf.emitente_cnpj ? { emitenteCnpj: nf.emitente_cnpj } : {}),
     dataEmissao: nf.data_emissao,
     status: nf.status,
     createdAt: nf.created_at,
@@ -399,6 +406,7 @@ export const supabaseRepository: EnderecamentoRepository = {
 
   async saveData({ notas, movimentos, notasCanceladas }) {
     omitNfCommercialFields = false
+    omitNfCnpjField = false
     omitItemExtendedFields = false
     omitItemLocalizacaoField = false
 

@@ -54,6 +54,7 @@ type NfRow = {
   serie: string
   chave: string
   emitente: string
+  emitente_cnpj?: string | null
   data_emissao: string
   status: 'em_andamento' | 'concluida'
   created_at: string
