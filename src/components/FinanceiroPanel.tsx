@@ -731,7 +731,7 @@ function ClientesSection({
                         <span className="fin-badge fin-badge--ativo">Armazenada</span>
                       </div>
                       <div className="fin-nf-stats muted">
-                        Entrada {formatarDataBr(nf.dataEntrada)} · {nf.diasArmazenados} dias ·{' '}
+                        Armazenagem {formatarDataBr(nf.dataEntrada)} · {nf.diasArmazenados} dias ·{' '}
                         {formatPesoBruto(nf.pesoLiquido)} kg · {nf.totalItens} itens ·{' '}
                         {formatQuantidadeNfe(nf.totalCaixas)} CX · {nf.totalPaletes} paletes
                       </div>
@@ -767,7 +767,7 @@ function ClientesSection({
                         <span className="fin-badge fin-badge--finalizada">Finalizada</span>
                       </div>
                       <div className="fin-nf-stats muted">
-                        {formatarDataBr(nf.dataEntrada)} →{' '}
+                        Armazenagem {formatarDataBr(nf.dataEntrada)} →{' '}
                         {nf.dataSaida ? formatarDataBr(nf.dataSaida) : '—'} · {nf.diasArmazenados} dias ·{' '}
                         {formatPesoBruto(nf.pesoLiquido)} kg
                       </div>
@@ -829,8 +829,8 @@ function DataEntradaSection({
       <div className="sidebar-block">
         <h4>Controle de permanência</h4>
         <p className="muted">
-          Data de entrada, tempo armazenado, peso, caixas e itens por NF. Ao dar saída, a cobrança
-          é finalizada.
+          Data de armazenagem preenchida na Entrada, tempo armazenado, peso, caixas e itens por NF.
+          Ao dar saída, a cobrança é finalizada.
         </p>
 
         {data.clientes.length > 0 && (
@@ -883,7 +883,7 @@ function DataEntradaSection({
                     <input
                       type="date"
                       className="input-nf input-nf--compact fin-data-armazenagem-input"
-                      value={dateInputValue(notasById.get(nf.nfId)?.dataArmazenagem ?? nf.dataEntrada)}
+                      value={dateInputValue(nf.dataEntrada)}
                       onChange={(e) => onUpdateNotaDataArmazenagem(nf.nfId, e.target.value)}
                     />
                   </div>
