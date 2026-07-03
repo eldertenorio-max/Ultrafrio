@@ -84,13 +84,11 @@ function PaletesItemInput({
       onChange={(e) => {
         const next = e.target.value
         setDraft({ itemIndex, value: next })
-        // Grava na hora — antes só gravava no blur e o mapa/Salvar não enxergavam o valor.
-        onCommit(itemIndex, next)
       }}
       onBlur={(e) => {
+        onCommit(itemIndex, e.target.value)
         setEditing(false)
         setDraft(null)
-        onCommit(itemIndex, e.target.value)
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
