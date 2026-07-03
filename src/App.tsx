@@ -651,13 +651,12 @@ export default function App() {
   }, [nfBuscaSaida, saidaItemIndex])
 
   const saidaFlaggedAddresses = useMemo(() => {
-    const flagged = new Set(saidaPaletesConfirmados.map((p) => p.addressId))
-    if (saidaPaleteAtivo) flagged.add(saidaPaleteAtivo)
+    const flagged = new Set<AddressId>()
     if (!saidaSelecaoConcluida) {
       for (const a of saidaPaletesSelecionados) flagged.add(a)
     }
     return flagged
-  }, [saidaPaletesConfirmados, saidaPaleteAtivo, saidaSelecaoConcluida, saidaPaletesSelecionados])
+  }, [saidaSelecaoConcluida, saidaPaletesSelecionados])
 
   const editNfAddresses = useMemo(() => {
     if (!nfEditar) return new Set<AddressId>()

@@ -1436,6 +1436,18 @@
   color: var(--text-muted);
 }
 
+.addr-mini--saida {
+  color: var(--text);
+}
+
+.addr-mini--saida li {
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
 .item-actions {
   margin-top: 12px;
   padding-top: 12px;
@@ -6158,18 +6170,24 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .addr-mini--saida .addr-ativo {
-  color: var(--cell-saida-flag);
+  color: var(--text);
+  background: color-mix(in srgb, var(--cell-destaque-verde) 36%, var(--bg-elevated));
+  outline: 1px solid color-mix(in srgb, var(--cell-sel) 55%, transparent);
   font-weight: 700;
 }
 
 .addr-mini--saida .addr-confirmado {
-  color: var(--cell-saida);
+  color: var(--text);
+  background: color-mix(in srgb, var(--cell-saida) 14%, var(--bg-elevated));
+  outline: 1px solid color-mix(in srgb, var(--cell-saida) 45%, transparent);
   text-decoration: line-through;
-  opacity: 0.85;
+  opacity: 1;
 }
 
 .addr-mini--saida .addr-selecionado {
-  color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elevated));
+  outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   font-weight: 600;
 }
 
@@ -6228,7 +6246,9 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .addr-mini--saida .addr-flagged {
-  color: var(--cell-saida-flag);
+  color: var(--text);
+  background: color-mix(in srgb, var(--cell-saida-flag) 18%, var(--bg-elevated));
+  outline: 1px solid color-mix(in srgb, var(--cell-saida-flag) 55%, transparent);
   font-weight: 600;
 }
 
