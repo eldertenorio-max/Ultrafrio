@@ -222,6 +222,7 @@ export function useEnderecamentoStore() {
       }
 
       let dataToSave = pickPersisted(next)
+      const previousSnapshot = lastPersistedRef.current
 
       if (lastPersistedRef.current) {
         const localPick = pickPersisted(next)
@@ -242,11 +243,22 @@ export function useEnderecamentoStore() {
         )
       }
 
-      await repo.saveData({
-        notas: dataToSave.notas,
-        movimentos: dataToSave.movimentos,
-        notasCanceladas: dataToSave.notasCanceladas,
-      })
+      await repo.saveData(
+        {
+          notas: dataToSave.notas,
+          movimentos: dataToSave.movimentos,
+          notasCanceladas: dataToSave.notasCanceladas,
+        },
+        {
+          previous: previousSnapshot
+            ? {
+                notas: previousSnapshot.notas,
+                movimentos: previousSnapshot.movimentos,
+                notasCanceladas: previousSnapshot.notasCanceladas,
+              }
+            : null,
+        },
+      )
       repo.saveUiPrefs({
         activeNfId: next.activeNfId,
         activeItemIndex: next.activeItemIndex,

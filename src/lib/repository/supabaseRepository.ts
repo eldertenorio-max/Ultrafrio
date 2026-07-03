@@ -86,25 +86,24 @@ async function upsertNf(
   return result
 }
 
-async function upsertItem(
+/** Upsert de vários itens de uma NF numa única requisição, com fallback de colunas ausentes. */
+async function upsertItensBulk(
   sb: ReturnType<typeof getSupabase>,
   nfId: string,
-  it: NotaFiscal['items'][number],
+  items: NotaFiscal['items'],
 ): Promise<{ error: { message: string } | null }> {
+  if (items.length === 0) return { error: null }
+  const build = () => items.map((it) => itemInsertRow(nfId, it))
   let result = await sb
     .from('ultrafrio_nf_itens')
-    .upsert(itemInsertRow(nfId, it), { onConflict: 'nf_id,item_index' })
+    .upsert(build(), { onConflict: 'nf_id,item_index' })
   if (result.error && missingColumnError(result.error.message) && !omitItemExtendedFields) {
     omitItemExtendedFields = true
-    result = await sb
-      .from('ultrafrio_nf_itens')
-      .upsert(itemInsertRow(nfId, it), { onConflict: 'nf_id,item_index' })
+    result = await sb.from('ultrafrio_nf_itens').upsert(build(), { onConflict: 'nf_id,item_index' })
   }
   if (result.error && missingColumnError(result.error.message) && !omitItemLocalizacaoField) {
     omitItemLocalizacaoField = true
-    result = await sb
-      .from('ultrafrio_nf_itens')
-      .upsert(itemInsertRow(nfId, it), { onConflict: 'nf_id,item_index' })
+    result = await sb.from('ultrafrio_nf_itens').upsert(build(), { onConflict: 'nf_id,item_index' })
   }
   return result
 }
@@ -123,21 +122,18 @@ async function syncNfItens(sb: ReturnType<typeof getSupabase>, nf: NotaFiscal): 
   }
 
   const keep = new Set(nf.items.map((it) => it.index))
-  for (const row of existing ?? []) {
-    if (!keep.has(row.item_index)) {
-      const { error } = await sb
-        .from('ultrafrio_nf_itens')
-        .delete()
-        .eq('nf_id', nf.id)
-        .eq('item_index', row.item_index)
-      if (error) throw new Error(error.message)
-    }
-  }
-
-  for (const it of nf.items) {
-    const { error } = await upsertItem(sb, nf.id, it)
+  const toDelete = (existing ?? []).filter((row) => !keep.has(row.item_index))
+  if (toDelete.length) {
+    const { error } = await sb
+      .from('ultrafrio_nf_itens')
+      .delete()
+      .eq('nf_id', nf.id)
+      .in('item_index', toDelete.map((r) => r.item_index))
     if (error) throw new Error(error.message)
   }
+
+  const { error } = await upsertItensBulk(sb, nf.id, nf.items)
+  if (error) throw new Error(error.message)
 }
 
 /** Sincroniza endereços incrementalmente — não apaga posições se o estado local veio vazio por engano. */
@@ -404,11 +400,22 @@ export const supabaseRepository: EnderecamentoRepository = {
     }
   },
 
-  async saveData({ notas, movimentos, notasCanceladas }) {
+  async saveData({ notas, movimentos, notasCanceladas }, opts) {
     omitNfCommercialFields = false
     omitNfCnpjField = false
     omitItemExtendedFields = false
     omitItemLocalizacaoField = false
+
+    const previous = opts?.previous ?? null
+    const prevNotaJson = new Map(
+      (previous?.notas ?? []).map((n) => [n.id, JSON.stringify(n)]),
+    )
+    const prevMovJson = new Map(
+      (previous?.movimentos ?? []).map((m) => [m.id, JSON.stringify(m)]),
+    )
+    const prevCanJson = new Map(
+      (previous?.notasCanceladas ?? []).map((c) => [c.id, JSON.stringify(c)]),
+    )
 
     const cleaned = limparMovimentosEntradaOrfaos({
       notas,
@@ -448,6 +455,9 @@ export const supabaseRepository: EnderecamentoRepository = {
     }
 
     for (const nf of notas) {
+      // Save incremental: pula NFs idênticas ao último snapshot já gravado.
+      if (prevNotaJson.get(nf.id) === JSON.stringify(nf)) continue
+
       const { error: upErr } = await upsertNf(sb, nf)
       if (upErr) throw new Error(upErr.message)
 
@@ -473,6 +483,7 @@ export const supabaseRepository: EnderecamentoRepository = {
     }
 
     for (const mov of movimentos) {
+      if (prevMovJson.get(mov.id) === JSON.stringify(mov)) continue
       const { error } = await upsertMovimento(sb, mov, notaIds)
       if (error) throw new Error(error.message)
     }
@@ -488,6 +499,7 @@ export const supabaseRepository: EnderecamentoRepository = {
     }
 
     for (const c of notasCanceladas) {
+      if (prevCanJson.get(c.id) === JSON.stringify(c)) continue
       const { error } = await sb.from('ultrafrio_notas_canceladas').upsert({
         id: c.id,
         numero: c.numero,
