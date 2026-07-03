@@ -8336,8 +8336,8 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .fin-entrada-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(150px, 1.15fr);
+  gap: 8px;
   margin-top: 6px;
 }
 
@@ -8349,6 +8349,33 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .fin-entrada-grid strong {
   font-size: 0.82rem;
+}
+
+.fin-valor-cobrar-card {
+  grid-column: 5;
+  grid-row: 1 / span 2;
+  justify-content: center;
+  min-height: 70px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent, #f5c518) 48%, var(--border));
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(245, 197, 24, 0.18), rgba(34, 197, 94, 0.08)),
+    var(--bg-elevated);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.fin-valor-cobrar-card span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fin-valor-cobrar-card strong {
+  font-size: 1.05rem;
+  color: var(--accent-hover, var(--accent, #f5c518));
 }
 
 .fin-cobranca-detalhes {
@@ -8437,6 +8464,12 @@ html.scroll-locked .sidebar.sidebar--wide {
 
   .fin-entrada-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .fin-valor-cobrar-card {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 0;
   }
 }
 

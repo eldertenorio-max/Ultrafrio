@@ -899,13 +899,13 @@ function DataEntradaSection({
                     <span className="muted">Dias</span>
                     <strong>{nf.diasArmazenados}</strong>
                   </div>
+                  <div className="fin-valor-cobrar-card">
+                    <span>Valor a cobrar</span>
+                    <strong>{formatMoedaFinanceiro(cobranca?.total ?? 0)}</strong>
+                  </div>
                   <div>
                     <span className="muted">Peso</span>
                     <strong>{formatPesoBruto(nf.pesoLiquido)} kg</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Valor a cobrar</span>
-                    <strong>{formatMoedaFinanceiro(cobranca?.total ?? 0)}</strong>
                   </div>
                   <div>
                     <span className="muted">Itens</span>
