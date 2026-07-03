@@ -184,6 +184,15 @@ export function EntradaPanel({
               os <strong>paletes</strong> — cada palete corresponde a um endereço no painel. No stage,
               não é necessário endereçar.
             </p>
+            <label className="nf-itens-campo entrada-data-armazenagem-row">
+              <span>Data de armazenagem</span>
+              <input
+                type="date"
+                className="input-nf input-nf--compact nf-data-armazenagem-input"
+                value={dateInputValue(activeNf.dataArmazenagem ?? activeNf.createdAt)}
+                onChange={(e) => onUpdateNfDataArmazenagem(activeNf.id, e.target.value)}
+              />
+            </label>
             <NfItensTable
               nf={activeNf}
               items={activeNf.items}

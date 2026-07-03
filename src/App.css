@@ -6201,6 +6201,11 @@ html.scroll-locked .sidebar.sidebar--wide {
   min-width: 150px;
 }
 
+.entrada-data-armazenagem-row {
+  margin: 8px 0 10px;
+  max-width: 240px;
+}
+
 .nf-section-title--sm {
   margin: 0 0 8px;
   font-size: 0.88rem;
