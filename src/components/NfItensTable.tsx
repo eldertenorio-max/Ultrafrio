@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type SyntheticEvent } from 'react'
+import { Fragment, useState, type SyntheticEvent } from 'react'
 import type { EntradaItemCampos } from '../lib/entradaCampos'
 import { normalizeDataFabricacao, todayDateInputMax } from '../lib/entradaCampos'
 import { canDesmembrarNfeItem } from '../lib/desmembrarItem'
@@ -49,6 +49,10 @@ function stopRowActivate(e: SyntheticEvent) {
   e.stopPropagation()
 }
 
+function paletesValueToDraft(value: number | undefined): string {
+  return value != null && value > 0 ? String(value) : ''
+}
+
 function PaletesItemInput({
   itemIndex,
   value,
@@ -60,11 +64,10 @@ function PaletesItemInput({
   disabled: boolean
   onCommit: (itemIndex: number, raw: string) => void
 }) {
-  const [draft, setDraft] = useState(() => (value != null && value > 0 ? String(value) : ''))
-
-  useEffect(() => {
-    setDraft(value != null && value > 0 ? String(value) : '')
-  }, [itemIndex, value])
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<{ itemIndex: number; value: string } | null>(null)
+  const persistedDraft = paletesValueToDraft(value)
+  const inputValue = editing && draft?.itemIndex === itemIndex ? draft.value : persistedDraft
 
   return (
     <input
@@ -72,15 +75,23 @@ function PaletesItemInput({
       min={1}
       step={1}
       className="input-nf input-nf--compact"
-      value={draft}
+      value={inputValue}
       disabled={disabled}
+      onFocus={() => {
+        setEditing(true)
+        setDraft({ itemIndex, value: persistedDraft })
+      }}
       onChange={(e) => {
         const next = e.target.value
-        setDraft(next)
+        setDraft({ itemIndex, value: next })
         // Grava na hora — antes só gravava no blur e o mapa/Salvar não enxergavam o valor.
         onCommit(itemIndex, next)
       }}
-      onBlur={(e) => onCommit(itemIndex, e.target.value)}
+      onBlur={(e) => {
+        setEditing(false)
+        setDraft(null)
+        onCommit(itemIndex, e.target.value)
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
         stopRowActivate(e)
