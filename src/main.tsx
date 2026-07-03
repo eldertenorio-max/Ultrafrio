@@ -10,9 +10,17 @@ createRoot(document.getElementById('root')!).render(
 )
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      /* registro do service worker é best-effort */
+  if (import.meta.env.PROD) {
+    // Em produção: registra o SW para tornar o app instalável (PWA).
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        /* registro do service worker é best-effort */
+      })
     })
-  })
+  } else {
+    // Em dev (Vite/HMR) o SW quebra o carregamento dos módulos — garante remoção.
+    void navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const r of regs) void r.unregister()
+    })
+  }
 }

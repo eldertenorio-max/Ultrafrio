@@ -159,14 +159,17 @@ export function calcularSaidaPalete(
   limites?: SaidaLimitesPorItem,
 ): SaidaPaleteCalculo | null {
   if (!item.allocatedAddresses.includes(addressId)) return null
-  if (quantidadeCaixas <= 0) return null
+  if (quantidadeCaixas < 0) return null
 
   const qtdItem = quantidadeBaseSaida(item, limites)
   const jaSaido = caixasJaSaidasItem(item.index, paletesConfirmados)
   const disponivel = qtdItem - jaSaido
+  // Item sem saldo mas que ainda ocupa posição: permite liberar a posição (0 caixas).
+  const soLiberarPosicao = disponivel <= 1e-9
+  if (quantidadeCaixas <= 0 && !soLiberarPosicao) return null
   if (quantidadeCaixas > disponivel + 1e-9) return null
 
-  const quantidadeSobra = qtdItem - jaSaido - quantidadeCaixas
+  const quantidadeSobra = Math.max(0, qtdItem - jaSaido - quantidadeCaixas)
   // Peso e valor totais correspondem ao estoque completo do item; ratear pela
   // quantidade completa (não pelo limite do XML) para não superestimar o peso.
   const r = ratio(quantidadeCaixas, quantidadeEstoqueItem(item))
@@ -174,7 +177,9 @@ export function calcularSaidaPalete(
   const pesoLiquidoTotal = pesoLiquidoTotalItem(nf, item)
   const capPalete = caixasPorPalete(item)
   const liberaPalete =
-    quantidadeSobra <= 1e-9 || quantidadeCaixas >= capPalete - 1e-6
+    soLiberarPosicao ||
+    quantidadeSobra <= 1e-9 ||
+    quantidadeCaixas >= capPalete - 1e-6
 
   return {
     addressId,
@@ -381,7 +386,13 @@ export function enderecosALiberar(
     const item = nf.items.find((it) => it.index === p.itemIndex)
     if (!item) continue
     const jaSaido = caixasJaSaidasItem(item.index, paletes, p.addressId)
-    const disponivel = item.quantidade - jaSaido
+    const qtdItem = quantidadeEstoqueItem(item)
+    const disponivel = qtdItem - jaSaido
+    if (disponivel <= 1e-9) {
+      // Posição residual sem saldo: libera ao confirmar (mesmo com 0 caixas).
+      liberar.push(p.addressId)
+      continue
+    }
     const cap = Math.min(disponivel, caixasPorPalete(item))
     if (p.quantidadeCaixas >= cap - 1e-6) liberar.push(p.addressId)
   }
@@ -422,11 +433,18 @@ export function aplicarSaidaParcial(
   const items = nf.items
     .map((it) => {
       const qSaida = saidaMap.get(it.index) ?? 0
-      if (qSaida <= 0) return it
+      const addresses = it.allocatedAddresses.filter((a) => !pickAddr.has(a))
+      const hadPick = it.allocatedAddresses.some((a) => pickAddr.has(a))
+
+      if (qSaida <= 0 && !hadPick) return it
+      if (qSaida <= 0 && hadPick) {
+        // Liberação de posições sem retirada de mercadoria (item esgotado).
+        if (addresses.length === 0 && it.quantidade <= 0) return null
+        return { ...it, allocatedAddresses: addresses }
+      }
 
       const qtdItem = quantidadeEstoqueItem(it)
       const sobraQtd = qtdItem - qSaida
-      const addresses = it.allocatedAddresses.filter((a) => !pickAddr.has(a))
 
       if (sobraQtd <= 0) {
         return {
@@ -440,7 +458,7 @@ export function aplicarSaidaParcial(
 
       return patchNfeItemQuantidade({ ...it, allocatedAddresses: addresses }, sobraQtd)
     })
-    .filter((it) => it.quantidade > 0 || it.allocatedAddresses.length > 0)
+    .filter((it): it is NfeItem => it != null && (it.quantidade > 0 || it.allocatedAddresses.length > 0))
 
   return { ...nf, items }
 }

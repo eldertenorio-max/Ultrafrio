@@ -1901,7 +1901,9 @@ export default function App() {
       return
     }
 
-    if (paletesDisponiveisItem(item, saidaPaletesConfirmados) <= 0) return
+    const qtdEstoque = quantidadeEstoqueItem(item)
+    const semSaldo = qtdEstoque <= 1e-9
+    if (!semSaldo && paletesDisponiveisItem(item, saidaPaletesConfirmados) <= 0) return
 
     resetSelecaoPaletesSaida()
     setSaidaItemIndex(index)
@@ -1946,7 +1948,8 @@ export default function App() {
     setSaidaPaletesNaFila(fila)
     setSaidaSelecaoConcluida(true)
     setSaidaPaleteAtivo(fila[0] ?? null)
-    setSaidaCaixasPalete('')
+    const item = nfBuscaSaida?.items.find((it) => it.index === saidaItemIndex)
+    setSaidaCaixasPalete(item && quantidadeEstoqueItem(item) <= 1e-9 ? '0' : '')
     setSaidaSelecaoErro(null)
   }
 
@@ -1966,7 +1969,13 @@ export default function App() {
     if (!item) return
 
     const caixas = parseQuantidadeSaida(saidaCaixasPalete)
-    if (caixas == null || caixas <= 0) {
+    const qtdItem = quantidadeEstoqueItem(item)
+    const semSaldo = qtdItem <= 1e-9
+    if (caixas == null || caixas < 0) {
+      setSaidaSelecaoErro('Informe uma quantidade válida de caixas.')
+      return
+    }
+    if (caixas <= 0 && !semSaldo) {
       setSaidaSelecaoErro('Informe uma quantidade válida de caixas.')
       return
     }
@@ -1998,6 +2007,7 @@ export default function App() {
       )
       if (restantes.length > 0) {
         setSaidaPaleteAtivo(restantes[0])
+        setSaidaCaixasPalete(semSaldo ? '0' : '')
       } else {
         setSaidaPaleteAtivo(null)
         setSaidaSelecaoConcluida(false)
@@ -2016,7 +2026,7 @@ export default function App() {
       }
       return next
     })
-    setSaidaCaixasPalete('')
+    setSaidaCaixasPalete(semSaldo ? '0' : '')
     setSaidaSelecaoErro(null)
   }
 

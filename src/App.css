@@ -5853,6 +5853,11 @@ html.scroll-locked .sidebar.sidebar--wide {
   font-size: 0.76rem;
 }
 
+.saida-aviso-sem-saldo {
+  color: var(--accent, #c9a227);
+  line-height: 1.35;
+}
+
 .saida-item-fase {
   padding: 8px 10px;
   border: 1px solid var(--border);

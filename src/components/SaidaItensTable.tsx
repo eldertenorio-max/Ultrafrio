@@ -4,6 +4,7 @@ import {
   pesoBrutoTotalItem,
   pesoLiquidoTotalItem,
   quantidadeBaseSaida,
+  paletesDisponiveisItem,
   type SaidaLimitesPorItem,
   type SaidaPaleteDraft,
 } from '../lib/saidaParcial'
@@ -96,7 +97,9 @@ export function SaidaItensTable({
             const esgotado = sobra <= 1e-9
             const temSaida = sobra < qtdItem - 1e-9
             const isActive = activeItemIndex === item.index
-            const selecionavel = !esgotado
+            const paletesLivres = paletesDisponiveisItem(item, paletesConfirmados)
+            const semSaldoPosicoes = qtdItem <= 1e-9 && paletesLivres > 0
+            const selecionavel = !esgotado || semSaldoPosicoes
             const selecionadosItem = paletesSelecionadosIds.filter((a) =>
               item.allocatedAddresses.includes(a),
             )
@@ -123,7 +126,7 @@ export function SaidaItensTable({
                     <span
                       className={`nf-itens-status${esgotado || (!isActive && !temSaida) ? ' nf-itens-status--ok' : ''}${temSaida && !isActive ? ' nf-itens-status--parcial' : ''}`}
                     >
-                      {isActive ? '✎' : esgotado ? '✓' : temSaida ? '◐' : '○'}
+                      {isActive ? '✎' : esgotado && !semSaldoPosicoes ? '✓' : semSaldoPosicoes ? '⊘' : temSaida ? '◐' : '○'}
                     </span>
                   </td>
                   <td className="nf-itens-col-codigo">{item.codigo || '—'}</td>

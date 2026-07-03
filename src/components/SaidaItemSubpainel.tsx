@@ -13,7 +13,7 @@ import {
   type SaidaPaleteDraft,
 } from '../lib/saidaParcial'
 import { formatAddressLabel } from '../layout/camaras'
-import { unidadeEstoqueItem } from '../lib/nfeUnidades'
+import { unidadeEstoqueItem, quantidadeEstoqueItem } from '../lib/nfeUnidades'
 import { formatPesoBruto, formatQuantidadeNfe, formatValorNfe } from '../lib/formatNfeItem'
 
 type Props = {
@@ -65,15 +65,18 @@ export function SaidaItemSubpainel({
 }: Props) {
   const confirmadosItem = paletesConfirmados.filter((p) => p.itemIndex === item.index)
   const paletesDisponiveis = paletesDisponiveisItem(item, paletesConfirmados)
+  const qtdEstoque = quantidadeEstoqueItem(item)
+  const semSaldo = qtdEstoque <= 1e-9 && item.allocatedAddresses.length > 0
   const totais = totaisSaidaItem(nf, item, paletesConfirmados, limitesPorItem)
 
   const paleteAtivoDoItem =
     paleteAtivo && item.allocatedAddresses.includes(paleteAtivo) ? paleteAtivo : null
   const caixas = parseQuantidadeSaida(caixasInput)
   const calcPreview: SaidaPaleteCalculo | null = useMemo(() => {
-    if (!isActive || !paleteAtivoDoItem || caixas == null || caixas <= 0) return null
+    if (!isActive || !paleteAtivoDoItem || caixas == null || caixas < 0) return null
+    if (caixas <= 0 && !semSaldo) return null
     return calcularSaidaPalete(nf, item, paleteAtivoDoItem, caixas, paletesConfirmados, limitesPorItem)
-  }, [isActive, nf, item, paleteAtivoDoItem, caixas, paletesConfirmados, limitesPorItem])
+  }, [isActive, nf, item, paleteAtivoDoItem, caixas, paletesConfirmados, limitesPorItem, semSaldo])
 
   const totaisExibicao = useMemo(() => {
     if (!calcPreview) return totais
@@ -166,20 +169,36 @@ export function SaidaItemSubpainel({
 
       {isActive && !emSelecaoMapa && !emConfirmacaoCaixas && (
         <div className="saida-item-acoes">
-          <p className="muted saida-paletes-disponiveis">
-            {paletesDisponiveis} palete(s) disponível(is)
-            {confirmadosItem.length > 0 && (
-              <> · {confirmadosItem.length} confirmado(s)</>
-            )}
-          </p>
+          {semSaldo ? (
+            <p className="muted saida-paletes-disponiveis saida-aviso-sem-saldo">
+              Item sem saldo — {paletesDisponiveis} posição(ões) ainda ocupada(s) no mapa. Selecione
+              no painel para liberar (0 caixas).
+            </p>
+          ) : (
+            <p className="muted saida-paletes-disponiveis">
+              {paletesDisponiveis} palete(s) disponível(is)
+              {confirmadosItem.length > 0 && (
+                <> · {confirmadosItem.length} confirmado(s)</>
+              )}
+            </p>
+          )}
           {isActive && selecaoErro && <p className="error saida-item-erro">{selecaoErro}</p>}
           <button
             type="button"
             className="btn primary btn-sm"
-            disabled={!qtdInputValida || paletesDisponiveis <= 0}
-            onClick={onIniciarSelecao}
+            disabled={semSaldo ? paletesDisponiveis <= 0 : !qtdInputValida || paletesDisponiveis <= 0}
+            onClick={() => {
+              if (semSaldo && !qtdPaletesInput.trim()) {
+                onQtdPaletesChange(String(paletesDisponiveis))
+              }
+              onIniciarSelecao()
+            }}
           >
-            {confirmadosItem.length > 0 ? 'Selecionar mais paletes' : 'Selecionar no painel'}
+            {semSaldo
+              ? 'Liberar posições no painel'
+              : confirmadosItem.length > 0
+                ? 'Selecionar mais paletes'
+                : 'Selecionar no painel'}
           </button>
         </div>
       )}
@@ -249,10 +268,10 @@ export function SaidaItemSubpainel({
           <button
             type="button"
             className="btn primary btn-sm full"
-            disabled={!calcPreview}
+            disabled={!calcPreview && !(semSaldo && caixas === 0)}
             onClick={onConfirmarPalete}
           >
-            Confirmar palete
+            {semSaldo ? 'Liberar posição' : 'Confirmar palete'}
           </button>
         </div>
       )}
