@@ -104,6 +104,10 @@ export function AppTopBar({
     closeAccountMenu()
   }
 
+  function handleRefreshPage() {
+    window.location.reload()
+  }
+
   return (
     <header className="app-topbar" aria-label="Barra principal">
       <div className="app-topbar-left">
@@ -137,6 +141,15 @@ export function AppTopBar({
           orientation="horizontal"
         />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+        <button
+          type="button"
+          className="app-topbar-refresh"
+          onClick={handleRefreshPage}
+          title="Atualizar página"
+          aria-label="Atualizar página"
+        >
+          <RefreshIcon />
+        </button>
 
         <div className="app-topbar-meta" aria-label="Data e hora">
           <span className="app-topbar-meta-time">{clock.time}</span>
@@ -188,5 +201,26 @@ export function AppTopBar({
         </div>
       </div>
     </header>
+  )
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18" aria-hidden>
+      <path
+        d="M20 6v5h-5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 11a7 7 0 1 0-2.05 4.95"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

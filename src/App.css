@@ -505,13 +505,50 @@
   gap: 4px;
 }
 
-.app-topbar .theme-toggle {
+.app-topbar .theme-toggle,
+.app-topbar-refresh {
   width: 36px;
   height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid var(--btn-surface-border);
   background: var(--btn-surface-bg);
   color: var(--btn-surface-fg);
+}
+
+.app-topbar-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.app-topbar-refresh:hover {
+  background: var(--btn-surface-hover-bg);
+  border-color: var(--btn-surface-border);
+}
+
+.app-topbar-refresh:active {
+  background: var(--btn-surface-active-bg);
+  border-color: var(--btn-surface-active-border);
+  color: var(--btn-surface-active-fg);
+}
+
+.app-topbar-refresh svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.app-topbar .theme-toggle-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .sidebar {
@@ -7821,7 +7858,8 @@ html.scroll-locked .sidebar.sidebar--wide {
     padding: 2px;
   }
 
-  .app-topbar .theme-toggle {
+  .app-topbar .theme-toggle,
+  .app-topbar-refresh {
     width: 34px;
     height: 34px;
     min-width: 34px;
@@ -7829,7 +7867,8 @@ html.scroll-locked .sidebar.sidebar--wide {
     padding: 0;
   }
 
-  .app-topbar .theme-toggle-icon {
+  .app-topbar .theme-toggle-icon,
+  .app-topbar-refresh svg {
     width: 18px;
     height: 18px;
   }
@@ -8243,6 +8282,19 @@ html.scroll-locked .sidebar.sidebar--wide {
     font-size: 0.98rem;
   }
 
+  .app-topbar .theme-toggle,
+  .app-topbar-refresh,
+  .app-topbar-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .app-topbar-user {
+    padding: 1px;
+  }
+
   .fin-grid-2,
   .fin-check-grid {
     grid-template-columns: 1fr;
@@ -8254,6 +8306,24 @@ html.scroll-locked .sidebar.sidebar--wide {
 
   .fin-entrada-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 380px) {
+  .app-topbar {
+    gap: 6px;
+  }
+
+  .app-topbar-logo {
+    max-width: min(96px, 28vw);
+  }
+
+  .app-topbar-brand {
+    gap: 6px;
+  }
+
+  .app-topbar-wms-main {
+    font-size: 0.9rem;
   }
 }
 
