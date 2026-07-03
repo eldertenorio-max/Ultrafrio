@@ -165,20 +165,12 @@ export function calcularCobrancaNf(
   const detalhes: DetalheCobranca[] = []
   const fator = fatorTempo(resumo.diasArmazenados, contrato.ciclo, contrato.regraTempo)
   const posicoes = totalPosicoesNf(nf)
-  const paletes = totalPaletesNf(nf)
   const peso = resumo.pesoLiquido || resumo.pesoBruto
 
   if (contrato.cobrarPosicaoPalete && tabela.custoPosicaoPalete > 0 && posicoes > 0) {
     detalhes.push({
       label: `Posição palete (${posicoes} × ${formatMoeda(tabela.custoPosicaoPalete)} × ${formatFator(fator)})`,
       valor: posicoes * tabela.custoPosicaoPalete * fator,
-    })
-  }
-
-  if (contrato.cobrarPalete && tabela.custoPorPalete > 0 && paletes > 0) {
-    detalhes.push({
-      label: `Palete (${paletes} × ${formatMoeda(tabela.custoPorPalete)} × ${formatFator(fator)})`,
-      valor: paletes * tabela.custoPorPalete * fator,
     })
   }
 
