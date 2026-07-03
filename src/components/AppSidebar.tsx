@@ -122,6 +122,7 @@ export function AppSidebar({
 
     e.preventDefault()
     e.stopPropagation()
+    if (sidebarMode === 'collapsed') onSidebarModeChange('open')
 
     const body = document.body
     const prevUserSelect = body.style.userSelect
@@ -170,7 +171,7 @@ export function AppSidebar({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {wide && sidebarMode !== 'fullscreen' && (
+      {sidebarMode !== 'fullscreen' && (
         <button
           type="button"
           className="sidebar-resize-handle"

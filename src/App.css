@@ -7903,14 +7903,20 @@ html.scroll-locked .sidebar.sidebar--wide {
   .sidebar-resize-handle {
     position: absolute;
     top: 0;
-    right: -10px;
+    right: 0;
     z-index: 90;
     display: block;
-    width: 20px;
+    width: 22px;
     height: 100%;
     padding: 0;
     border: 0;
-    background: transparent;
+    background: linear-gradient(
+      to right,
+      transparent 0,
+      transparent 8px,
+      color-mix(in srgb, var(--brand-yellow, #f9db00) 16%, transparent) 8px,
+      color-mix(in srgb, var(--brand-yellow, #f9db00) 16%, transparent) 100%
+    );
     cursor: ew-resize;
     touch-action: none;
   }
@@ -7920,12 +7926,29 @@ html.scroll-locked .sidebar.sidebar--wide {
     position: absolute;
     top: 12px;
     bottom: 12px;
-    left: 9px;
-    width: 3px;
+    right: 2px;
+    width: 4px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--brand-yellow, #f9db00) 72%, var(--border));
-    box-shadow: 0 0 0 1px color-mix(in srgb, #000 16%, transparent);
-    opacity: 0.72;
+    background: var(--brand-yellow, #f9db00);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, #000 20%, transparent),
+      0 0 10px color-mix(in srgb, var(--brand-yellow, #f9db00) 42%, transparent);
+    opacity: 0.9;
+  }
+
+  .sidebar-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 4px;
+    height: 28px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    background:
+      radial-gradient(circle, color-mix(in srgb, var(--text) 70%, transparent) 1px, transparent 2px)
+      center / 4px 7px repeat-y;
+    opacity: 0.7;
   }
 
   .sidebar-resize-handle:active::before {
