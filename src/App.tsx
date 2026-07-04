@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import { AppSidebar } from './components/AppSidebar'
 import { AppTopBar } from './components/AppTopBar'
 import { PwaInstallBanner } from './components/PwaInstallBanner'
-import { HomologacaoBanner } from './components/HomologacaoBanner'
+import { AmbienteBanner } from './components/AmbienteBanner'
 import { VoiceAssistantHUD } from './components/VoiceAssistantHUD'
 import type { SidebarSectionId } from './components/CollapsibleSidebarSection'
 import { DetailModal } from './components/DetailModal'
@@ -119,7 +119,7 @@ import { useVoiceRegistry } from './hooks/useVoiceRegistry'
 import { findNotaByNumero, mensagemNfCanceladaDuplicada, mensagemNfDuplicada } from './lib/nfDuplicate'
 import { repararNfDuplicadaDoXml, tentarRepararPersistido } from './lib/repararNfEstoque'
 import { parseCanceladaXml } from './lib/parseCanceladaXml'
-import { isHomologacao, tituloApp } from './lib/appAmbiente'
+import { getAmbienteDeploy, tituloApp } from './lib/appAmbiente'
 import { parseNfeReferenciaChaves, parseNfeXml } from './lib/parseNfeXml'
 import { parseEnderecoFalado, validarEnderecoDestinoVoz } from './lib/parseEnderecoFalado'
 import { splitMovimentacaoVozTranscript } from './lib/movimentacaoVoz'
@@ -357,7 +357,7 @@ export default function App() {
     document.title = tituloApp()
   }, [])
 
-  const homologacao = isHomologacao()
+  const ambienteDeploy = getAmbienteDeploy()
 
   const reparoInicialFeitoRef = useRef(false)
   useEffect(() => {
@@ -3395,9 +3395,11 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${sidebarMode === 'fullscreen' ? ' app-shell--menu-fullscreen' : ''}${homologacao ? ' app-shell--homolog' : ''}`}>
+    <div
+      className={`app-shell${sidebarMode === 'fullscreen' ? ' app-shell--menu-fullscreen' : ''}${ambienteDeploy ? ` app-shell--${ambienteDeploy}` : ''}`}
+    >
       <PwaInstallBanner />
-      {homologacao && <HomologacaoBanner />}
+      <AmbienteBanner />
       {savingImportante && (
         <div className="salvando-overlay" role="status" aria-live="polite">
           <div className="salvando-overlay-card">

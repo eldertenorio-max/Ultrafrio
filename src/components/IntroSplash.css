@@ -77,9 +77,18 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.intro-ambiente--homolog {
   color: #1a1200;
   background: #f9db00;
   border: 1px solid #c9a800;
+}
+
+.intro-ambiente--producao {
+  color: #e8f4ff;
+  background: #145a9e;
+  border: 1px solid #0a2f54;
 }
 
 [data-theme='dark'] .intro-splash {
