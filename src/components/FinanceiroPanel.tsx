@@ -21,9 +21,10 @@ import type {
 } from '../lib/financeiro/types'
 import type { MovimentoRegistro, NotaFiscal } from '../types'
 
-type SubAba = 'tabela' | 'contrato' | 'clientes' | 'entrada'
+type SubAba = 'tabela' | 'contrato' | 'clientes' | 'entrada' | 'logica'
 
 const FIN_ENTRADA_PAGE_SIZE = 8
+const FIN_LOGICA_PAGE_SIZE = 10
 
 type LinhaFinanceiroEntrada = {
   nf: ReturnType<typeof resumirNfArmazenada>
@@ -37,6 +38,29 @@ type LinhaFinanceiroEntrada = {
   diasPeriodo: number
   valorPeriodo: number
   posicoes: number
+}
+
+type DetalheLogicaCobranca = {
+  label: string
+  valor: number
+}
+
+type LinhaLogicaCobranca = {
+  nf: ReturnType<typeof resumirNfArmazenada>
+  nota: NotaFiscal
+  cliente: ClienteFinanceiro | undefined
+  contrato: ContratoCliente | null
+  tabela: TabelaCobranca | null
+  entradaMovimento: MovimentoRegistro | undefined
+  saidaMovimento: MovimentoRegistro | undefined
+  posicoes: number
+  pesoBase: number
+  caixas: number
+  paletes: number
+  valorMercadoria: number
+  fatorTempo: number
+  detalhes: DetalheLogicaCobranca[]
+  total: number
 }
 
 type Props = {
@@ -56,6 +80,7 @@ const SUBABAS: { id: SubAba; label: string }[] = [
   { id: 'contrato', label: 'Contrato' },
   { id: 'clientes', label: 'Clientes' },
   { id: 'entrada', label: 'Data de entrada' },
+  { id: 'logica', label: 'Lógica de cobrança' },
 ]
 
 function parseNum(raw: string): number {
@@ -123,6 +148,124 @@ function numeroCsv(value: number): string {
 
 function totalPosicoesNota(nf: NotaFiscal | undefined): number {
   return nf?.items.reduce((s, it) => s + it.allocatedAddresses.length, 0) ?? 0
+}
+
+function totalPosicoesMovimento(mov: MovimentoRegistro | undefined): number {
+  return mov?.itens.reduce((s, it) => s + it.addressIds.length, 0) ?? 0
+}
+
+function totalPaletesMovimento(mov: MovimentoRegistro | undefined): number {
+  return mov?.itens.reduce((s, it) => s + (it.paletes ?? it.addressIds.length), 0) ?? 0
+}
+
+function totalCaixasMovimento(mov: MovimentoRegistro | undefined): number {
+  return mov?.itens.reduce((s, it) => {
+    const unidade = it.unidade.trim().toUpperCase()
+    if (unidade === 'CX' || unidade === 'CAIXA' || unidade === 'FD' || unidade === 'FARDO') {
+      return s + it.quantidade
+    }
+    return s
+  }, 0) ?? 0
+}
+
+function valorMovimento(mov: MovimentoRegistro | undefined): number {
+  return mov?.valorTotal ?? mov?.itens.reduce((s, it) => s + (it.valorTotal ?? 0), 0) ?? 0
+}
+
+function pesoMovimento(mov: MovimentoRegistro | undefined): number {
+  return mov?.pesoLiquido ?? mov?.pesoBruto ?? mov?.itens.reduce((s, it) => s + (it.pesoLiquido ?? it.pesoBruto ?? 0), 0) ?? 0
+}
+
+function labelCiclo(ciclo: CicloCobranca | undefined): string {
+  if (!ciclo) return 'Sem contrato'
+  return ciclo === 'quinzenal' ? 'Quinzenal' : 'Mensal'
+}
+
+function labelRegraTempo(regra: RegraTempo | undefined): string {
+  if (!regra) return 'Sem contrato'
+  return regra === 'cheia' ? 'Cheia' : 'Proporcional'
+}
+
+function diasCiclo(ciclo: CicloCobranca): number {
+  return ciclo === 'quinzenal' ? 15 : 30
+}
+
+function fatorTempoFinanceiro(dias: number, ciclo: CicloCobranca, regra: RegraTempo): number {
+  const periodo = diasCiclo(ciclo)
+  return regra === 'cheia' ? Math.max(1, Math.ceil(dias / periodo)) : dias / periodo
+}
+
+function formatFatorFinanceiro(fator: number): string {
+  if (Math.abs(fator - Math.round(fator)) < 0.01) return String(Math.round(fator))
+  return fator.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+}
+
+function flagsContrato(contrato: ContratoCliente | null): string {
+  if (!contrato) return 'Sem contrato ativo'
+  const flags = [
+    contrato.cobrarPosicaoPalete && 'Posição',
+    contrato.cobrarKilo && (contrato.kiloPorDia ? 'Kilo por dia' : 'Kilo por ciclo'),
+    contrato.cobrarPalete && 'Palete',
+    contrato.cobrarEntrada && 'Entrada',
+    contrato.cobrarSaida && 'Saída',
+  ].filter(Boolean)
+  return flags.length ? flags.join(', ') : 'Nenhuma cobrança marcada'
+}
+
+function calcularDetalhesLogica({
+  nf,
+  contrato,
+  tabela,
+  posicoes,
+  pesoBase,
+  paletes,
+}: {
+  nf: ReturnType<typeof resumirNfArmazenada>
+  contrato: ContratoCliente | null
+  tabela: TabelaCobranca | null
+  posicoes: number
+  pesoBase: number
+  paletes: number
+}): { fatorTempo: number; detalhes: DetalheLogicaCobranca[]; total: number } {
+  if (!contrato || !tabela) return { fatorTempo: 0, detalhes: [], total: 0 }
+
+  const fatorTempo = fatorTempoFinanceiro(nf.diasArmazenados, contrato.ciclo, contrato.regraTempo)
+  const detalhes: DetalheLogicaCobranca[] = []
+
+  if (contrato.cobrarPosicaoPalete && tabela.custoPosicaoPalete > 0 && posicoes > 0) {
+    detalhes.push({
+      label: `Posição (${posicoes} × ${formatMoedaFinanceiro(tabela.custoPosicaoPalete)} × ${formatFatorFinanceiro(fatorTempo)})`,
+      valor: posicoes * tabela.custoPosicaoPalete * fatorTempo,
+    })
+  }
+
+  if (contrato.cobrarKilo && tabela.custoPorKilo > 0 && pesoBase > 0) {
+    const multiplicador = contrato.kiloPorDia ? nf.diasArmazenados : fatorTempo
+    detalhes.push({
+      label: contrato.kiloPorDia
+        ? `Kilo/dia (${formatPesoBruto(pesoBase)} kg × ${formatMoedaFinanceiro(tabela.custoPorKilo)} × ${nf.diasArmazenados} dias)`
+        : `Kilo (${formatPesoBruto(pesoBase)} kg × ${formatMoedaFinanceiro(tabela.custoPorKilo)} × ${formatFatorFinanceiro(fatorTempo)})`,
+      valor: pesoBase * tabela.custoPorKilo * multiplicador,
+    })
+  }
+
+  if (contrato.cobrarPalete && tabela.custoPorPalete > 0 && paletes > 0) {
+    detalhes.push({
+      label: `Palete (${paletes} × ${formatMoedaFinanceiro(tabela.custoPorPalete)} × ${formatFatorFinanceiro(fatorTempo)})`,
+      valor: paletes * tabela.custoPorPalete * fatorTempo,
+    })
+  }
+
+  if (contrato.cobrarEntrada && tabela.custoEntrada > 0) {
+    detalhes.push({ label: `Entrada (${formatMoedaFinanceiro(tabela.custoEntrada)})`, valor: tabela.custoEntrada })
+  }
+
+  if (contrato.cobrarSaida && tabela.custoSaida > 0 && nf.status === 'finalizada') {
+    detalhes.push({ label: `Saída (${formatMoedaFinanceiro(tabela.custoSaida)})`, valor: tabela.custoSaida })
+  }
+
+  const total = detalhes.reduce((s, d) => s + d.valor, 0)
+  return { fatorTempo, detalhes, total }
 }
 
 export function FinanceiroPanel({
@@ -198,6 +341,17 @@ export function FinanceiroPanel({
           notas={notas}
           movimentos={movimentos}
           onUpdateNotaDataArmazenagem={onUpdateNotaDataArmazenagem}
+          onSelectCliente={(cnpj) => {
+            setClienteSelecionado(cnpj)
+            setSubAba('clientes')
+          }}
+        />
+      )}
+      {subAba === 'logica' && (
+        <LogicaCobrancaSection
+          data={data}
+          notas={notas}
+          movimentos={movimentos}
           onSelectCliente={(cnpj) => {
             setClienteSelecionado(cnpj)
             setSubAba('clientes')
@@ -847,6 +1001,320 @@ function ClientesSection({
           {resumoCliente.nfsArmazenadas.length === 0 && resumoCliente.nfsFinalizadas.length === 0 && (
             <p className="muted">Nenhuma NF vinculada a este cliente.</p>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Lógica de cobrança ─── */
+
+function LogicaCobrancaSection({
+  data,
+  notas,
+  movimentos,
+  onSelectCliente,
+}: {
+  data: FinanceiroData
+  notas: NotaFiscal[]
+  movimentos: MovimentoRegistro[]
+  onSelectCliente: (cnpj: string) => void
+}) {
+  const [pagina, setPagina] = useState(1)
+
+  const linhas = useMemo<LinhaLogicaCobranca[]>(
+    () =>
+      notas
+        .map((nota) => {
+          const nf = resumirNfArmazenada(nota, movimentos)
+          const cliente = data.clientes.find((c) => {
+            const cnpj = nf.emitenteCnpj ? normalizarCnpj(nf.emitenteCnpj) : ''
+            return c.cnpj === cnpj || c.razaoSocial.trim().toLowerCase() === nf.emitente.trim().toLowerCase()
+          })
+          const contrato = cliente ? contratoAtivoCliente(data, cliente.cnpj) : null
+          const tabela = tabelaById(data, contrato?.tabelaId ?? null)
+          const entradaMovimento = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.nfId && !m.excluido)
+          const saidaMovimento = movimentos
+            .filter((m) => m.tipo === 'saida' && m.nfId === nf.nfId && !m.excluido)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+          const posicoes = Math.max(totalPosicoesNota(nota), totalPosicoesMovimento(entradaMovimento))
+          const pesoBase = nf.pesoLiquido || nf.pesoBruto || pesoMovimento(entradaMovimento)
+          const caixas = Math.max(nf.totalCaixas, totalCaixasMovimento(entradaMovimento))
+          const paletes = Math.max(nf.totalPaletes, totalPaletesMovimento(entradaMovimento))
+          const valorMercadoria = nf.valorMercadoria || valorMovimento(entradaMovimento)
+          const calculo = calcularDetalhesLogica({
+            nf,
+            contrato,
+            tabela,
+            posicoes,
+            pesoBase,
+            paletes,
+          })
+          return {
+            nf,
+            nota,
+            cliente,
+            contrato,
+            tabela,
+            entradaMovimento,
+            saidaMovimento,
+            posicoes,
+            pesoBase,
+            caixas,
+            paletes,
+            valorMercadoria,
+            ...calculo,
+          }
+        })
+        .sort((a, b) => {
+          if (a.nf.status !== b.nf.status) return a.nf.status === 'armazenada' ? -1 : 1
+          return b.nf.dataEntrada.localeCompare(a.nf.dataEntrada)
+        }),
+    [data, movimentos, notas],
+  )
+
+  const resumo = useMemo(
+    () =>
+      linhas.reduce(
+        (acc, linha) => ({
+          nfs: acc.nfs + 1,
+          armazenadas: acc.armazenadas + (linha.nf.status === 'armazenada' ? 1 : 0),
+          finalizadas: acc.finalizadas + (linha.nf.status === 'finalizada' ? 1 : 0),
+          semContrato: acc.semContrato + (!linha.contrato ? 1 : 0),
+          semTabela: acc.semTabela + (linha.contrato && !linha.tabela ? 1 : 0),
+          dias: acc.dias + linha.nf.diasArmazenados,
+          total: acc.total + linha.total,
+        }),
+        {
+          nfs: 0,
+          armazenadas: 0,
+          finalizadas: 0,
+          semContrato: 0,
+          semTabela: 0,
+          dias: 0,
+          total: 0,
+        },
+      ),
+    [linhas],
+  )
+
+  const totalPaginas = Math.max(1, Math.ceil(linhas.length / FIN_LOGICA_PAGE_SIZE))
+  const paginaAtual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaAtual - 1) * FIN_LOGICA_PAGE_SIZE
+  const linhasPagina = linhas.slice(inicio, inicio + FIN_LOGICA_PAGE_SIZE)
+  const fim = Math.min(inicio + linhasPagina.length, linhas.length)
+
+  if (linhas.length === 0) {
+    return (
+      <div className="fin-section">
+        <p className="muted">Nenhuma NF encontrada para lógica de cobrança.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fin-section">
+      <div className="sidebar-block fin-logica-resumo">
+        <div className="fin-entrada-resumo-head">
+          <h4>Lógica de cobrança</h4>
+          <span className="muted">Inclui NFs armazenadas e finalizadas.</span>
+        </div>
+        <div className="fin-entrada-resumo-grid">
+          <div className="fin-entrada-resumo-card fin-entrada-resumo-card--destaque">
+            <span>Total calculado</span>
+            <strong>{formatMoedaFinanceiro(resumo.total)}</strong>
+          </div>
+          <div className="fin-entrada-resumo-card">
+            <span>NFs</span>
+            <strong>{resumo.nfs}</strong>
+          </div>
+          <div className="fin-entrada-resumo-card">
+            <span>Armazenadas</span>
+            <strong>{resumo.armazenadas}</strong>
+          </div>
+          <div className="fin-entrada-resumo-card">
+            <span>Finalizadas</span>
+            <strong>{resumo.finalizadas}</strong>
+          </div>
+          <div className="fin-entrada-resumo-card">
+            <span>Dias somados</span>
+            <strong>{resumo.dias}</strong>
+          </div>
+          <div className="fin-entrada-resumo-card">
+            <span>Sem contrato</span>
+            <strong>{resumo.semContrato}</strong>
+          </div>
+          <div className="fin-entrada-resumo-card">
+            <span>Sem tabela</span>
+            <strong>{resumo.semTabela}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="fin-paginacao fin-paginacao--top">
+        <span>
+          Mostrando {inicio + 1}-{fim} de {linhas.length}
+        </span>
+        <div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={paginaAtual <= 1}
+            onClick={() => setPagina(Math.max(1, paginaAtual - 1))}
+          >
+            Anterior
+          </button>
+          <strong>
+            Página {paginaAtual} de {totalPaginas}
+          </strong>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={paginaAtual >= totalPaginas}
+            onClick={() => setPagina(Math.min(totalPaginas, paginaAtual + 1))}
+          >
+            Próxima
+          </button>
+        </div>
+      </div>
+
+      <ul className="fin-logica-lista">
+        {linhasPagina.map((linha) => (
+          <li key={linha.nf.nfId} className="fin-logica-item">
+            <div className="fin-logica-head">
+              <div>
+                <strong>NF {linha.nf.nfNumero}</strong>
+                <span>{linha.nf.emitente}</span>
+              </div>
+              <span className={`fin-badge ${linha.nf.status === 'armazenada' ? 'fin-badge--ativo' : 'fin-badge--finalizada'}`}>
+                {linha.nf.status === 'armazenada' ? 'Armazenada' : 'Finalizada'}
+              </span>
+            </div>
+
+            <div className="fin-logica-grid">
+              <div>
+                <span>Cliente financeiro</span>
+                <strong>{linha.cliente?.razaoSocial ?? 'Sem cliente vinculado'}</strong>
+                {linha.cliente && (
+                  <button type="button" className="btn-link fin-link-cliente" onClick={() => onSelectCliente(linha.cliente!.cnpj)}>
+                    Ver cliente →
+                  </button>
+                )}
+              </div>
+              <div>
+                <span>CNPJ</span>
+                <strong>{linha.nf.emitenteCnpj ? formatarCnpj(linha.nf.emitenteCnpj) : '—'}</strong>
+              </div>
+              <div>
+                <span>Data de armazenagem</span>
+                <strong>{formatarDataBr(linha.nf.dataEntrada)}</strong>
+              </div>
+              <div>
+                <span>Entrada registrada</span>
+                <strong>{formatarDataHoraBr(linha.entradaMovimento?.createdAt ?? linha.nota.createdAt)}</strong>
+              </div>
+              <div>
+                <span>Saída registrada</span>
+                <strong>{linha.nf.dataSaida ? formatarDataHoraBr(linha.nf.dataSaida) : 'Em estoque'}</strong>
+              </div>
+              <div>
+                <span>NF de saída</span>
+                <strong>{linha.saidaMovimento?.nfSaida?.numero ?? '—'}</strong>
+              </div>
+              <div>
+                <span>Tempo armazenado</span>
+                <strong>{linha.nf.diasArmazenados} dia(s)</strong>
+              </div>
+              <div>
+                <span>Ciclo de cobrança</span>
+                <strong>{labelCiclo(linha.contrato?.ciclo)}</strong>
+              </div>
+              <div>
+                <span>Regra de tempo</span>
+                <strong>{labelRegraTempo(linha.contrato?.regraTempo)}</strong>
+              </div>
+              <div>
+                <span>Fator aplicado</span>
+                <strong>{linha.fatorTempo > 0 ? formatFatorFinanceiro(linha.fatorTempo) : '—'}</strong>
+              </div>
+              <div>
+                <span>Tabela</span>
+                <strong>{linha.tabela?.nome ?? (linha.contrato ? 'Sem tabela' : '—')}</strong>
+              </div>
+              <div>
+                <span>O que cobra</span>
+                <strong>{flagsContrato(linha.contrato)}</strong>
+              </div>
+              <div>
+                <span>Peso base</span>
+                <strong>{formatPesoBruto(linha.pesoBase)} kg</strong>
+              </div>
+              <div>
+                <span>Caixas</span>
+                <strong>{formatQuantidadeNfe(linha.caixas)}</strong>
+              </div>
+              <div>
+                <span>Paletes</span>
+                <strong>{linha.paletes}</strong>
+              </div>
+              <div>
+                <span>Posições</span>
+                <strong>{linha.posicoes}</strong>
+              </div>
+              <div>
+                <span>Valor mercadoria</span>
+                <strong>{formatValorNfe(linha.valorMercadoria)}</strong>
+              </div>
+            </div>
+
+            <div className="fin-logica-cobranca">
+              <div className="fin-logica-cobranca-head">
+                <strong>Composição da cobrança</strong>
+                <span>{formatMoedaFinanceiro(linha.total)}</span>
+              </div>
+              {linha.detalhes.length === 0 ? (
+                <p className="muted">Sem valor calculado. Verifique contrato ativo, tabela e opções de cobrança.</p>
+              ) : (
+                <ul>
+                  {linha.detalhes.map((detalhe) => (
+                    <li key={detalhe.label}>
+                      <span>{detalhe.label}</span>
+                      <strong>{formatMoedaFinanceiro(detalhe.valor)}</strong>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {totalPaginas > 1 && (
+        <div className="fin-paginacao">
+          <span>
+            Mostrando {inicio + 1}-{fim} de {linhas.length}
+          </span>
+          <div>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={paginaAtual <= 1}
+              onClick={() => setPagina(Math.max(1, paginaAtual - 1))}
+            >
+              Anterior
+            </button>
+            <strong>
+              Página {paginaAtual} de {totalPaginas}
+            </strong>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={paginaAtual >= totalPaginas}
+              onClick={() => setPagina(Math.min(totalPaginas, paginaAtual + 1))}
+            >
+              Próxima
+            </button>
+          </div>
         </div>
       )}
     </div>
