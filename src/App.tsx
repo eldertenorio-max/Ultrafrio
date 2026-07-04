@@ -1767,7 +1767,10 @@ export default function App() {
     setSaidaOrigemEstoque(origem)
     setNfBuscaSaidaId(nf.id)
     limparEstadoSaida()
-    focarMapaBuscaEncontrado(primeiroEnderecoNf(nf), avisoNfEncontrada(nf, 'saida'))
+    setMapFocusAddressId(null)
+    setMapPulseAddressId(null)
+    setMapFocusStage(false)
+    setBuscaEncontrada(avisoNfEncontrada(nf, 'saida'))
   }
 
   function resolverDestinoSaida(nf: NotaFiscal): boolean {
