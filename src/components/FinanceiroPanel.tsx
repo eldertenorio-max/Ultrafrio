@@ -74,8 +74,20 @@ function diasPeriodoCobranca(inicio: string, fim: string): number {
   return Math.max(0, diff + 1)
 }
 
+function dateToInputValueLocal(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function todayInputValue(): string {
-  return new Date().toISOString().slice(0, 10)
+  return dateToInputValueLocal(new Date())
+}
+
+function inicioMesVigenteInputValue(): string {
+  const hoje = new Date()
+  return dateToInputValueLocal(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
 }
 
 export function FinanceiroPanel({
@@ -875,7 +887,7 @@ function DataEntradaSection({
             const valorDiaria = tabela ? (nf.pesoBruto * tabela.custoPorKilo) / 30 : 0
             const valorACobrar = valorDiaria * nf.diasArmazenados
             const periodo = periodosCobranca[nf.nfId]
-            const periodoInicio = periodo?.inicio ?? dateInputValue(nf.dataEntrada)
+            const periodoInicio = periodo?.inicio ?? inicioMesVigenteInputValue()
             const periodoFim = periodo?.fim ?? todayInputValue()
             const diasPeriodo = diasPeriodoCobranca(periodoInicio, periodoFim)
             const valorPeriodo = diasPeriodo * valorDiaria
