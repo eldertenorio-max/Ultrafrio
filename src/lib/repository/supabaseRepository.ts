@@ -118,7 +118,11 @@ async function upsertItensBulk(
 }
 
 /** Sincroniza itens sem apagar tudo — evita perda se o insert falhar após delete. */
-async function syncNfItens(sb: ReturnType<typeof getSupabase>, nf: NotaFiscal): Promise<void> {
+async function syncNfItens(
+  sb: ReturnType<typeof getSupabase>,
+  nf: NotaFiscal,
+  opts?: { permitirLimparTudo?: boolean },
+): Promise<void> {
   const { data: existing, error: loadErr } = await sb
     .from('ultrafrio_nf_itens')
     .select('item_index')
@@ -126,7 +130,10 @@ async function syncNfItens(sb: ReturnType<typeof getSupabase>, nf: NotaFiscal): 
   if (loadErr) throw new Error(loadErr.message)
 
   if (nf.items.length === 0) {
-    if (existing?.length) return
+    if (existing?.length && opts?.permitirLimparTudo) {
+      const { error } = await sb.from('ultrafrio_nf_itens').delete().eq('nf_id', nf.id)
+      if (error) throw new Error(error.message)
+    }
     return
   }
 
@@ -146,7 +153,11 @@ async function syncNfItens(sb: ReturnType<typeof getSupabase>, nf: NotaFiscal): 
 }
 
 /** Sincroniza endereços incrementalmente — não apaga posições se o estado local veio vazio por engano. */
-async function syncNfEnderecamentos(sb: ReturnType<typeof getSupabase>, nf: NotaFiscal): Promise<void> {
+async function syncNfEnderecamentos(
+  sb: ReturnType<typeof getSupabase>,
+  nf: NotaFiscal,
+  opts?: { permitirLimparTudo?: boolean },
+): Promise<void> {
   const desired = nf.items.flatMap((it) =>
     it.allocatedAddresses.map((address_id) => ({
       nf_id: nf.id,
@@ -163,7 +174,7 @@ async function syncNfEnderecamentos(sb: ReturnType<typeof getSupabase>, nf: Nota
 
   const temEnderecosNoEstado = nf.items.some((it) => it.allocatedAddresses.length > 0)
   if (desired.length === 0 && (existing?.length ?? 0) > 0 && !temEnderecosNoEstado) {
-    return
+    if (!opts?.permitirLimparTudo) return
   }
 
   const desiredByAddr = new Map(desired.map((d) => [d.address_id, d]))
@@ -467,13 +478,24 @@ export const supabaseRepository: EnderecamentoRepository = {
 
     for (const nf of notas) {
       // Save incremental: pula NFs idênticas ao último snapshot já gravado.
-      if (prevNotaJson.get(nf.id) === JSON.stringify(nf)) continue
+      const permitirLimparTudo = movimentos.some(
+        (m) => m.tipo === 'saida' && m.nfId === nf.id && !m.excluido,
+      )
+      const notaMudou = prevNotaJson.get(nf.id) !== JSON.stringify(nf)
+      const saidaNovaOuAlterada = movimentos.some(
+        (m) =>
+          m.tipo === 'saida' &&
+          m.nfId === nf.id &&
+          !m.excluido &&
+          prevMovJson.get(m.id) !== JSON.stringify(m),
+      )
+      if (!notaMudou && !saidaNovaOuAlterada) continue
 
       const { error: upErr } = await upsertNf(sb, nf)
       if (upErr) throw new Error(upErr.message)
 
-      await syncNfItens(sb, nf)
-      await syncNfEnderecamentos(sb, nf)
+      await syncNfItens(sb, nf, { permitirLimparTudo })
+      await syncNfEnderecamentos(sb, nf, { permitirLimparTudo })
     }
 
     const keepMov = movimentos.map((m) => m.id)
