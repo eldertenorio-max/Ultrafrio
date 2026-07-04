@@ -689,15 +689,21 @@ export default function App() {
     ? state.notas.find((n) => n.id === consultaNfAdicionarId) ?? null
     : null
 
+  const saidaPendingSelection = !saidaModoPalete
+    ? pendingSelection
+    : !saidaSelecaoConcluida
+      ? saidaPaletesSelecionados
+      : saidaPaletesNaFila.length > 0
+        ? new Set(saidaPaletesNaFila)
+        : saidaPaleteAtivo
+          ? new Set([saidaPaleteAtivo])
+          : pendingSelection
+
   const panelPendingSelection = editAdicionarPosicoesAlvo != null
     ? editNovasPosicoes
     : editMode
       ? editPendingSelection
-      : saidaModoPalete && !saidaSelecaoConcluida
-        ? saidaPaletesSelecionados
-        : saidaModoPalete && saidaPaleteAtivo
-          ? new Set([saidaPaleteAtivo])
-          : pendingSelection
+      : saidaPendingSelection
   const panelAllocateMode =
     allocateMode ||
     editMode ||
@@ -1024,7 +1030,7 @@ export default function App() {
     const saidaPending =
       saidaModoPalete &&
       (saidaPaletesSelecionados.has(addressId) ||
-        (saidaSelecaoConcluida && saidaPaleteAtivo === addressId))
+        (saidaSelecaoConcluida && saidaPaletesNaFila.includes(addressId)))
     const stagePending = editStagePending.has(addressId)
     const editPending = editPendingSelection.has(addressId)
     const entradaPending = pendingSelection.has(addressId)
