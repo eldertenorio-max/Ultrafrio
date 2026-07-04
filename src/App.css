@@ -8291,9 +8291,9 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .fin-nf-item {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  border-radius: 12px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -8334,49 +8334,57 @@ html.scroll-locked .sidebar.sidebar--wide {
   color: #aaa;
 }
 
+.fin-entrada-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 230px);
+  gap: 14px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+
 .fin-entrada-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(125px, 1fr)) minmax(190px, 230px);
-  align-items: stretch;
-  column-gap: 18px;
-  row-gap: 12px;
-  margin-top: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 18px;
+  align-content: start;
 }
 
 .fin-entrada-grid > div {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  min-height: 48px;
   gap: 3px;
+  min-width: 0;
 }
 
 .fin-entrada-grid strong {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
 }
 
 .fin-valor-cobrar-card {
-  grid-column: 5;
-  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  min-height: 88px;
-  padding: 14px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0f172a, #111827);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.28);
+  gap: 6px;
+  min-height: 96px;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96)),
+    #111827;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
 }
 
 .fin-valor-cobrar-card span {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: rgba(226, 232, 240, 0.78);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .fin-valor-cobrar-card strong {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   color: #f8fafc;
 }
 
@@ -8464,14 +8472,12 @@ html.scroll-locked .sidebar.sidebar--wide {
     grid-template-columns: 1fr;
   }
 
-  .fin-entrada-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .fin-entrada-layout {
+    grid-template-columns: 1fr;
   }
 
-  .fin-valor-cobrar-card {
-    grid-column: 1 / -1;
-    grid-row: auto;
-    min-height: 0;
+  .fin-entrada-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

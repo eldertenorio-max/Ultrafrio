@@ -877,51 +877,53 @@ function DataEntradaSection({
                     </button>
                   )}
                 </div>
-                <div className="fin-entrada-grid">
-                  <div>
-                    <span className="muted">Data de armazenagem</span>
-                    <input
-                      type="date"
-                      className="input-nf input-nf--compact fin-data-armazenagem-input"
-                      value={dateInputValue(nf.dataEntrada)}
-                      onChange={(e) => onUpdateNotaDataArmazenagem(nf.nfId, e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <span className="muted">Entrada registrada</span>
-                    <strong>{formatarDataHoraBr(notasById.get(nf.nfId)?.createdAt ?? nf.dataEntrada)}</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Saída</span>
-                    <strong>{nf.dataSaida ? formatarDataHoraBr(nf.dataSaida) : '—'}</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Dias</span>
-                    <strong>{nf.diasArmazenados}</strong>
+                <div className="fin-entrada-layout">
+                  <div className="fin-entrada-grid">
+                    <div>
+                      <span className="muted">Data de armazenagem</span>
+                      <input
+                        type="date"
+                        className="input-nf input-nf--compact fin-data-armazenagem-input"
+                        value={dateInputValue(nf.dataEntrada)}
+                        onChange={(e) => onUpdateNotaDataArmazenagem(nf.nfId, e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <span className="muted">Entrada registrada</span>
+                      <strong>{formatarDataHoraBr(notasById.get(nf.nfId)?.createdAt ?? nf.dataEntrada)}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Saída</span>
+                      <strong>{nf.dataSaida ? formatarDataHoraBr(nf.dataSaida) : '—'}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Dias</span>
+                      <strong>{nf.diasArmazenados}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Peso</span>
+                      <strong>{formatPesoBruto(nf.pesoLiquido)} kg</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Itens</span>
+                      <strong>{nf.totalItens}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Caixas</span>
+                      <strong>{formatQuantidadeNfe(nf.totalCaixas)}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Paletes</span>
+                      <strong>{nf.totalPaletes}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Valor merc.</span>
+                      <strong>{formatValorNfe(nf.valorMercadoria)}</strong>
+                    </div>
                   </div>
                   <div className="fin-valor-cobrar-card">
                     <span>Valor a cobrar</span>
                     <strong>{formatMoedaFinanceiro(cobranca?.total ?? 0)}</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Peso</span>
-                    <strong>{formatPesoBruto(nf.pesoLiquido)} kg</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Itens</span>
-                    <strong>{nf.totalItens}</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Caixas</span>
-                    <strong>{formatQuantidadeNfe(nf.totalCaixas)}</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Paletes</span>
-                    <strong>{nf.totalPaletes}</strong>
-                  </div>
-                  <div>
-                    <span className="muted">Valor merc.</span>
-                    <strong>{formatValorNfe(nf.valorMercadoria)}</strong>
                   </div>
                 </div>
               </li>
