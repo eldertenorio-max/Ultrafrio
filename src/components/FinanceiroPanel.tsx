@@ -1666,7 +1666,7 @@ function DataEntradaSection({
               {todasPaginaMarcadas ? 'Desmarcar página' : 'Marcar página'}
             </button>
             <button type="button" className="btn btn-sm" onClick={marcarTodasFiltradas}>
-              Marcar todos filtrados
+              Marcar todos
             </button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={limparMarcadasFiltradas}>
               Limpar marcações
