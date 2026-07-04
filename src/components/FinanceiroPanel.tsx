@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { formatValorNfe, formatPesoBruto, formatQuantidadeNfe } from '../lib/formatNfeItem'
 import {
-  calcularCobrancaNf,
   formatMoedaFinanceiro,
   formatarCnpj,
   formatarDataBr,
@@ -857,11 +856,10 @@ function DataEntradaSection({
               const cnpj = nf.emitenteCnpj ? normalizarCnpj(nf.emitenteCnpj) : ''
               return c.cnpj === cnpj || c.razaoSocial.trim().toLowerCase() === nf.emitente.trim().toLowerCase()
             })
-            const nota = notasById.get(nf.nfId)
             const contrato = cli ? contratoAtivoCliente(data, cli.cnpj) : null
             const tabela = tabelaById(data, contrato?.tabelaId ?? null)
-            const cobranca = nota && contrato && tabela ? calcularCobrancaNf(nota, contrato, tabela, movimentos) : null
             const valorDiaria = tabela ? (nf.pesoBruto * tabela.custoPorKilo) / 30 : 0
+            const valorACobrar = valorDiaria * nf.diasArmazenados
             return (
               <li key={nf.nfId} className="fin-nf-item">
                 <div className="fin-nf-header">
@@ -928,7 +926,7 @@ function DataEntradaSection({
                   </div>
                   <div className="fin-valor-cobrar-card">
                     <span>Valor a cobrar</span>
-                    <strong>{formatMoedaFinanceiro(cobranca?.total ?? 0)}</strong>
+                    <strong>{formatMoedaFinanceiro(valorACobrar)}</strong>
                   </div>
                 </div>
               </li>
