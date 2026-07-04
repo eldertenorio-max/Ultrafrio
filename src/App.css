@@ -8320,6 +8320,10 @@ html.scroll-locked .sidebar.sidebar--wide {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  border-color: rgba(30, 64, 175, 0.28);
+  background:
+    linear-gradient(135deg, rgba(30, 64, 175, 0.14), rgba(15, 23, 42, 0.08)),
+    color-mix(in srgb, var(--bg-elevated) 90%, #1e3a8a);
 }
 
 .fin-entrada-resumo-head {
@@ -8331,6 +8335,7 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .fin-entrada-resumo-head h4 {
   margin: 0;
+  color: #0f172a;
 }
 
 .fin-entrada-resumo-grid {
@@ -8345,24 +8350,29 @@ html.scroll-locked .sidebar.sidebar--wide {
   gap: 3px;
   min-width: 0;
   padding: 9px 10px;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(148, 163, 184, 0.26);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-panel));
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(226, 232, 240, 0.88)),
+    #e5e7eb;
 }
 
 .fin-entrada-resumo-card span {
-  color: var(--text-muted);
+  color: #475569;
   font-size: 0.72rem;
 }
 
 .fin-entrada-resumo-card strong {
+  color: #0f172a;
   font-size: 0.92rem;
   line-height: 1.2;
 }
 
 .fin-entrada-resumo-card--destaque {
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
-  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+  border-color: rgba(30, 64, 175, 0.36);
+  background:
+    linear-gradient(135deg, rgba(241, 245, 249, 0.98), rgba(203, 213, 225, 0.86)),
+    #d1d5db;
 }
 
 .fin-periodo-massa {
