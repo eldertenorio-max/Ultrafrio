@@ -7843,6 +7843,19 @@ html.scroll-locked .sidebar.sidebar--wide {
   .nf-itens-col-descricao {
     max-width: 150px;
   }
+
+  .fin-entrada-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-entrada-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .fin-valor-cobrar-card {
+    width: fit-content;
+    min-width: 150px;
+  }
 }
 
 @media (max-width: 900px) {
