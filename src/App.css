@@ -6457,6 +6457,12 @@ html.scroll-locked .sidebar.sidebar--wide {
   margin-top: 4px;
 }
 
+.painel-filtros-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .painel-filtro-campo {
   display: flex;
   flex-direction: column;
@@ -6467,6 +6473,17 @@ html.scroll-locked .sidebar.sidebar--wide {
 .painel-filtro-campo span {
   color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+.painel-filtros-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.painel-filtrar-btn {
+  min-width: 120px;
 }
 
 .painel-resumo-badge {

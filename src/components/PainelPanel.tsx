@@ -38,6 +38,20 @@ export function PainelPanel({ filtros, movimentos, notas, onFiltrosChange }: Pro
   const filtrados = useMemo(() => filtrarMovimentos(movimentos, filtros), [movimentos, filtros])
   const resumo = resumoPeriodo(filtros, filtrados.length)
 
+  function aplicarFiltros(form: HTMLFormElement) {
+    const formData = new FormData(form)
+    onFiltrosChange({
+      dataInicio: String(formData.get('dataInicio') ?? ''),
+      horaInicio: String(formData.get('horaInicio') ?? ''),
+      dataFim: String(formData.get('dataFim') ?? ''),
+      horaFim: String(formData.get('horaFim') ?? ''),
+    })
+  }
+
+  function aplicarPeriodoRapido(dias: number) {
+    onFiltrosChange(painelFiltrosPorDias(dias))
+  }
+
   return (
     <div className="painel-root">
       <div className="sidebar-block painel-header-block">
@@ -70,50 +84,64 @@ export function PainelPanel({ filtros, movimentos, notas, onFiltrosChange }: Pro
                 key={label}
                 type="button"
                 className={`painel-periodo-btn${filtrosAtivos(filtros, dias) ? ' painel-periodo-btn--active' : ''}`}
-                onClick={() => onFiltrosChange(painelFiltrosPorDias(dias))}
+                onClick={() => aplicarPeriodoRapido(dias)}
               >
                 {label}
               </button>
             ))}
           </div>
-          <div className="painel-filtros-grid">
-            <label className="painel-filtro-campo">
-              <span>Data início</span>
-              <input
-                type="date"
-                className="input-nf"
-                value={filtros.dataInicio}
-                onChange={(e) => onFiltrosChange({ dataInicio: e.target.value })}
-              />
-            </label>
-            <label className="painel-filtro-campo">
-              <span>Hora início</span>
-              <input
-                type="time"
-                className="input-nf"
-                value={filtros.horaInicio}
-                onChange={(e) => onFiltrosChange({ horaInicio: e.target.value })}
-              />
-            </label>
-            <label className="painel-filtro-campo">
-              <span>Data fim</span>
-              <input
-                type="date"
-                className="input-nf"
-                value={filtros.dataFim}
-                onChange={(e) => onFiltrosChange({ dataFim: e.target.value })}
-              />
-            </label>
-            <label className="painel-filtro-campo">
-              <span>Hora fim</span>
-              <input
-                type="time"
-                className="input-nf"
-                value={filtros.horaFim}
-                onChange={(e) => onFiltrosChange({ horaFim: e.target.value })}
-              />
-            </label>
-          </div>
+          <form
+            key={`${filtros.dataInicio}-${filtros.horaInicio}-${filtros.dataFim}-${filtros.horaFim}`}
+            className="painel-filtros-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              aplicarFiltros(e.currentTarget)
+            }}
+          >
+            <div className="painel-filtros-grid">
+              <label className="painel-filtro-campo">
+                <span>Data início</span>
+                <input
+                  type="date"
+                  name="dataInicio"
+                  className="input-nf"
+                  defaultValue={filtros.dataInicio}
+                />
+              </label>
+              <label className="painel-filtro-campo">
+                <span>Hora início</span>
+                <input
+                  type="time"
+                  name="horaInicio"
+                  className="input-nf"
+                  defaultValue={filtros.horaInicio}
+                />
+              </label>
+              <label className="painel-filtro-campo">
+                <span>Data fim</span>
+                <input
+                  type="date"
+                  name="dataFim"
+                  className="input-nf"
+                  defaultValue={filtros.dataFim}
+                />
+              </label>
+              <label className="painel-filtro-campo">
+                <span>Hora fim</span>
+                <input
+                  type="time"
+                  name="horaFim"
+                  className="input-nf"
+                  defaultValue={filtros.horaFim}
+                />
+              </label>
+            </div>
+            <div className="painel-filtros-actions">
+              <button type="submit" className="btn primary painel-filtrar-btn">
+                Filtrar
+              </button>
+            </div>
+          </form>
         </fieldset>
 
         <p className="painel-resumo-badge">{resumo}</p>
