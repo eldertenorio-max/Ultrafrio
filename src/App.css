@@ -169,6 +169,49 @@
   box-shadow: 0 1px 0 color-mix(in srgb, #fff 40%, transparent);
 }
 
+.homologacao-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  text-align: center;
+  color: #1a1200;
+  background: linear-gradient(90deg, #f9db00 0%, #ffe566 50%, #f9db00 100%);
+  border-bottom: 1px solid #c9a800;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.06);
+}
+
+.homologacao-banner strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-topbar-ambiente {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-topbar-ambiente--homolog {
+  color: #1a1200;
+  background: #f9db00;
+  border: 1px solid #c9a800;
+}
+
 .app-topbar-mark {
   display: none;
 }

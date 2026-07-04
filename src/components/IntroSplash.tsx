@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LOGO_DOCA_LIVRE_SRC } from '../lib/brandAssets'
+import { isHomologacao } from '../lib/appAmbiente'
 import './IntroSplash.css'
 
 const MIN_INTRO_MS = 2200
@@ -55,6 +56,7 @@ export function IntroSplash({ loading, onFinish }: Props) {
       <div className="intro-glow" aria-hidden />
       <div className="intro-content">
         <img src={LOGO_DOCA_LIVRE_SRC} alt="Doca Livre" className="intro-logo" />
+        {isHomologacao() && <p className="intro-ambiente">Homologação</p>}
         <div className="intro-progress-wrap">
           <div className="intro-progress-track">
             <div className="intro-progress-bar" style={{ width: `${progress}%` }} />

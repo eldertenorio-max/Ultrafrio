@@ -55,12 +55,30 @@ git push -u origin main
 
 ## Render (site estático)
 
+### Homologação e produção
+
+| Ambiente | URL | Deploy |
+|----------|-----|--------|
+| **Homologação** | [ultrafrio.onrender.com](https://ultrafrio.onrender.com/) | Automático a cada push no `main` |
+| **Produção** | [wms.docalivre.com.br](https://wms.docalivre.com.br/) | Manual — só quando você aprovar |
+
+No Render, configure dois **Static Sites** apontando para o mesmo repositório:
+
+1. **Homologação** — variável `VITE_APP_AMBIENTE=homolog`, Auto Deploy **ligado**
+2. **Produção** — variável `VITE_APP_AMBIENTE=producao`, Auto Deploy **desligado**
+
+O site de homologação exibe banner e selo **Homologação** para não confundir com o WMS oficial.
+
+Fluxo: alteração → push → testar em homologação → quando estiver ok, dizer **“publicar no WMS”** → Manual Deploy no serviço de produção.
+
+### Configuração básica
+
 1. **New → Blueprint** ou **Static Site** apontando para este repositório
 2. Use o `render.yaml` incluído ou configure:
    - **Build command:** `npm ci && npm run build`
    - **Publish directory:** `dist`
    - **Node:** 20.19+
-3. Adicione as variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (necessárias no **build** do Vite)
+3. Adicione as variáveis de ambiente `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_APP_AMBIENTE` (necessárias no **build** do Vite)
 
 O arquivo `public/_redirects` garante que rotas do SPA funcionem no Render.
 

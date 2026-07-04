@@ -7,6 +7,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { LayoutLegend, type LayoutLegendProps } from './LayoutLegend'
 import { AccountMenuPopover } from './AccountMenuPopover'
 import { BRAND_PRODUCT_NAME, BRAND_PRODUCT_VARIANT, LOGO_DOCA_LIVRE_SRC } from '../lib/brandAssets'
+import { isHomologacao } from '../lib/appAmbiente'
 import type { ContaUsuario } from '../lib/contaSessao'
 import { corAvatarUsuario, iniciaisUsuario } from '../lib/contaSessao'
 
@@ -128,6 +129,9 @@ export function AppTopBar({
             <strong className="app-topbar-wms" aria-label={`${BRAND_PRODUCT_NAME} ${BRAND_PRODUCT_VARIANT}`}>
               <span className="app-topbar-wms-main">{BRAND_PRODUCT_NAME}</span>
               <span className="app-topbar-wms-light">{BRAND_PRODUCT_VARIANT}</span>
+              {isHomologacao() && (
+                <span className="app-topbar-ambiente app-topbar-ambiente--homolog">Homologação</span>
+              )}
             </strong>
           </div>
         </div>

@@ -69,6 +69,19 @@
   letter-spacing: 0.04em;
 }
 
+.intro-ambiente {
+  margin: -12px 0 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1a1200;
+  background: #f9db00;
+  border: 1px solid #c9a800;
+}
+
 [data-theme='dark'] .intro-splash {
   background: #ffffff;
 }
