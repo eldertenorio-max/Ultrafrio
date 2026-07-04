@@ -1130,7 +1130,7 @@ function DataEntradaSection({
                       <input
                         type="date"
                         className="input-nf input-nf--compact fin-data-armazenagem-input"
-                        value={dateInputValue(nf.dataEntrada)}
+                        value={dateInputValue(linha.nota?.dataArmazenagem ?? nf.dataEntrada)}
                         onChange={(e) => onUpdateNotaDataArmazenagem(nf.nfId, e.target.value)}
                       />
                     </div>

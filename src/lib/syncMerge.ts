@@ -77,6 +77,24 @@ function resolveNfStatus(
   return nf.status
 }
 
+function resolveDataArmazenagem(
+  base: NotaFiscal | undefined,
+  local: NotaFiscal | undefined,
+  remote: NotaFiscal | undefined,
+): string | undefined {
+  const baseValue = base?.dataArmazenagem
+  const localValue = local?.dataArmazenagem
+  const remoteValue = remote?.dataArmazenagem
+
+  if (local && localValue !== baseValue) return localValue
+  if (remote && remoteValue !== baseValue) return remoteValue
+  return localValue ?? remoteValue ?? baseValue
+}
+
+function withDataArmazenagem(nf: NotaFiscal, dataArmazenagem: string | undefined): NotaFiscal {
+  return dataArmazenagem == null ? nf : { ...nf, dataArmazenagem }
+}
+
 function preserveOptionalNfFields(nf: NotaFiscal, fallback: NotaFiscal): NotaFiscal {
   const items = mergeNfItems(nf, fallback)
   return {
@@ -104,20 +122,23 @@ function mergeSingleNotaFiscal(
   l: NotaFiscal | undefined,
   r: NotaFiscal | undefined,
 ): NotaFiscal | undefined {
+  const dataArmazenagem = resolveDataArmazenagem(b, l, r)
+
   if (entityJson(b) !== entityJson(l)) {
-    if (l !== undefined) return l
+    if (l !== undefined) return withDataArmazenagem(l, dataArmazenagem)
   }
 
   if (entityJson(b) !== entityJson(r)) {
-    if (r === undefined) return l ?? b
+    if (r === undefined) return l ? withDataArmazenagem(l, dataArmazenagem) : b
     const fallback = l ?? b
-    if (!fallback) return r
+    if (!fallback) return withDataArmazenagem(r, dataArmazenagem)
     const fromRemote = preserveOptionalNfFields(r, fallback)
     const fromFallback = preserveOptionalNfFields(fallback, r)
-    return pickBestNf(fromFallback, fromRemote)
+    return withDataArmazenagem(pickBestNf(fromFallback, fromRemote), dataArmazenagem)
   }
 
-  return l ?? b ?? r
+  const merged = l ?? b ?? r
+  return merged ? withDataArmazenagem(merged, dataArmazenagem) : undefined
 }
 
 function mergeNotaFiscal(base: NotaFiscal[], local: NotaFiscal[], remote: NotaFiscal[]): NotaFiscal[] {
