@@ -2049,16 +2049,17 @@ export default function App() {
     const novos: SaidaPaleteDraft[] = []
     let caixasRestantes = caixas
 
-    for (const addressId of enderecosParaConfirmar) {
+    for (let i = 0; i < enderecosParaConfirmar.length; i++) {
+      const addressId = enderecosParaConfirmar[i]
       const confirmadosAteAqui = [...baseConfirmados, ...novos]
       const saldoItem = sobraItem(item, confirmadosAteAqui, saidaLimitesPorItem)
       const soLiberarPosicao = saldoItem <= 1e-9
-      if (caixasRestantes <= 1e-9 && !soLiberarPosicao) break
+      const enderecosRestantes = enderecosParaConfirmar.length - i
 
       const capPalete = Math.min(saldoItem, caixasPorPalete(item))
       const caixasDoPalete = soLiberarPosicao
         ? 0
-        : Math.min(caixasRestantes, capPalete > 0 ? capPalete : caixasRestantes)
+        : Math.min(caixasRestantes / enderecosRestantes, capPalete > 0 ? capPalete : caixasRestantes)
       const calc = calcularSaidaPalete(
         nfBuscaSaida,
         item,
