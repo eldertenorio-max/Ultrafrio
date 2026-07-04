@@ -925,7 +925,7 @@ function DataEntradaSection({
                     </div>
                   </div>
                   <div className="fin-valor-cobrar-card">
-                    <span>Valor a cobrar</span>
+                    <span>Valor vigente</span>
                     <strong>{formatMoedaFinanceiro(valorACobrar)}</strong>
                   </div>
                 </div>
