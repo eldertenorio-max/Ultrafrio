@@ -8374,19 +8374,19 @@ html.scroll-locked .sidebar.sidebar--wide {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
-  min-height: 96px;
-  padding: 16px 18px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 14px;
+  gap: 4px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
   background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96)),
-    #111827;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+    linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.88)),
+    #162033;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
 }
 
 .fin-valor-cobrar-card span {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   color: rgba(226, 232, 240, 0.78);
   text-transform: uppercase;
@@ -8394,7 +8394,7 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .fin-valor-cobrar-card strong {
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: #f8fafc;
 }
 
