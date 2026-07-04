@@ -23,6 +23,8 @@ import type { MovimentoRegistro, NotaFiscal } from '../types'
 
 type SubAba = 'tabela' | 'contrato' | 'clientes' | 'entrada'
 
+const FIN_ENTRADA_PAGE_SIZE = 8
+
 type LinhaFinanceiroEntrada = {
   nf: ReturnType<typeof resumirNfArmazenada>
   nota: NotaFiscal | undefined
@@ -870,6 +872,12 @@ function DataEntradaSection({
   const [periodosCobranca, setPeriodosCobranca] = useState<
     Record<string, { inicio: string; fim: string }>
   >({})
+  const [periodoMassa, setPeriodoMassa] = useState(() => ({
+    inicio: inicioMesVigenteInputValue(),
+    fim: todayInputValue(),
+  }))
+  const [nfsMarcadas, setNfsMarcadas] = useState<Set<string>>(() => new Set())
+  const [paginaEntrada, setPaginaEntrada] = useState(1)
 
   const resumos = useMemo(
     () => notas.map((nf) => resumirNfArmazenada(nf, movimentos)),
@@ -945,6 +953,66 @@ function DataEntradaSection({
       ),
     [linhasFinanceiro],
   )
+
+  const totalPaginasEntrada = Math.max(1, Math.ceil(linhasFinanceiro.length / FIN_ENTRADA_PAGE_SIZE))
+  const paginaEntradaAtual = Math.min(paginaEntrada, totalPaginasEntrada)
+  const inicioPaginaEntrada = (paginaEntradaAtual - 1) * FIN_ENTRADA_PAGE_SIZE
+  const linhasPaginaEntrada = linhasFinanceiro.slice(
+    inicioPaginaEntrada,
+    inicioPaginaEntrada + FIN_ENTRADA_PAGE_SIZE,
+  )
+  const fimPaginaEntrada = Math.min(inicioPaginaEntrada + linhasPaginaEntrada.length, linhasFinanceiro.length)
+  const nfsMarcadasFiltradas = linhasFinanceiro.filter((linha) => nfsMarcadas.has(linha.nf.nfId))
+  const todasPaginaMarcadas =
+    linhasPaginaEntrada.length > 0 &&
+    linhasPaginaEntrada.every((linha) => nfsMarcadas.has(linha.nf.nfId))
+
+  function toggleNfMarcada(nfId: string, marcada: boolean) {
+    setNfsMarcadas((prev) => {
+      const next = new Set(prev)
+      if (marcada) next.add(nfId)
+      else next.delete(nfId)
+      return next
+    })
+  }
+
+  function marcarPaginaEntrada(marcar: boolean) {
+    setNfsMarcadas((prev) => {
+      const next = new Set(prev)
+      for (const linha of linhasPaginaEntrada) {
+        if (marcar) next.add(linha.nf.nfId)
+        else next.delete(linha.nf.nfId)
+      }
+      return next
+    })
+  }
+
+  function marcarTodasFiltradas() {
+    setNfsMarcadas((prev) => {
+      const next = new Set(prev)
+      for (const linha of linhasFinanceiro) next.add(linha.nf.nfId)
+      return next
+    })
+  }
+
+  function limparMarcadasFiltradas() {
+    setNfsMarcadas((prev) => {
+      const next = new Set(prev)
+      for (const linha of linhasFinanceiro) next.delete(linha.nf.nfId)
+      return next
+    })
+  }
+
+  function aplicarPeriodoMarcadas() {
+    if (nfsMarcadasFiltradas.length === 0) return
+    setPeriodosCobranca((prev) => {
+      const next = { ...prev }
+      for (const linha of nfsMarcadasFiltradas) {
+        next[linha.nf.nfId] = { inicio: periodoMassa.inicio, fim: periodoMassa.fim }
+      }
+      return next
+    })
+  }
 
   function gerarRelatorioExcelDetalhado() {
     const header = csvLineFinanceiro([
@@ -1091,38 +1159,121 @@ function DataEntradaSection({
         </div>
       )}
 
+      {linhasFinanceiro.length > 0 && (
+        <div className="sidebar-block fin-periodo-massa">
+          <div className="fin-periodo-massa-head">
+            <h4>Aplicar para todos - Período de cobrança</h4>
+            <span className="muted">{nfsMarcadasFiltradas.length} NF(s) marcada(s)</span>
+          </div>
+          <div className="fin-periodo-massa-grid">
+            <label className="nf-itens-campo">
+              <span>Início</span>
+              <input
+                type="date"
+                className="input-nf input-nf--compact"
+                value={periodoMassa.inicio}
+                onChange={(e) => setPeriodoMassa((prev) => ({ ...prev, inicio: e.target.value }))}
+              />
+            </label>
+            <label className="nf-itens-campo">
+              <span>Fim</span>
+              <input
+                type="date"
+                className="input-nf input-nf--compact"
+                value={periodoMassa.fim}
+                onChange={(e) => setPeriodoMassa((prev) => ({ ...prev, fim: e.target.value }))}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={aplicarPeriodoMarcadas}
+              disabled={nfsMarcadasFiltradas.length === 0}
+            >
+              Aplicar nos marcados
+            </button>
+          </div>
+          <div className="fin-periodo-massa-actions">
+            <button type="button" className="btn btn-sm" onClick={() => marcarPaginaEntrada(!todasPaginaMarcadas)}>
+              {todasPaginaMarcadas ? 'Desmarcar página' : 'Marcar página'}
+            </button>
+            <button type="button" className="btn btn-sm" onClick={marcarTodasFiltradas}>
+              Marcar todos filtrados
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={limparMarcadasFiltradas}>
+              Limpar marcações
+            </button>
+          </div>
+        </div>
+      )}
+
       {linhasFinanceiro.length === 0 ? (
         <p className="muted">Nenhuma NF encontrada.</p>
       ) : (
-        <ul className="fin-nf-lista">
-          {linhasFinanceiro.map((linha) => {
-            const { nf, cliente: cli, valorDiaria, valorVigente, periodoInicio, periodoFim, diasPeriodo, valorPeriodo } = linha
-            const updatePeriodo = (patch: Partial<{ inicio: string; fim: string }>) => {
-              setPeriodosCobranca((prev) => ({
-                ...prev,
-                [nf.nfId]: {
-                  inicio: periodoInicio,
-                  fim: periodoFim,
-                  ...patch,
-                },
-              }))
-            }
-            return (
-              <li key={nf.nfId} className="fin-nf-item">
-                <div className="fin-nf-header">
-                  <strong>NF {nf.nfNumero}</strong>
-                  <span className={`fin-badge ${nf.status === 'armazenada' ? 'fin-badge--ativo' : 'fin-badge--finalizada'}`}>
-                    {nf.status === 'armazenada' ? 'Armazenada' : 'Finalizada'}
-                  </span>
-                </div>
-                <div className="fin-nf-stats">
-                  <span>{nf.emitente}</span>
-                  {cli && (
-                    <button type="button" className="btn-link fin-link-cliente" onClick={() => onSelectCliente(cli.cnpj)}>
-                      Ver cliente →
-                    </button>
-                  )}
-                </div>
+        <>
+          <div className="fin-paginacao fin-paginacao--top">
+            <span>
+              Mostrando {inicioPaginaEntrada + 1}-{fimPaginaEntrada} de {linhasFinanceiro.length}
+            </span>
+            <div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={paginaEntradaAtual <= 1}
+                onClick={() => setPaginaEntrada(Math.max(1, paginaEntradaAtual - 1))}
+              >
+                Anterior
+              </button>
+              <strong>
+                Página {paginaEntradaAtual} de {totalPaginasEntrada}
+              </strong>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={paginaEntradaAtual >= totalPaginasEntrada}
+                onClick={() => setPaginaEntrada(Math.min(totalPaginasEntrada, paginaEntradaAtual + 1))}
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+
+          <ul className="fin-nf-lista">
+            {linhasPaginaEntrada.map((linha) => {
+              const { nf, cliente: cli, valorDiaria, valorVigente, periodoInicio, periodoFim, diasPeriodo, valorPeriodo } = linha
+              const updatePeriodo = (patch: Partial<{ inicio: string; fim: string }>) => {
+                setPeriodosCobranca((prev) => ({
+                  ...prev,
+                  [nf.nfId]: {
+                    inicio: periodoInicio,
+                    fim: periodoFim,
+                    ...patch,
+                  },
+                }))
+              }
+              return (
+                <li key={nf.nfId} className="fin-nf-item">
+                  <div className="fin-nf-header">
+                    <label className="fin-nf-marcador">
+                      <input
+                        type="checkbox"
+                        checked={nfsMarcadas.has(nf.nfId)}
+                        onChange={(e) => toggleNfMarcada(nf.nfId, e.target.checked)}
+                      />
+                      <strong>NF {nf.nfNumero}</strong>
+                    </label>
+                    <span className={`fin-badge ${nf.status === 'armazenada' ? 'fin-badge--ativo' : 'fin-badge--finalizada'}`}>
+                      {nf.status === 'armazenada' ? 'Armazenada' : 'Finalizada'}
+                    </span>
+                  </div>
+                  <div className="fin-nf-stats">
+                    <span>{nf.emitente}</span>
+                    {cli && (
+                      <button type="button" className="btn-link fin-link-cliente" onClick={() => onSelectCliente(cli.cnpj)}>
+                        Ver cliente →
+                      </button>
+                    )}
+                  </div>
                 <div className="fin-entrada-layout">
                   <div className="fin-entrada-grid">
                     <div>
@@ -1216,8 +1367,38 @@ function DataEntradaSection({
                 </div>
               </li>
             )
-          })}
-        </ul>
+            })}
+          </ul>
+
+          {totalPaginasEntrada > 1 && (
+            <div className="fin-paginacao">
+              <span>
+                Mostrando {inicioPaginaEntrada + 1}-{fimPaginaEntrada} de {linhasFinanceiro.length}
+              </span>
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={paginaEntradaAtual <= 1}
+                  onClick={() => setPaginaEntrada(Math.max(1, paginaEntradaAtual - 1))}
+                >
+                  Anterior
+                </button>
+                <strong>
+                  Página {paginaEntradaAtual} de {totalPaginasEntrada}
+                </strong>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={paginaEntradaAtual >= totalPaginasEntrada}
+                  onClick={() => setPaginaEntrada(Math.min(totalPaginasEntrada, paginaEntradaAtual + 1))}
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
