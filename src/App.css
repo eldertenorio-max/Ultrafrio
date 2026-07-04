@@ -7852,6 +7852,11 @@ html.scroll-locked .sidebar.sidebar--wide {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .fin-data-armazenagem-input {
+    min-width: 0;
+    max-width: 128px;
+  }
+
   .fin-valor-cobrar-card {
     width: fit-content;
     min-width: 150px;
