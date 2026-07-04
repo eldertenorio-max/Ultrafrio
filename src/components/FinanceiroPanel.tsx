@@ -861,6 +861,7 @@ function DataEntradaSection({
             const contrato = cli ? contratoAtivoCliente(data, cli.cnpj) : null
             const tabela = tabelaById(data, contrato?.tabelaId ?? null)
             const cobranca = nota && contrato && tabela ? calcularCobrancaNf(nota, contrato, tabela, movimentos) : null
+            const valorDiaria = tabela ? (nf.pesoBruto * tabela.custoPorKilo) / 30 : 0
             return (
               <li key={nf.nfId} className="fin-nf-item">
                 <div className="fin-nf-header">
@@ -899,6 +900,10 @@ function DataEntradaSection({
                     <div>
                       <span className="muted">Dias</span>
                       <strong>{nf.diasArmazenados}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Valor diária</span>
+                      <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
                     </div>
                     <div>
                       <span className="muted">Peso</span>
