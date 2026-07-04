@@ -1,6 +1,6 @@
 export type AppAmbienteDeploy = 'homolog' | 'producao'
 
-const HOSTS_HOMOLOG = ['ultrafrio.onrender.com']
+const HOSTS_HOMOLOG = ['ultrafrio.onrender.com', 'ultrafrio-homologacao.onrender.com']
 const HOSTS_PRODUCAO = ['wms.docalivre.com.br']
 
 function normalizarAmbiente(value: string | undefined): AppAmbienteDeploy | null {

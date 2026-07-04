@@ -59,7 +59,7 @@ git push -u origin main
 
 | Ambiente | URL | Deploy |
 |----------|-----|--------|
-| **Homologação** | [ultrafrio.onrender.com](https://ultrafrio.onrender.com/) | Automático a cada push no `main` |
+| **Homologação** | [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/) | Automático a cada push no `main` |
 | **Produção** | [wms.docalivre.com.br](https://wms.docalivre.com.br/) | **Manual** — só quando você aprovar |
 
 > **Importante:** se produção também atualizar sozinha, os dois serviços no Render estão com **Auto Deploy ligado** no mesmo repositório. Desligue na produção **uma vez** (passo a passo abaixo).
