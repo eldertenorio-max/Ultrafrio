@@ -91,6 +91,8 @@ Fluxo: alteração → push → testar em homologação → quando estiver ok, d
    - **Node:** 20.19+
 3. Adicione as variáveis de ambiente `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_APP_AMBIENTE` (necessárias no **build** do Vite)
 
+**Homologação sem dados?** Confira se `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` estão no serviço de homologação e faça **Manual Deploy → Clear build cache & deploy**. O arquivo `/supabase-config.json` precisa existir no site (mesmos dados da produção).
+
 O arquivo `public/_redirects` garante que rotas do SPA funcionem no Render.
 
 ## Scripts

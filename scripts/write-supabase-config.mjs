@@ -28,7 +28,16 @@ const out = 'public/supabase-config.json'
 if (url && anonKey) {
   writeFileSync(out, `${JSON.stringify({ url, anonKey }, null, 2)}\n`, 'utf8')
   console.log('supabase-config: gerado public/supabase-config.json')
-} else if (existsSync(out)) {
-  unlinkSync(out)
-  console.log('supabase-config: removido (variáveis ausentes)')
+} else {
+  if (process.env.RENDER) {
+    console.error(
+      'ERRO: VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY são obrigatórias no build do Render.',
+    )
+    console.error('Environment → adicione as variáveis → Manual Deploy (Clear build cache).')
+    process.exit(1)
+  }
+  if (existsSync(out)) {
+    unlinkSync(out)
+    console.log('supabase-config: removido (variáveis ausentes)')
+  }
 }
