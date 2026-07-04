@@ -326,6 +326,7 @@ function RuaGrid({
                     const occ = occupancy.get(addressId)
                     const pending = pendingSelection.has(addressId)
                     const stagePending = editStagePending?.has(addressId) ?? false
+                    const saidaItemDestaque = saidaItemDestaqueAddresses?.has(addressId) ?? false
                     const clickable = isClickable(kind)
 
                     let className = `cell cell--${kind}`
@@ -343,8 +344,10 @@ function RuaGrid({
                       (editMoveOrigens?.size ?? 0) > 0 || (editMoveDestinos?.size ?? 0) > 0
                     if (moveOrigem) className += ' cell--move-origem'
                     else if (moveDestino) className += ' cell--move-destino'
-                    else if (focusAddressId === addressId) className += ' cell--selecionado'
-                    if (pulseAddressId === addressId) className += ' cell--busca-pulse'
+                    else if (focusAddressId === addressId && !saidaItemDestaque)
+                      className += ' cell--selecionado'
+                    if (pulseAddressId === addressId && !saidaItemDestaque)
+                      className += ' cell--busca-pulse'
                     else if (stagePending) className += ' cell--stage-pending'
                     else if (pending) className += editMode ? ' cell--destaque-verde' : ' cell--selecionado'
                     else if (confirmed) className += ' cell--confirmado'
@@ -358,7 +361,7 @@ function RuaGrid({
                       className += ' cell--destaque-verde'
                     } else if (consultaAddresses?.has(addressId) && !pending) className += ' cell--destaque-verde'
                     else if (saidaFlaggedAddresses?.has(addressId)) className += ' cell--saida-flag'
-                    else if (saidaItemDestaqueAddresses?.has(addressId) && !pending)
+                    else if (saidaItemDestaque && !pending)
                       className += ' cell--destaque-verde'
                     else if (saidaAddresses?.has(addressId)) className += ' cell--saida'
                     if (allocateMode && (clickable || pending)) className += ' cell--alocavel'
