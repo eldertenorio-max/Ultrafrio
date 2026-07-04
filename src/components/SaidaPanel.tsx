@@ -179,11 +179,6 @@ export function SaidaPanel({
 
         {modoBusca === 'numero' ? (
           <>
-            <p className="muted">
-              {origemEstoque === 'stage'
-                ? 'Busque a NF e selecione itens que estão no stage para dar saída.'
-                : 'Busque a NF de origem no estoque, selecione o item na tabela e informe os paletes.'}
-            </p>
             <div className="saida-busca">
               <input
                 type="text"

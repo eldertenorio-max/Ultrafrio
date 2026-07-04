@@ -101,7 +101,6 @@ export function EntradaPanel({
       {emAndamento.length > 0 && (
         <div className="sidebar-block">
           <h3>Entradas em andamento</h3>
-          <p className="muted nf-list-hint">Ctrl+clique para selecionar várias · Shift+clique para intervalo</p>
           <ul className="nf-list">
             {emAndamento.map((nf) => {
               const pendentes = nf.items.filter((it) => !itemEnderecamentoCompleto(it)).length

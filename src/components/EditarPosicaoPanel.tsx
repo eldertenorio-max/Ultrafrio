@@ -191,10 +191,6 @@ export function EditarPosicaoPanel({
   return (
     <>
       <div className="sidebar-block">
-        <p className="muted">
-          Busque a NF e movimente livremente entre o armazém físico e o stage — pelo mapa,
-          por voz ou pelos campos de endereço.
-        </p>
         <div className="saida-busca">
           <input
             type="text"

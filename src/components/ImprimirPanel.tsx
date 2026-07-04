@@ -25,11 +25,6 @@ export function ImprimirPanel({
 
   return (
     <div className="imprimir-panel">
-      <p className="muted">
-        Imprima o layout das câmaras selecionadas — em branco para endereçar manualmente, ou
-        preenchido com as NFs e posições ocupadas como aparecem no painel.
-      </p>
-
       <div className="sidebar-block">
         <div className="imprimir-toolbar">
           <h4>Câmaras</h4>
@@ -88,15 +83,6 @@ export function ImprimirPanel({
           </label>
         </div>
       </div>
-
-      <div className="sidebar-block imprimir-duplex-box">
-        <h4>Frente e verso</h4>
-        <p className="muted">
-          Na impressora, ative <strong>impressão duplex</strong> (frente e verso) com virar pela borda longa.
-          As páginas saem em pares: Rua 1 e Rua 2 da mesma câmara.
-        </p>
-      </div>
-
       <div className="imprimir-actions">
         <button
           type="button"

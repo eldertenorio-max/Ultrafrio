@@ -145,11 +145,6 @@ export function ConsultaEstoquePanel({
       ) : (
         <>
       <div className="sidebar-block">
-        <p className="muted">
-          Filtre por nota, item, remetente ou lote. Os endereços encontrados aparecem no painel com
-          fundo verde claro, sem cobrir o número da NF.
-        </p>
-
         <div className="consulta-filtros">
           <label className="consulta-campo">
             <span>Nota fiscal</span>
@@ -321,10 +316,6 @@ export function ConsultaEstoquePanel({
 
       <div className="sidebar-block consulta-adicionar">
         <h3 className="consulta-section-title">Adicionar mais itens em um novo endereço</h3>
-        <p className="muted">
-          Busque uma NF já importada por XML. Replique um item existente ou cadastre um item manual
-          e depois enderece na aba Entrada.
-        </p>
         <div className="saida-busca">
           <input
             type="text"

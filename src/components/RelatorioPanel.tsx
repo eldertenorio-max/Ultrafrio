@@ -29,11 +29,6 @@ export function RelatorioPanel({ notas }: Props) {
 
   return (
     <div className="relatorio-panel">
-      <p className="muted">
-        Gere relatórios das notas fiscais e itens em estoque. Exporte em CSV ou abra uma versão
-        para impressão / PDF.
-      </p>
-
       <div className="sidebar-block">
         <h4>Origem do estoque</h4>
         <div className="relatorio-origem">

@@ -111,11 +111,6 @@ export function FinanceiroPanel({
 
   return (
     <div className="financeiro-panel">
-      <p className="muted">
-        Cobrança de armazenagem por cliente: cadastre tabelas de preço, contratos e acompanhe o
-        tempo de permanência das NFs.
-      </p>
-
       {error && <p className="error">{error}</p>}
       {saving && <p className="muted fin-saving">Salvando…</p>}
 
@@ -850,10 +845,6 @@ function DataEntradaSection({
     <div className="fin-section">
       <div className="sidebar-block">
         <h4>Controle de permanência</h4>
-        <p className="muted">
-          Data de armazenagem preenchida na Entrada, tempo armazenado, peso, caixas e itens por NF.
-          Ao dar saída, a cobrança é finalizada.
-        </p>
 
         {data.clientes.length > 0 && (
           <label className="nf-itens-campo">
