@@ -947,7 +947,8 @@ function ClientesSection({
                       </div>
                       <div className="fin-nf-stats muted">
                         Armazenagem {formatarDataBr(nf.dataEntrada)} · {nf.diasArmazenados} dias ·{' '}
-                        {formatPesoBruto(nf.pesoLiquido)} kg · {nf.totalItens} itens ·{' '}
+                        {formatPesoBruto(nf.pesoRestante > 0 ? nf.pesoRestante : nf.pesoEntrada)} kg ·{' '}
+                        {nf.totalItens} itens ·{' '}
                         {formatQuantidadeNfe(nf.totalCaixas)} CX · {nf.totalPaletes} paletes
                       </div>
                       {cob && cob.detalhes.length > 0 && (
@@ -1038,7 +1039,12 @@ function LogicaCobrancaSection({
             .filter((m) => m.tipo === 'saida' && m.nfId === nf.nfId && !m.excluido)
             .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
           const posicoes = Math.max(totalPosicoesNota(nota), totalPosicoesMovimento(entradaMovimento))
-          const pesoBase = nf.pesoLiquido || nf.pesoBruto || pesoMovimento(entradaMovimento)
+          const pesoBase =
+            nf.status === 'armazenada'
+              ? nf.pesoRestante > 0
+                ? nf.pesoRestante
+                : nf.pesoEntrada
+              : nf.pesoEntrada || nf.pesoLiquido || nf.pesoBruto || pesoMovimento(entradaMovimento)
           const caixas = Math.max(nf.totalCaixas, totalCaixasMovimento(entradaMovimento))
           const paletes = Math.max(nf.totalPaletes, totalPaletesMovimento(entradaMovimento))
           const valorMercadoria = nf.valorMercadoria || valorMovimento(entradaMovimento)
@@ -1371,7 +1377,8 @@ function DataEntradaSection({
         })
         const contrato = cliente ? contratoAtivoCliente(data, cliente.cnpj) : null
         const tabela = tabelaById(data, contrato?.tabelaId ?? null)
-        const valorDiaria = tabela ? (nf.pesoBruto * tabela.custoPorKilo) / 30 : 0
+        const pesoCobranca = nf.pesoRestante > 0 ? nf.pesoRestante : nf.pesoEntrada
+        const valorDiaria = tabela ? (pesoCobranca * tabela.custoPorKilo) / 30 : 0
         const valorVigente = valorDiaria * nf.diasArmazenados
         const periodo = periodosCobranca[nf.nfId]
         const periodoInicio = periodo?.inicio ?? inicioMesVigenteInputValue()
@@ -1403,7 +1410,7 @@ function DataEntradaSection({
           valorPeriodo: acc.valorPeriodo + linha.valorPeriodo,
           valorVigente: acc.valorVigente + linha.valorVigente,
           posicoes: acc.posicoes + linha.posicoes,
-          peso: acc.peso + linha.nf.pesoLiquido,
+          peso: acc.peso + (linha.nf.pesoRestante > 0 ? linha.nf.pesoRestante : linha.nf.pesoEntrada),
           caixas: acc.caixas + linha.nf.totalCaixas,
           paletes: acc.paletes + linha.nf.totalPaletes,
           itens: acc.itens + linha.nf.totalItens,
@@ -1498,8 +1505,10 @@ function DataEntradaSection({
       'Valor diária',
       'Valor vigente',
       'Valor a cobrar período',
-      'Peso líquido kg',
-      'Peso bruto kg',
+      'Peso entrada kg',
+      'Peso a cobrar kg',
+      'Peso saído kg',
+      'Qtd saídas',
       'Caixas NF',
       'Paletes NF',
       'Posições NF',
@@ -1535,8 +1544,10 @@ function DataEntradaSection({
           numeroCsv(linha.valorDiaria),
           numeroCsv(linha.valorVigente),
           numeroCsv(linha.valorPeriodo),
-          numeroCsv(linha.nf.pesoLiquido),
-          numeroCsv(linha.nf.pesoBruto),
+          numeroCsv(linha.nf.pesoEntrada),
+          numeroCsv(linha.nf.pesoRestante > 0 ? linha.nf.pesoRestante : linha.nf.pesoEntrada),
+          numeroCsv(linha.nf.pesoSaido),
+          linha.nf.saidas.length,
           numeroCsv(linha.nf.totalCaixas),
           linha.nf.totalPaletes,
           linha.posicoes,
@@ -1758,8 +1769,8 @@ function DataEntradaSection({
                       <strong>{formatarDataHoraBr(notasById.get(nf.nfId)?.createdAt ?? nf.dataEntrada)}</strong>
                     </div>
                     <div>
-                      <span className="muted">Saída</span>
-                      <strong>{nf.dataSaida ? formatarDataHoraBr(nf.dataSaida) : '—'}</strong>
+                      <span className="muted">Saídas</span>
+                      <strong>{nf.saidas.length > 0 ? `${nf.saidas.length} registro(s)` : '—'}</strong>
                     </div>
                     <div>
                       <span className="muted">Dias</span>
@@ -1770,8 +1781,14 @@ function DataEntradaSection({
                       <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
                     </div>
                     <div>
-                      <span className="muted">Peso</span>
-                      <strong>{formatPesoBruto(nf.pesoLiquido)} kg</strong>
+                      <span className="muted">Peso entrada</span>
+                      <strong>{formatPesoBruto(nf.pesoEntrada)} kg</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Peso a cobrar</span>
+                      <strong className="fin-peso-cobranca">
+                        {formatPesoBruto(nf.pesoRestante > 0 ? nf.pesoRestante : nf.pesoEntrada)} kg
+                      </strong>
                     </div>
                     <div>
                       <span className="muted">Itens</span>
@@ -1833,6 +1850,37 @@ function DataEntradaSection({
                     <strong>{formatMoedaFinanceiro(valorPeriodo)}</strong>
                   </div>
                 </div>
+                {nf.saidas.length > 0 && (
+                  <div className="fin-saidas-card">
+                    <div className="fin-saidas-head">
+                      <strong>Saídas registradas</strong>
+                      <span className="muted">
+                        Total saído: {formatPesoBruto(nf.pesoSaido)} kg
+                        {nf.pesoRestante > 0 && nf.pesoSaido > 0 ? (
+                          <> · Restante: {formatPesoBruto(nf.pesoRestante)} kg</>
+                        ) : null}
+                      </span>
+                    </div>
+                    <ul className="fin-saidas-lista">
+                      {nf.saidas.map((saida, idx) => (
+                        <li key={saida.id} className="fin-saidas-item">
+                          <span className="fin-saidas-num">#{idx + 1}</span>
+                          <span>{formatarDataHoraBr(saida.data)}</span>
+                          {saida.nfSaidaNumero ? (
+                            <span>NF saída {saida.nfSaidaNumero}</span>
+                          ) : (
+                            <span>Saída parcial</span>
+                          )}
+                          <strong>{formatPesoBruto(saida.pesoSaida)} kg</strong>
+                          {saida.caixasSaida > 0 && (
+                            <span>{formatQuantidadeNfe(saida.caixasSaida)} CX</span>
+                          )}
+                          {saida.paletesSaida > 0 && <span>{saida.paletesSaida} palete(s)</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </li>
             )
             })}

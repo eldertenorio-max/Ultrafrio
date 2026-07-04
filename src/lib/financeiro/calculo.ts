@@ -1,5 +1,15 @@
 import type { MovimentoRegistro, NotaFiscal } from '../../types'
 import type { ContratoCliente, RegraTempo, TabelaCobranca } from './types'
+import { pesoBrutoTotalItem, pesoLiquidoTotalItem } from '../saidaParcial'
+
+export type SaidaNfFinanceiro = {
+  id: string
+  data: string
+  nfSaidaNumero: string | null
+  pesoSaida: number
+  caixasSaida: number
+  paletesSaida: number
+}
 
 export type ResumoNfArmazenada = {
   nfId: string
@@ -11,6 +21,13 @@ export type ResumoNfArmazenada = {
   diasArmazenados: number
   pesoBruto: number
   pesoLiquido: number
+  /** Peso registrado na entrada (referência original). */
+  pesoEntrada: number
+  /** Peso ainda em estoque — base para cobrança diária. */
+  pesoRestante: number
+  /** Soma das saídas parciais ou totais. */
+  pesoSaido: number
+  saidas: SaidaNfFinanceiro[]
   totalItens: number
   totalCaixas: number
   totalPaletes: number
@@ -92,10 +109,71 @@ function fatorTempo(dias: number, ciclo: 'mensal' | 'quinzenal', regra: RegraTem
   return dias / periodo
 }
 
-function pesoTotalNf(nf: NotaFiscal): number {
+
+function pesoMovimentoRegistro(m: MovimentoRegistro): number {
+  if (m.pesoLiquido != null && m.pesoLiquido > 0) return m.pesoLiquido
+  if (m.pesoBruto != null && m.pesoBruto > 0) return m.pesoBruto
+  return m.itens.reduce((s, it) => s + (it.pesoLiquido ?? it.pesoBruto ?? 0), 0)
+}
+
+function caixasMovimento(m: MovimentoRegistro): number {
+  return m.itens.reduce((s, it) => {
+    const q = it.quantidadeSaida ?? it.quantidade
+    const u = it.unidade.trim().toUpperCase()
+    if (u === 'CX' || u === 'CAIXA' || u === 'FD' || u === 'FARDO') return s + q
+    return s
+  }, 0)
+}
+
+function paletesMovimento(m: MovimentoRegistro): number {
+  const fromItems = m.itens.reduce((s, it) => s + (it.paletes ?? it.addressIds.length), 0)
+  if (fromItems > 0) return fromItems
+  return m.itens.reduce((s, it) => s + it.addressIds.length, 0)
+}
+
+function pesoItensAtualNf(nf: NotaFiscal): number {
+  return nf.items.reduce((s, it) => {
+    const direct = it.pesoLiquido ?? it.pesoBruto
+    if (direct != null && direct > 0) return s + direct
+    const total = pesoLiquidoTotalItem(nf, it) ?? pesoBrutoTotalItem(nf, it)
+    return s + (total ?? 0)
+  }, 0)
+}
+
+function pesoEntradaNf(nf: NotaFiscal, movimentos: MovimentoRegistro[]): number {
+  const entrada = movimentos.find((m) => m.tipo === 'entrada' && m.nfId === nf.id && !m.excluido)
+  const movPeso = entrada ? pesoMovimentoRegistro(entrada) : 0
+  if (movPeso > 0) return movPeso
   if (nf.pesoLiquido != null && nf.pesoLiquido > 0) return nf.pesoLiquido
   if (nf.pesoBruto != null && nf.pesoBruto > 0) return nf.pesoBruto
-  return nf.items.reduce((s, it) => s + (it.pesoLiquido ?? it.pesoBruto ?? 0), 0)
+  return pesoItensAtualNf(nf)
+}
+
+export function listarSaidasNf(nfId: string, movimentos: MovimentoRegistro[]): SaidaNfFinanceiro[] {
+  return movimentos
+    .filter((m) => m.tipo === 'saida' && m.nfId === nfId && !m.excluido)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((m) => ({
+      id: m.id,
+      data: m.createdAt,
+      nfSaidaNumero: m.nfSaida?.numero ?? null,
+      pesoSaida: pesoMovimentoRegistro(m),
+      caixasSaida: caixasMovimento(m),
+      paletesSaida: paletesMovimento(m),
+    }))
+}
+
+function pesoRestanteNf(nf: NotaFiscal, movimentos: MovimentoRegistro[], pesoEntrada: number): number {
+  if (!nfTemEstoque(nf)) return 0
+
+  const fromItems = pesoItensAtualNf(nf)
+  if (fromItems > 0) return fromItems
+
+  const saidas = listarSaidasNf(nf.id, movimentos)
+  const pesoSaido = saidas.reduce((s, x) => s + x.pesoSaida, 0)
+  if (pesoEntrada > 0 && pesoSaido > 0) return Math.max(0, pesoEntrada - pesoSaido)
+
+  return nf.pesoLiquido ?? nf.pesoBruto ?? 0
 }
 
 function totalPaletesNf(nf: NotaFiscal): number {
@@ -142,6 +220,14 @@ export function resumirNfArmazenada(
   const entrada = dataEntradaNf(nf, movimentos)
   const saida = dataSaidaNf(nf.id, movimentos)
   const armazenada = nfTemEstoque(nf)
+  const saidas = listarSaidasNf(nf.id, movimentos)
+  const pesoEntrada = pesoEntradaNf(nf, movimentos)
+  const pesoRestante = armazenada ? pesoRestanteNf(nf, movimentos, pesoEntrada) : 0
+  const pesoSaido =
+    saidas.reduce((s, x) => s + x.pesoSaida, 0) ||
+    (pesoEntrada > 0 ? Math.max(0, pesoEntrada - pesoRestante) : 0)
+  const pesoCobranca = armazenada ? pesoRestante : pesoEntrada
+
   return {
     nfId: nf.id,
     nfNumero: nf.numero,
@@ -150,8 +236,12 @@ export function resumirNfArmazenada(
     dataEntrada: entrada,
     dataSaida: armazenada ? null : saida,
     diasArmazenados: diasArmazenados(entrada, armazenada ? null : saida, agora),
-    pesoBruto: nf.pesoBruto ?? pesoTotalNf(nf),
-    pesoLiquido: nf.pesoLiquido ?? pesoTotalNf(nf),
+    pesoBruto: pesoEntrada,
+    pesoLiquido: pesoCobranca,
+    pesoEntrada,
+    pesoRestante,
+    pesoSaido,
+    saidas,
     totalItens: nf.items.length,
     totalCaixas: totalCaixasNf(nf),
     totalPaletes: totalPaletesNf(nf),
@@ -171,7 +261,12 @@ export function calcularCobrancaNf(
   const detalhes: DetalheCobranca[] = []
   const fator = fatorTempo(resumo.diasArmazenados, contrato.ciclo, contrato.regraTempo)
   const posicoes = totalPosicoesNf(nf)
-  const peso = resumo.pesoLiquido || resumo.pesoBruto
+  const peso =
+    resumo.status === 'armazenada'
+      ? resumo.pesoRestante > 0
+        ? resumo.pesoRestante
+        : resumo.pesoEntrada
+      : resumo.pesoEntrada
 
   if (contrato.cobrarPosicaoPalete && tabela.custoPosicaoPalete > 0 && posicoes > 0) {
     detalhes.push({

@@ -8721,6 +8721,63 @@ html.scroll-locked .sidebar.sidebar--wide {
   color: #f8fafc;
 }
 
+.fin-peso-cobranca {
+  color: var(--accent, #2563eb);
+}
+
+.fin-saidas-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+}
+
+.fin-saidas-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.fin-saidas-head > strong {
+  font-size: 0.88rem;
+}
+
+.fin-saidas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fin-saidas-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-size: 0.78rem;
+}
+
+.fin-saidas-num {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.fin-saidas-item strong {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
 .fin-periodo-cobranca-card {
   margin-top: 12px;
   padding: 12px 14px;
