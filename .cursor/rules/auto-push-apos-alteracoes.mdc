@@ -1,33 +1,32 @@
 ---
-description: Commit e push automaticos na main apos alteracoes no codigo
+description: Commit e push na branch homolog apos alteracoes no codigo
 alwaysApply: true
 ---
 
 # Subir automaticamente apos alteracoes
 
-Quando concluir uma tarefa que **alterou arquivos do projeto** (implementacao, correcao, refactor), faca commit e push **sem esperar** o usuario pedir "suba".
+Quando concluir uma tarefa que **alterou arquivos do projeto**, faca commit e push **sem esperar** o usuario pedir "suba".
 
-## Quando aplicar
+## Branch de desenvolvimento
 
-- Aplicar: codigo modificado/criado e build ou verificacao relevante passou (ou a mudanca e trivial e segura).
-- Nao aplicar: respostas so com explicacao/revisao, perguntas, ou quando o usuario pedir explicitamente para **nao** commitar.
+- Push padrao: **`origin homolog`** (dispara homologacao automaticamente).
+- **`main`**: so via `npm run publish:wms` ou quando o usuario pedir **"publicar no WMS"**.
 
 ## Fluxo obrigatorio
 
-1. `git status`, `git diff` e `git log -3 --oneline` (em paralelo).
-2. Mensagem de commit curta em portugues (1-2 frases, foco no porquê).
+1. `git status`, `git diff` e `git log -3 --oneline`.
+2. Mensagem de commit curta em portugues.
 3. `git add` apenas arquivos da tarefa — nunca `.env`, credenciais ou secrets.
-4. `git commit` e `git push origin main`.
-5. Informar o hash e a mensagem do commit na resposta final.
+4. Garantir branch `homolog`: `git checkout homolog` (criar a partir de main se nao existir).
+5. `git commit` e **`git push origin homolog`**.
+6. Informar hash e mensagem do commit.
+
+## Publicar no WMS
+
+Quando o usuario pedir publicar no WMS: `npm run publish:wms` + orientar Manual Deploy no Render.
 
 ## Seguranca git
 
 - Nunca `git push --force` em main/master.
 - Nunca alterar `git config`.
-- Nunca `--no-verify` salvo pedido explicito.
-- Se o commit falhar no hook, corrigir e criar **novo** commit (nao amend salvo excecao da regra de amend).
 - Se nao houver mudancas, nao criar commit vazio.
-
-## Exemplo de encerramento
-
-"Tarefa concluida. Enviado: `abc1234` — Corrige X para Y."

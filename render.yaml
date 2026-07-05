@@ -1,13 +1,14 @@
-# Blueprint Render — Homologação + Produção (mesmo repositório, mesmo build)
+# Blueprint Render — Homologação + Produção (2 branches, mesmo repo)
 #
-# Homologação: https://ultrafrio-homologacao.onrender.com — deploy automático a cada push
-# Produção:    https://wms.docalivre.com.br — deploy manual (só quando você pedir)
+# Homologação: branch homolog → https://ultrafrio-homologacao.onrender.com (auto deploy)
+# Produção:    branch main     → https://wms.docalivre.com.br (manual deploy)
 #
-# Mesmo Supabase: public/supabase-config.json + variáveis VITE_SUPABASE_* idênticas nos dois serviços.
+# Mesmo Supabase nos dois (public/supabase-config.json + VITE_SUPABASE_* idênticas).
 services:
   - type: web
     name: ultrafrio-homologacao
     runtime: static
+    branch: homolog
     autoDeployTrigger: commit
     buildCommand: npm ci --no-audit --no-fund && node scripts/write-supabase-config.mjs && npm run build
     staticPublishPath: ./dist
@@ -22,6 +23,7 @@ services:
   - type: web
     name: ultrafrio-producao
     runtime: static
+    branch: main
     autoDeployTrigger: off
     buildCommand: npm ci --no-audit --no-fund && node scripts/write-supabase-config.mjs && npm run build
     staticPublishPath: ./dist

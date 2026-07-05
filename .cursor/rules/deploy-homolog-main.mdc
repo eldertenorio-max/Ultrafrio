@@ -1,0 +1,31 @@
+---
+description: Deploy com 2 branches homolog/main igual Controle de Carregamento
+alwaysApply: true
+---
+
+# Deploy homolog + main (Ultrafrio WMS)
+
+## Branches
+
+| Branch | Render | Deploy |
+|--------|--------|--------|
+| `homolog` | ultrafrio-homologacao | Automático |
+| `main` | wms.docalivre.com.br | Manual no Render |
+
+## Fluxo ao concluir alterações de código
+
+1. Trabalhar na branch **`homolog`** (checkout se necessário).
+2. `git commit` + **`git push origin homolog`** — dispara homologação.
+3. **Não** push em `main` salvo publicação no WMS.
+
+## Publicar no WMS (quando o usuário pedir)
+
+1. `npm run publish:wms` (merge homolog → main, alinha branches).
+2. Usuário: Render → Ultrafrio → **Manual Deploy → Clear build cache & deploy**.
+3. `npm run check:deploy` — deve passar.
+
+## Paridade
+
+- Mesmo Supabase nos dois ambientes.
+- Banner “Homologação” só na homolog (hostname).
+- Antes de publicar: `main` e `homolog` no **mesmo commit**.

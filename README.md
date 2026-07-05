@@ -55,45 +55,56 @@ git push -u origin main
 
 ## Render (site estático)
 
-### Homologação e produção
+### Homologação e produção (2 branches)
 
-| Ambiente | URL | Deploy |
-|----------|-----|--------|
-| **Homologação** | [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/) | **Automático** a cada push no `main` |
-| **Produção (WMS)** | [wms.docalivre.com.br](https://wms.docalivre.com.br/) | **Manual** — só quando você pedir |
+Modelo igual ao **Controle de Carregamento** — detalhes em [`HOMOLOGACAO_RENDER.md`](HOMOLOGACAO_RENDER.md).
 
-> **Regra:** push no `main` atualiza **só a homologação**. A produção **não** recebe ao mesmo tempo — só quando você disser **“publicar no WMS”** (ou equivalente).
+| Ambiente | Branch | URL | Deploy |
+|----------|--------|-----|--------|
+| **Homologação** | `homolog` | [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/) | **Automático** a cada push |
+| **Produção (WMS)** | `main` | [wms.docalivre.com.br](https://wms.docalivre.com.br/) | **Manual** — só quando pedir |
 
-#### Desligar deploy automático na produção (Render — uma vez)
+| Push | O que atualiza |
+|------|----------------|
+| `homolog` | Só homologação |
+| `main` | Produção (Manual Deploy no Render) |
 
-1. Acesse [dashboard.render.com](https://dashboard.render.com)
-2. Abra o serviço **Ultrafrio** (`wms.docalivre.com.br`)
-3. **Settings** → **Build & Deploy** → **Auto-Deploy**
-4. Selecione **Off** e salve
+#### Configurar no Render (uma vez)
 
-No serviço **Ultrafrio-homologacao**, mantenha **Auto-Deploy → On Commit**.
+| Serviço | Branch | Auto-Deploy |
+|---------|--------|-------------|
+| **Ultrafrio-homologacao** | `homolog` | **On Commit** |
+| **Ultrafrio** (WMS) | `main` | **Off** |
 
-No Render, configure **dois Static Sites** com o **mesmo build** nos dois:
+Build idêntico nos dois:
 
-| Campo | Valor (homologação e produção) |
-|-------|--------------------------------|
+| Campo | Valor |
+|-------|--------|
 | **Build command** | `npm ci --no-audit --no-fund && node scripts/write-supabase-config.mjs && npm run build` |
 | **Publish directory** | `dist` |
 | **NODE_VERSION** | `20.19.0` |
-| **VITE_SUPABASE_URL** | URL do Supabase (mesma nos dois) |
-| **VITE_SUPABASE_ANON_KEY** | Chave anon/publishable (mesma nos dois) |
+| **VITE_SUPABASE_URL** / **VITE_SUPABASE_ANON_KEY** | Mesmos nos dois |
 
-Não use `VITE_APP_AMBIENTE` — o banner “Homologação” é detectado pelo hostname em runtime.
+Não use `VITE_APP_AMBIENTE` — banner “Homologação” detectado pelo hostname.
 
 #### Fluxo
 
-1. Alteração → **push no `main`** → homologação atualiza sozinha  
-2. Teste em [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/)  
-3. Quando estiver ok, peça **“publicar no WMS”**  
-4. Render → **Ultrafrio (WMS)** → **Manual Deploy → Clear build cache & deploy**  
-5. Confirme: `npm run check:deploy` → **AMBIENTES IGUAIS**
+```powershell
+# 1. Desenvolver (sobe homolog sozinha)
+git checkout homolog
+git push origin homolog
 
-**Única diferença intencional:** na homologação aparece o banner/selo “Homologação”. No WMS real isso não aparece.
+# 2. Testar na homologação
+
+# 3. Publicar no WMS
+npm run publish:wms
+# Render → Ultrafrio → Manual Deploy → Clear build cache & deploy
+
+# 4. Validar
+npm run check:deploy
+```
+
+**Única diferença visual:** banner/selo “Homologação” só na homologação.
 
 ### Configuração básica
 
@@ -111,3 +122,5 @@ O arquivo `public/_redirects` garante que rotas do SPA funcionem no Render.
 | `npm run build` | Typecheck + build produção |
 | `npm run build:web` | Build rápido (só Vite) |
 | `npm run preview` | Preview do `dist` |
+| `npm run check:deploy` | Valida paridade homolog ↔ produção (sites + branches) |
+| `npm run publish:wms` | Merge `homolog` → `main` e alinha branches |

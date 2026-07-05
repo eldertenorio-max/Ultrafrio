@@ -9,7 +9,8 @@
     "build:web": "node scripts/write-supabase-config.mjs && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check:deploy": "node scripts/check-deploy-parity.mjs"
+    "check:deploy": "node scripts/check-deploy-parity.mjs",
+    "publish:wms": "node scripts/publish-wms.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
