@@ -70,60 +70,98 @@ async function apagarTudo(table, idColumn = 'id') {
   if (!res.ok) throw new Error(`${table} delete all: ${await res.text()}`)
 }
 
+async function contarOpcional(table) {
+  try {
+    return await contar(table)
+  } catch {
+    return 0
+  }
+}
+
+const TABELAS_ESTOQUE = [
+  ['ultrafrio_movimentos', 'id'],
+  ['ultrafrio_notas_canceladas', 'id'],
+  ['ultrafrio_enderecamentos', 'nf_id'],
+  ['ultrafrio_nf_itens', 'nf_id'],
+  ['ultrafrio_notas_fiscais', 'id'],
+]
+
+/** Financeiro (clientes/contratos gerados pelas NFs). */
+const TABELAS_FINANCEIRO = [
+  ['ultrafrio_fin_contratos', 'id'],
+  ['ultrafrio_fin_clientes', 'cnpj'],
+  ['ultrafrio_fin_tabelas', 'id'],
+]
+
 async function main() {
-  const [movs, canceladas, nfs, enderecos, itens] = await Promise.all([
-    contar('ultrafrio_movimentos').catch(() => listar('ultrafrio_movimentos').then((r) => r.length)),
-    contar('ultrafrio_notas_canceladas').catch(() => 0),
-    contar('ultrafrio_notas_fiscais').catch(() => listar('ultrafrio_notas_fiscais').then((r) => r.length)),
-    contar('ultrafrio_enderecamentos').catch(() => 0),
-    contar('ultrafrio_nf_itens').catch(() => 0),
-  ])
+  const contagensAntes = {}
+  for (const [table] of [...TABELAS_ESTOQUE, ...TABELAS_FINANCEIRO]) {
+    contagensAntes[table] = await contarOpcional(table)
+  }
 
+  const nfs = contagensAntes['ultrafrio_notas_fiscais']
   const nfsDetalhe =
-    nfs > 0 ? (await listar('ultrafrio_notas_fiscais', 'numero')).map((n) => n.numero) : []
+    nfs > 0
+      ? (await listar('ultrafrio_notas_fiscais', 'numero').catch(() => [])).map((n) => n.numero)
+      : []
 
-  console.log('=== Reset completo ===')
-  console.log(`Movimentos (histórico): ${movs}`)
+  console.log('=== Reset completo (homolog + produção — mesmo Supabase) ===')
+  console.log(`URL: ${url}`)
+  console.log(`Movimentos (histórico): ${contagensAntes['ultrafrio_movimentos']}`)
   console.log(`NFs no estoque: ${nfs}`)
   if (nfsDetalhe.length) console.log('  NFs:', nfsDetalhe.join(', '))
-  console.log(`Itens de NF: ${itens}`)
-  console.log(`Endereços alocados: ${enderecos}`)
-  console.log(`NFs canceladas: ${canceladas}`)
+  console.log(`Itens de NF: ${contagensAntes['ultrafrio_nf_itens']}`)
+  console.log(`Endereços alocados: ${contagensAntes['ultrafrio_enderecamentos']}`)
+  console.log(`NFs canceladas: ${contagensAntes['ultrafrio_notas_canceladas']}`)
+  console.log(`Fin. clientes: ${contagensAntes['ultrafrio_fin_clientes']}`)
+  console.log(`Fin. contratos: ${contagensAntes['ultrafrio_fin_contratos']}`)
+  console.log(`Fin. tabelas: ${contagensAntes['ultrafrio_fin_tabelas']}`)
   console.log('Cadastro de remetentes: mantido')
 
   if (dryRun) {
     console.log('\n(dry-run — nada alterado. Use --confirm para executar.)')
+    console.log('\nIMPORTANTE: feche TODAS as abas de homologação E produção antes do --confirm,')
+    console.log('  senão o navegador regrava o estoque antigo na nuvem.')
     return
   }
 
   console.log('\nApagando…')
-  await apagarTudo('ultrafrio_movimentos')
-  await apagarTudo('ultrafrio_notas_canceladas').catch(() => {})
-  await apagarTudo('ultrafrio_enderecamentos').catch(() => {})
-  await apagarTudo('ultrafrio_nf_itens', 'nf_id').catch(() => {})
-  await apagarTudo('ultrafrio_notas_fiscais')
+  for (const [table, col] of TABELAS_ESTOQUE) {
+    await apagarTudo(table, col).catch((e) => {
+      if (!String(e.message).includes('does not exist')) throw e
+    })
+  }
+  for (const [table, col] of TABELAS_FINANCEIRO) {
+    await apagarTudo(table, col).catch((e) => {
+      if (!String(e.message).includes('does not exist')) throw e
+    })
+  }
 
-  const [movsFinal, nfsFinal, endFinal, itensFinal, canFinal] = await Promise.all([
-    contar('ultrafrio_movimentos').catch(() => 0),
-    contar('ultrafrio_notas_fiscais').catch(() => 0),
-    contar('ultrafrio_enderecamentos').catch(() => 0),
-    contar('ultrafrio_nf_itens').catch(() => 0),
-    contar('ultrafrio_notas_canceladas').catch(() => 0),
-  ])
+  const contagensDepois = {}
+  for (const [table] of [...TABELAS_ESTOQUE, ...TABELAS_FINANCEIRO]) {
+    contagensDepois[table] = await contarOpcional(table)
+  }
 
   console.log('\n=== Após reset ===')
-  console.log(`Movimentos: ${movsFinal}`)
-  console.log(`NFs: ${nfsFinal}`)
-  console.log(`Itens: ${itensFinal}`)
-  console.log(`Endereços: ${endFinal}`)
-  console.log(`Canceladas: ${canFinal}`)
+  console.log(`Movimentos: ${contagensDepois['ultrafrio_movimentos']}`)
+  console.log(`NFs: ${contagensDepois['ultrafrio_notas_fiscais']}`)
+  console.log(`Itens: ${contagensDepois['ultrafrio_nf_itens']}`)
+  console.log(`Endereços: ${contagensDepois['ultrafrio_enderecamentos']}`)
+  console.log(`Canceladas: ${contagensDepois['ultrafrio_notas_canceladas']}`)
+  console.log(`Fin. clientes: ${contagensDepois['ultrafrio_fin_clientes']}`)
+  console.log(`Fin. contratos: ${contagensDepois['ultrafrio_fin_contratos']}`)
 
-  if (movsFinal + nfsFinal + endFinal + itensFinal + canFinal > 0) {
+  const restante = Object.values(contagensDepois).reduce((s, n) => s + n, 0)
+  if (restante > 0) {
     console.error('\nERRO: ainda há registros. Verifique RLS ou use o SQL em supabase/sql/reset_tudo.sql')
     process.exit(1)
   }
 
-  console.log('\nPronto. Recarregue TODAS as abas do painel (F5).')
+  console.log('\nPronto. Homologação e produção compartilham este banco — os dois ficam vazios.')
+  console.log('1. Feche TODAS as abas do WMS (homolog e produção).')
+  console.log('2. Abra de novo e use Ctrl+Shift+R (limpa cache do site).')
+  console.log('   Homolog: https://ultrafrio-homologacao.onrender.com')
+  console.log('   Produção: https://wms.docalivre.com.br')
 }
 
 main().catch((e) => {
