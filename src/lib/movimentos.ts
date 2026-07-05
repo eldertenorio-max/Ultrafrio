@@ -93,6 +93,29 @@ export function contarEnderecosPersistidos(data: PersistedData): number {
   )
 }
 
+/** Endereços liberados em saídas registradas — não restaurar no reparo automático. */
+export function enderecosLiberadosPorSaidas(
+  movimentos: MovimentoRegistro[],
+  nfId: string,
+  itemIndex: number,
+): Set<AddressId> {
+  const liberados = new Set<AddressId>()
+  for (const m of movimentos) {
+    if (m.excluido || m.nfId !== nfId || m.tipo !== 'saida') continue
+    for (const it of m.itens) {
+      if (it.itemIndex !== itemIndex) continue
+      const ids = it.addressIds ?? []
+      if (ids.length === 0) continue
+      const liberouPalete = (it.paletes ?? 0) >= 1
+      const esgotouItem = (it.quantidadeSobra ?? 0) <= 1e-9 && (it.quantidadeSaida ?? it.quantidade ?? 0) > 0
+      if (liberouPalete || esgotouItem) {
+        for (const addr of ids) liberados.add(addr)
+      }
+    }
+  }
+  return liberados
+}
+
 /** Último snapshot com endereços para um item (entrada ou movimentação posterior). */
 export function ultimoSnapshotEnderecosItem(
   movimentos: MovimentoRegistro[],
@@ -237,10 +260,12 @@ export function recuperarEnderecosPerdidos(data: PersistedData): PersistedData {
       const candidatos = ultimoSnapshotEnderecosItem(data.movimentos, nf.id, it.index)
       if (candidatos.length === 0) return it
 
+      const liberadosPorSaida = enderecosLiberadosPorSaidas(data.movimentos, nf.id, it.index)
       const enderecos = candidatos.filter(
         (addr) =>
           enderecoValidoNoMapa(addr) &&
-          (!ocupacao.has(addr) || ocupacao.get(addr) === nf.id),
+          (!ocupacao.has(addr) || ocupacao.get(addr) === nf.id) &&
+          !liberadosPorSaida.has(addr),
       )
       if (enderecos.length === 0) return it
 

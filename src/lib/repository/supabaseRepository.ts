@@ -491,6 +491,16 @@ export const supabaseRepository: EnderecamentoRepository = {
       )
       if (!notaMudou && !saidaNovaOuAlterada) continue
 
+      // Grava saídas novas antes de apagar endereços — evita reparo restaurar posições.
+      if (saidaNovaOuAlterada) {
+        for (const mov of movimentos) {
+          if (mov.tipo !== 'saida' || mov.nfId !== nf.id || mov.excluido) continue
+          if (prevMovJson.get(mov.id) === JSON.stringify(mov)) continue
+          const { error } = await upsertMovimento(sb, mov, notaIds)
+          if (error) throw new Error(error.message)
+        }
+      }
+
       const { error: upErr } = await upsertNf(sb, nf)
       if (upErr) throw new Error(upErr.message)
 

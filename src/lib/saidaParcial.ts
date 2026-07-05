@@ -392,6 +392,11 @@ export function enderecosALiberar(
   paletes: SaidaPaleteDraft[],
   limites?: SaidaLimitesPorItem,
 ): AddressId[] {
+  const porItem = new Map<number, number>()
+  for (const p of paletes) {
+    porItem.set(p.itemIndex, (porItem.get(p.itemIndex) ?? 0) + 1)
+  }
+
   const liberar: AddressId[] = []
   for (const p of paletes) {
     const item = nf.items.find((it) => it.index === p.itemIndex)
@@ -401,6 +406,12 @@ export function enderecosALiberar(
     const disponivel = qtdItem - jaSaido
     if (disponivel <= 1e-9) {
       // Posição residual sem saldo: libera ao confirmar (mesmo com 0 caixas).
+      liberar.push(p.addressId)
+      continue
+    }
+    // Saída parcial em vários paletes: posição escolhida no mapa é liberada.
+    const multiPalete = (porItem.get(p.itemIndex) ?? 0) > 1
+    if (multiPalete && p.quantidadeCaixas > 0) {
       liberar.push(p.addressId)
       continue
     }

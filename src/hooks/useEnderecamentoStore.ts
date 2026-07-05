@@ -46,7 +46,7 @@ const SAVE_DEBOUNCE_SUPABASE_MS = 0
 /** Coalesce curto para agrupar o burst de eventos Realtime de um mesmo save. */
 const REMOTE_RELOAD_DEBOUNCE_MS = 120
 /** Ignora eco do próprio save no Realtime; curto para captar mudanças de outros quase na hora. */
-const IGNORE_REMOTE_AFTER_SAVE_MS = 2500
+const IGNORE_REMOTE_AFTER_SAVE_MS = 4000
 /** Fallback caso o Realtime não esteja habilitado. */
 const POLL_INTERVAL_MS = 1500
 const PERSIST_RETRY_MS = 600
@@ -443,7 +443,7 @@ export function useEnderecamentoStore() {
     skipSave.current = true
     try {
       const remote = await repoRef.current.loadData()
-      const { data, dadosReparados } = prepareLoadedDataWithRepair(remote)
+      const { data, dadosReparados, enderecosRecuperados } = prepareLoadedDataWithRepair(remote)
       const remoteMergedNormalized = normalizePersistedData(data)
       const base = lastPersistedRef.current
       const localNow = pickPersisted(stateRef.current)
@@ -481,8 +481,10 @@ export function useEnderecamentoStore() {
         writeLocalCache(repoRef.current, merged)
       }
       const precisaSalvarReparo =
-        dadosReparados ||
-        (merged && !persistedEquals(merged, remoteMergedNormalized) && !wouldWipePersistedStock(data, merged))
+        (dadosReparados && enderecosRecuperados > 0) ||
+        (merged &&
+          !persistedEquals(merged, remoteMergedNormalized) &&
+          !wouldWipePersistedStock(data, merged))
 
       if (precisaSalvarReparo && merged) {
         skipSave.current = true
