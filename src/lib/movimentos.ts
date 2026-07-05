@@ -102,13 +102,17 @@ export function enderecosLiberadosPorSaidas(
   const liberados = new Set<AddressId>()
   for (const m of movimentos) {
     if (m.excluido || m.nfId !== nfId || m.tipo !== 'saida') continue
-    for (const it of m.itens) {
-      if (it.itemIndex !== itemIndex) continue
+    const snapsItem = m.itens.filter((it) => it.itemIndex === itemIndex)
+    const enderecosSaida = snapsItem.flatMap((it) => it.addressIds ?? [])
+    const multiPaleteSaida = enderecosSaida.length > 1
+    for (const it of snapsItem) {
       const ids = it.addressIds ?? []
       if (ids.length === 0) continue
+      const qtdSaida = it.quantidadeSaida ?? it.quantidade ?? 0
       const liberouPalete = (it.paletes ?? 0) >= 1
-      const esgotouItem = (it.quantidadeSobra ?? 0) <= 1e-9 && (it.quantidadeSaida ?? it.quantidade ?? 0) > 0
-      if (liberouPalete || esgotouItem) {
+      const esgotouItem = (it.quantidadeSobra ?? 0) <= 1e-9 && qtdSaida > 0
+      const saiuMultiPalete = multiPaleteSaida && qtdSaida > 0
+      if (liberouPalete || esgotouItem || saiuMultiPalete) {
         for (const addr of ids) liberados.add(addr)
       }
     }

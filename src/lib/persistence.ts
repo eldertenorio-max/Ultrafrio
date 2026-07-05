@@ -22,16 +22,24 @@ function normalizarStatusNotas(notas: NotaFiscal[]): NotaFiscal[] {
   }))
 }
 
-export function normalizePersistedData(data: PersistedData): PersistedData {
-  const base = limparMovimentosEntradaOrfaos(
-    syncVinculosNotas(
-      recuperarEnderecosPerdidos(
-        recuperarItensPerdidos(
-          sincronizarMovimentosEntrada(sanitizarEnderecosInvalidos(migrarRuasNosDados(data))),
-        ),
-      ),
-    ),
-  )
+export type NormalizePersistedOptions = {
+  /** Repara endereços/itens a partir do histórico (só ao carregar da nuvem). */
+  reparar?: boolean
+}
+
+export function normalizePersistedData(
+  data: PersistedData,
+  opts?: NormalizePersistedOptions,
+): PersistedData {
+  const reparar = opts?.reparar !== false
+  let base = migrarRuasNosDados(data)
+  base = sanitizarEnderecosInvalidos(base)
+  base = sincronizarMovimentosEntrada(base)
+  if (reparar) {
+    base = recuperarItensPerdidos(base)
+    base = recuperarEnderecosPerdidos(base)
+  }
+  base = limparMovimentosEntradaOrfaos(syncVinculosNotas(base))
   return {
     ...base,
     notas: normalizarStatusNotas(base.notas),

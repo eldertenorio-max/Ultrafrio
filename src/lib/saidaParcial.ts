@@ -397,28 +397,33 @@ export function enderecosALiberar(
     porItem.set(p.itemIndex, (porItem.get(p.itemIndex) ?? 0) + 1)
   }
 
-  const liberar: AddressId[] = []
+  const liberar = new Set<AddressId>()
   for (const p of paletes) {
     const item = nf.items.find((it) => it.index === p.itemIndex)
-    if (!item) continue
+    if (!item || !item.allocatedAddresses.includes(p.addressId)) continue
+
     const jaSaido = caixasJaSaidasItem(item.index, paletes, p.addressId)
     const qtdItem = quantidadeBaseSaida(item, limites)
     const disponivel = qtdItem - jaSaido
+    const multiPalete = (porItem.get(p.itemIndex) ?? 0) > 1
+
     if (disponivel <= 1e-9) {
       // Posição residual sem saldo: libera ao confirmar (mesmo com 0 caixas).
-      liberar.push(p.addressId)
+      liberar.add(p.addressId)
       continue
     }
-    // Saída parcial em vários paletes: posição escolhida no mapa é liberada.
-    const multiPalete = (porItem.get(p.itemIndex) ?? 0) > 1
-    if (multiPalete && p.quantidadeCaixas > 0) {
-      liberar.push(p.addressId)
+    if (p.quantidadeCaixas <= 0) continue
+
+    // Saída parcial em vários paletes: cada posição confirmada é liberada.
+    if (multiPalete) {
+      liberar.add(p.addressId)
       continue
     }
+
     const cap = Math.min(disponivel, caixasPorPalete(item))
-    if (p.quantidadeCaixas >= cap - 1e-6) liberar.push(p.addressId)
+    if (p.quantidadeCaixas >= cap - 1e-6) liberar.add(p.addressId)
   }
-  return liberar
+  return [...liberar]
 }
 
 export function sobrasPorItem(
@@ -495,6 +500,10 @@ export function snapshotSaidaPaletes(
   limites?: SaidaLimitesPorItem,
 ): MovimentoItemSnapshot[] {
   const liberar = new Set(enderecosALiberar(nf, paletes, limites))
+  const porItem = new Map<number, number>()
+  for (const p of paletes) {
+    porItem.set(p.itemIndex, (porItem.get(p.itemIndex) ?? 0) + 1)
+  }
   const snapshots: MovimentoItemSnapshot[] = []
   const anteriores: SaidaPaleteDraft[] = []
 
@@ -505,6 +514,10 @@ export function snapshotSaidaPaletes(
     if (!calc) continue
     anteriores.push(p)
 
+    const multiPalete = (porItem.get(p.itemIndex) ?? 0) > 1
+    const liberaEndereco =
+      liberar.has(p.addressId) || (multiPalete && p.quantidadeCaixas > 0)
+
     snapshots.push({
       itemIndex: item.index,
       codigo: item.codigo,
@@ -512,7 +525,7 @@ export function snapshotSaidaPaletes(
       quantidade: p.quantidadeCaixas,
       unidade: unidadeEstoqueItem(item),
       addressIds: [p.addressId],
-      paletes: liberar.has(p.addressId) ? 1 : 0,
+      paletes: liberaEndereco ? 1 : 0,
       quantidadeSaida: p.quantidadeCaixas,
       quantidadeSobra: calc.quantidadeSobra,
       ...(calc.pesoBrutoSaida != null ? { pesoBruto: calc.pesoBrutoSaida } : {}),

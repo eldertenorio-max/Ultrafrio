@@ -232,7 +232,8 @@ export function useEnderecamentoStore() {
         dataToSave = consolidarRemocoesLocais(base, localPick, dataToSave)
       }
 
-      dataToSave = normalizePersistedData(dataToSave)
+      // Não reparar endereços ao gravar — evita restaurar posições recém-liberadas.
+      dataToSave = normalizePersistedData(dataToSave, { reparar: false })
 
       if (
         lastPersistedRef.current &&
