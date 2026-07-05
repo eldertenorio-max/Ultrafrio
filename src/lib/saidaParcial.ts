@@ -160,6 +160,33 @@ export function caixasJaSaidasItem(
     .reduce((s, p) => s + p.quantidadeCaixas, 0)
 }
 
+export function itemSaidaPendente(
+  item: NfeItem,
+  confirmados: SaidaPaleteDraft[],
+  limites?: SaidaLimitesPorItem,
+): boolean {
+  if (item.allocatedAddresses.length === 0) return false
+  const sobra = sobraItem(item, confirmados, limites)
+  if (sobra > 1e-9) return true
+  return sobra <= 1e-9 && paletesDisponiveisItem(item, confirmados) > 0
+}
+
+/** Próximo item da saída (ex.: devolução) ainda pendente após confirmar o item atual. */
+export function proximoItemSaidaPendente(
+  itensOrdem: NfeItem[],
+  currentItemIndex: number,
+  confirmados: SaidaPaleteDraft[],
+  limites?: SaidaLimitesPorItem,
+): NfeItem | null {
+  const pos = itensOrdem.findIndex((it) => it.index === currentItemIndex)
+  const order =
+    pos >= 0
+      ? [...itensOrdem.slice(pos + 1), ...itensOrdem.slice(0, pos)]
+      : [...itensOrdem]
+
+  return order.find((it) => itemSaidaPendente(it, confirmados, limites)) ?? null
+}
+
 export function calcularSaidaPalete(
   nf: NotaFiscal,
   item: NfeItem,

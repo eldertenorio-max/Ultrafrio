@@ -54,6 +54,7 @@ import {
   enderecosALiberar,
   paletesDisponiveisItem,
   parseQuantidadeSaida,
+  proximoItemSaidaPendente,
   sobraItem,
   type SaidaPaleteDraft,
 } from './lib/saidaParcial'
@@ -2103,13 +2104,24 @@ export default function App() {
         setSaidaPaletesNaFila([])
         setSaidaQtdPaletesAlvo(null)
         setSaidaModoPalete(false)
+        setSaidaQtdPaletesInput('')
+        setSaidaCaixasPalete('')
         const itemAtual = nfBuscaSaida.items.find((it) => it.index === saidaItemIndex)
-        if (
+        const itemCompleto =
           itemAtual &&
           paletesDisponiveisItem(itemAtual, next) <= 0 &&
           sobraItem(itemAtual, next, saidaLimitesPorItem) <= 1e-9
-        ) {
-          setSaidaItemIndex(null)
+        if (itemCompleto && saidaItemIndex != null) {
+          const proximo = proximoItemSaidaPendente(
+            saidaItensExibicao,
+            saidaItemIndex,
+            next,
+            saidaLimitesPorItem,
+          )
+          setSaidaItemIndex(proximo?.index ?? null)
+          if (proximo) {
+            focarMapaDestaque(primeiroEnderecoIds(proximo.allocatedAddresses))
+          }
         }
       }
       return next

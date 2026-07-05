@@ -139,34 +139,43 @@ export function vincularSaidaXmlOrigem(
   const avisos: string[] = []
   const limitesPorItem: Record<number, number> = {}
   const itensExibicao: NfeItem[] = []
+  const usadoPorItem = new Map<number, number>()
 
-  const xmlByCodigo = quantidadesXmlPorCodigo(doc)
-  const origemByCodigo = new Map<string, NfeItem>()
-  for (const item of origem.items) {
-    if (item.allocatedAddresses.length === 0) continue
-    const cod = normCodigo(item.codigo)
-    if (!cod || origemByCodigo.has(cod)) continue
-    origemByCodigo.set(cod, item)
-  }
+  const estoqueOrigem = origem.items.filter((it) => it.allocatedAddresses.length > 0)
 
-  for (const [cod, qtdXml] of xmlByCodigo) {
-    const origItem = origemByCodigo.get(cod)
+  for (const xmlItem of doc.items) {
+    const cod = normCodigo(xmlItem.codigo)
+    const qtdXml = quantidadeEstoqueItem(xmlItem)
+    if (!cod || qtdXml <= 1e-9) continue
+
+    const origItem = estoqueOrigem.find((it) => {
+      if (normCodigo(it.codigo) !== cod) return false
+      const qtdEstoque = quantidadeEstoqueItem(it)
+      const jaUsado = usadoPorItem.get(it.index) ?? 0
+      return jaUsado < qtdEstoque - 1e-9
+    })
+
     if (!origItem) {
-      const xmlItem = doc.items.find((i) => normCodigo(i.codigo) === cod)
       avisos.push(
-        `Código ${xmlItem?.codigo ?? cod} do XML de saída não encontrado com estoque na NF ${origem.numero}.`,
+        `Código ${xmlItem.codigo} do XML de saída não encontrado com estoque disponível na NF ${origem.numero}.`,
       )
       continue
     }
 
     const qtdEstoque = quantidadeEstoqueItem(origItem)
-    if (qtdXml > qtdEstoque + 1e-9) {
+    const jaUsado = usadoPorItem.get(origItem.index) ?? 0
+    const disponivel = qtdEstoque - jaUsado
+    const limite = Math.min(qtdXml, disponivel)
+
+    if (qtdXml > disponivel + 1e-9) {
       avisos.push(
-        `${origItem.codigo}: XML pede ${qtdXml} ${unidadeEstoqueItem(origItem)}, mas há ${qtdEstoque} em estoque.`,
+        `${origItem.codigo}: XML pede ${qtdXml} ${unidadeEstoqueItem(origItem)}, mas há ${disponivel} disponível nesta linha de estoque.`,
       )
     }
 
-    limitesPorItem[origItem.index] = Math.min(qtdXml, qtdEstoque)
+    limitesPorItem[origItem.index] = (limitesPorItem[origItem.index] ?? 0) + limite
+    usadoPorItem.set(origItem.index, jaUsado + limite)
+
     if (!itensExibicao.some((i) => i.index === origItem.index)) {
       itensExibicao.push(origItem)
     }
