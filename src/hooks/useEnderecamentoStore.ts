@@ -46,7 +46,7 @@ const SAVE_DEBOUNCE_SUPABASE_MS = 0
 /** Coalesce curto para agrupar o burst de eventos Realtime de um mesmo save. */
 const REMOTE_RELOAD_DEBOUNCE_MS = 120
 /** Ignora eco do próprio save no Realtime; curto para captar mudanças de outros quase na hora. */
-const IGNORE_REMOTE_AFTER_SAVE_MS = 900
+const IGNORE_REMOTE_AFTER_SAVE_MS = 2500
 /** Fallback caso o Realtime não esteja habilitado. */
 const POLL_INTERVAL_MS = 1500
 const PERSIST_RETRY_MS = 600
@@ -274,7 +274,7 @@ export function useEnderecamentoStore() {
           removidas.size > 0 && dataToSave.notas.some((n) => removidas.has(n.id))
         if (
           !restaurariaRemovidas &&
-          contarEnderecosPersistidos(dataToSave) >= contarEnderecosPersistidos(localPick)
+          contarEnderecosPersistidos(dataToSave) <= contarEnderecosPersistidos(localPick)
         ) {
           applyPersistedToState(dataToSave, next)
         }
@@ -451,7 +451,7 @@ export function useEnderecamentoStore() {
 
       if (
         trustRemote &&
-        contarEnderecosPersistidos(remoteMergedNormalized) <
+        contarEnderecosPersistidos(remoteMergedNormalized) !==
           contarEnderecosPersistidos(localNow)
       ) {
         return

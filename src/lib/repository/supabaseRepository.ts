@@ -494,8 +494,9 @@ export const supabaseRepository: EnderecamentoRepository = {
       const { error: upErr } = await upsertNf(sb, nf)
       if (upErr) throw new Error(upErr.message)
 
-      await syncNfItens(sb, nf, { permitirLimparTudo })
+      // Libera posições no banco antes dos itens — evita reload com endereços fantasmas após saída.
       await syncNfEnderecamentos(sb, nf, { permitirLimparTudo })
+      await syncNfItens(sb, nf, { permitirLimparTudo })
     }
 
     const keepMov = movimentos.map((m) => m.id)

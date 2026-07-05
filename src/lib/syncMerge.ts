@@ -28,10 +28,15 @@ function nfCompleteness(nf: NotaFiscal): number {
   )
 }
 
-function mergeAllocatedAddresses(remote: string[], fallback: string[]): string[] {
-  if (fallback.length > remote.length) return [...fallback]
-  if (remote.length > fallback.length) return [...remote]
-  return remote.length > 0 ? [...remote] : [...fallback]
+function mergeAllocatedAddresses(primary: string[], secondary: string[]): string[] {
+  const secondarySet = new Set(secondary)
+  // Saída no primary: posições removidas — não restaurar endereços antigos.
+  if (primary.length < secondary.length && primary.every((a) => secondarySet.has(a))) {
+    return [...primary]
+  }
+  if (secondary.length > primary.length) return [...secondary]
+  if (primary.length > secondary.length) return [...primary]
+  return primary.length > 0 ? [...primary] : [...secondary]
 }
 
 function preserveOptionalItemFields(item: NfeItem, fallback: NfeItem): NfeItem {
@@ -207,6 +212,18 @@ function mergeMovimentos(
   return result
 }
 
+function aplicarEnderecosPreferidos(preferido: NotaFiscal, candidato: NotaFiscal): NotaFiscal {
+  const prefByIndex = new Map(preferido.items.map((it) => [it.index, it]))
+  return {
+    ...candidato,
+    items: candidato.items.map((it) => {
+      const pref = prefByIndex.get(it.index)
+      if (!pref || pref.allocatedAddresses.length >= it.allocatedAddresses.length) return it
+      return { ...it, allocatedAddresses: [...pref.allocatedAddresses] }
+    }),
+  }
+}
+
 /** Evita que sync remoto apague endereços ou NFs que ainda existem no estado anterior. */
 export function protegerNotasContraRegressao(
   anterior: NotaFiscal[],
@@ -229,6 +246,10 @@ export function protegerNotasContraRegressao(
     }
     if (nfCompleteness(prev) > nfCompleteness(atual)) {
       porId.set(prev.id, prev)
+      continue
+    }
+    if (enderecoCount(prev) < enderecoCount(atual)) {
+      porId.set(prev.id, aplicarEnderecosPreferidos(prev, atual))
     }
   }
 
