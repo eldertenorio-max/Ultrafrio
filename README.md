@@ -59,21 +59,19 @@ git push -u origin main
 
 | Ambiente | URL | Deploy |
 |----------|-----|--------|
-| **Homologação** | [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/) | Automático a cada push no `main` |
-| **Produção (WMS)** | [wms.docalivre.com.br](https://wms.docalivre.com.br/) | Automático a cada push no `main` |
+| **Homologação** | [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/) | **Automático** a cada push no `main` |
+| **Produção (WMS)** | [wms.docalivre.com.br](https://wms.docalivre.com.br/) | **Manual** — só quando você pedir |
 
-Os dois serviços no Render apontam para o **mesmo repositório** e recebem o **mesmo commit** — builds independentes, código idêntico.
+> **Regra:** push no `main` atualiza **só a homologação**. A produção **não** recebe ao mesmo tempo — só quando você disser **“publicar no WMS”** (ou equivalente).
 
-#### Ativar deploy automático na produção (Render — uma vez)
-
-Se o WMS ainda estiver com Auto Deploy **Off**:
+#### Desligar deploy automático na produção (Render — uma vez)
 
 1. Acesse [dashboard.render.com](https://dashboard.render.com)
 2. Abra o serviço **Ultrafrio** (`wms.docalivre.com.br`)
 3. **Settings** → **Build & Deploy** → **Auto-Deploy**
-4. Selecione **On Commit** e salve
+4. Selecione **Off** e salve
 
-Repita a conferência no serviço **Ultrafrio-homologacao** (também **On Commit**).
+No serviço **Ultrafrio-homologacao**, mantenha **Auto-Deploy → On Commit**.
 
 No Render, configure **dois Static Sites** com o **mesmo build** nos dois:
 
@@ -87,21 +85,15 @@ No Render, configure **dois Static Sites** com o **mesmo build** nos dois:
 
 Não use `VITE_APP_AMBIENTE` — o banner “Homologação” é detectado pelo hostname em runtime.
 
-Fluxo: alteração → push no `main` → os dois sites atualizam sozinhos (~2–5 min) → teste na homologação → valide paridade.
+#### Fluxo
 
-#### Validar que os dois estão iguais
+1. Alteração → **push no `main`** → homologação atualiza sozinha  
+2. Teste em [ultrafrio-homologacao.onrender.com](https://ultrafrio-homologacao.onrender.com/)  
+3. Quando estiver ok, peça **“publicar no WMS”**  
+4. Render → **Ultrafrio (WMS)** → **Manual Deploy → Clear build cache & deploy**  
+5. Confirme: `npm run check:deploy` → **AMBIENTES IGUAIS**
 
-Após o deploy (aguarde status **Live** nos dois serviços):
-
-```bash
-npm run check:deploy
-```
-
-Deve retornar **AMBIENTES IGUAIS** (mesmo `index-*.js`, `index-*.css`, `sw.js` e `supabase-config.json`).
-
-Se divergirem, confira build command e variáveis de ambiente iguais nos dois serviços e faça **Manual Deploy → Clear build cache & deploy** no que estiver atrás.
-
-**Única diferença intencional:** na homologação aparece o banner/selo “Homologação” (mesmo código, detectado pelo hostname). No WMS real isso não aparece.
+**Única diferença intencional:** na homologação aparece o banner/selo “Homologação”. No WMS real isso não aparece.
 
 ### Configuração básica
 
