@@ -69,6 +69,8 @@ describe('pesoBrutoReferenciaNf', () => {
     const resumo = resumirNfArmazenada(nf, [movLiquido()], agora)
     expect(resumo.pesoBruto).toBeCloseTo(27_794.92, 2)
     expect(resumo.pesoBrutoRestante).toBeCloseTo(27_794.92, 2)
+    expect(resumo.pesoAtual).toBeCloseTo(27_794.92, 2)
+    expect(resumo.pesoSaidoBruto).toBe(0)
     expect(resumo.pesoEntrada).toBeCloseTo(26_897.32, 2)
     expect(resumo.pesoRestante).toBeCloseTo(26_897.32, 2)
     expect(resumo.diasArmazenados).toBe(125)
@@ -93,9 +95,15 @@ describe('pesoBrutoReferenciaNf', () => {
       ],
     }
 
-    const resumo = resumirNfArmazenada(nf, [movLiquido(), saida])
+    const agora = new Date(2026, 6, 6)
+    const resumo = resumirNfArmazenada(nf, [movLiquido(), saida], agora)
     expect(resumo.pesoBruto).toBeCloseTo(27_794.92, 1)
     expect(resumo.pesoBrutoRestante).toBeCloseTo(13_897.46, 1)
+    expect(resumo.pesoAtual).toBeCloseTo(13_897.46, 1)
+    expect(resumo.pesoSaidoBruto).toBeCloseTo(13_897.46, 1)
+    expect(resumo.pesoAtual).toBeCloseTo(resumo.pesoBruto - resumo.pesoSaidoBruto, 2)
+    expect(resumo.dataUltimaSaida).toBeTruthy()
+    expect(resumo.diasCobranca).toBeLessThan(resumo.diasArmazenados)
     expect(resumo.pesoRestante).toBeCloseTo(13_448.66, 1)
   })
 })

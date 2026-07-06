@@ -3,6 +3,7 @@ import {
   calcularCobrancaDetalhada,
   dataNoPeriodoCobranca,
   debitosEntradaPeriodo,
+  diasPeriodoCobrancaArmazenagem,
   saidasNoPeriodoCobranca,
   valorAcumuladoArmazenagem,
   valorCobrancaPeriodo,
@@ -46,9 +47,13 @@ const resumoNf = (overrides: Partial<ResumoNfArmazenada> = {}): ResumoNfArmazena
   emitente: 'ASTRAPLUS',
   dataEntrada: '2026-07-05',
   dataSaida: null,
+  dataUltimaSaida: null,
   diasArmazenados: 1,
+  diasCobranca: 1,
   pesoBruto: 27500,
   pesoBrutoRestante: 27500,
+  pesoAtual: 27500,
+  pesoSaidoBruto: 0,
   pesoLiquido: 23500,
   pesoEntrada: 23500,
   pesoRestante: 23500,
@@ -106,9 +111,11 @@ describe('calcularCobrancaDetalhada', () => {
     const cobranca = calcularCobrancaDetalhada(
       resumoNf({
         diasArmazenados: dias,
+        diasCobranca: dias,
         pesoEntrada: 26_897.32,
         pesoBruto,
         pesoBrutoRestante: pesoBruto,
+        pesoAtual: pesoBruto,
         pesoLiquido: 26_897.32,
         pesoRestante: 26_897.32,
       }),
@@ -125,19 +132,34 @@ describe('calcularCobrancaDetalhada', () => {
     expect(valorCobrancaPeriodo(6, diaria)).toBe(1000.56)
   })
 
-  it('kilo após saída parcial: diária sobre peso bruto restante (bruto − saída)', () => {
+  it('kilo após saída parcial: dias desde última saída × diária sobre peso atual', () => {
     const pesoBrutoEntrada = 27_794.92
     const pesoBrutoRestante = 13_897.46
+    const diasPosSaida = 6
     const diaria = valorDiariaPorKilo(pesoBrutoRestante, 0.18, 'mensal')
 
     const cobranca = calcularCobrancaDetalhada(
       resumoNf({
         pesoBruto: pesoBrutoEntrada,
         pesoBrutoRestante,
+        pesoAtual: pesoBrutoRestante,
         pesoEntrada: 13_448.66,
         pesoLiquido: 13_448.66,
         pesoRestante: 13_448.66,
         pesoSaido: 13_448.66,
+        diasArmazenados: 125,
+        diasCobranca: diasPosSaida,
+        dataUltimaSaida: '2026-07-01',
+        saidas: [
+          {
+            id: 's1',
+            data: '2026-07-01',
+            nfSaidaNumero: null,
+            pesoSaida: 13_448.66,
+            caixasSaida: 660,
+            paletesSaida: 10,
+          },
+        ],
       }),
       contratoBase({ cobrarPalete: false, cobrarKilo: true, cobrarEntrada: false, kiloPorDia: true }),
       { ...tabelaBase(), custoPorKilo: 0.18 },
@@ -146,6 +168,7 @@ describe('calcularCobrancaDetalhada', () => {
 
     expect(diaria).toBe(83.38)
     expect(cobranca.valorDiaria).toBe(83.38)
+    expect(cobranca.valorVigente).toBe(500.28)
     expect(valorCobrancaPeriodo(6, diaria)).toBe(500.28)
   })
 
@@ -170,6 +193,32 @@ describe('calcularCobrancaDetalhada', () => {
 
     expect(cobranca.valorDiaria).toBe(0)
     expect(cobranca.valorVigente).toBe(0)
+  })
+})
+
+describe('diasPeriodoCobrancaArmazenagem', () => {
+  it('após saída parcial, período conta só dias desde a última saída', () => {
+    expect(
+      diasPeriodoCobrancaArmazenagem(
+        '2026-07-01',
+        '2026-07-06',
+        '2026-03-03',
+        '2026-07-01',
+        'armazenada',
+      ),
+    ).toBe(6)
+  })
+
+  it('sem saída, período respeita data de entrada', () => {
+    expect(
+      diasPeriodoCobrancaArmazenagem(
+        '2026-07-01',
+        '2026-07-06',
+        '2026-07-05',
+        null,
+        'armazenada',
+      ),
+    ).toBe(2)
   })
 })
 

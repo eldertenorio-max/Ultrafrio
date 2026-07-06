@@ -3,6 +3,7 @@ import { formatValorNfe, formatPesoBruto, formatQuantidadeNfe } from '../lib/for
 import {
   calcularCobrancaDetalhada,
   debitosEntradaPeriodo,
+  diasPeriodoCobrancaArmazenagem,
   formatMoedaFinanceiro,
   formatarCnpj,
   formatarDataBr,
@@ -158,11 +159,6 @@ function numeroCsv(value: number): string {
 
 function totalPosicoesNota(nf: NotaFiscal | undefined): number {
   return nf?.items.reduce((s, it) => s + it.allocatedAddresses.length, 0) ?? 0
-}
-
-function pesoAtualBrutoNf(nf: ReturnType<typeof resumirNfArmazenada>): number {
-  if (nf.status !== 'armazenada') return 0
-  return nf.pesoBrutoRestante > 0 ? nf.pesoBrutoRestante : nf.pesoBruto
 }
 
 function totalPosicoesMovimento(mov: MovimentoRegistro | undefined): number {
@@ -1364,7 +1360,15 @@ function DataEntradaSection({
         const periodo = periodosCobranca[nf.nfId]
         const periodoInicio = periodo?.inicio ?? inicioMesVigenteInputValue()
         const periodoFim = periodo?.fim ?? todayInputValue()
-        const diasPeriodo = diasPeriodoCobranca(periodoInicio, periodoFim)
+        const diasPeriodo = contrato?.cobrarKilo
+          ? diasPeriodoCobrancaArmazenagem(
+              periodoInicio,
+              periodoFim,
+              nf.dataEntrada,
+              nf.dataUltimaSaida,
+              nf.status,
+            )
+          : diasPeriodoCobranca(periodoInicio, periodoFim)
         const valorArmazenagem = valorCobrancaPeriodo(diasPeriodo, valorDiaria)
         const saidasPeriodo = saidasNoPeriodoCobranca(nf.saidas, periodoInicio, periodoFim)
         const entradaNoPeriodo = debitosEntradaPeriodo(
@@ -1557,7 +1561,7 @@ function DataEntradaSection({
           numeroCsv(linha.valorPeriodo),
           numeroCsv(linha.nf.pesoEntrada),
           numeroCsv(linha.nf.pesoBruto),
-          numeroCsv(pesoAtualBrutoNf(linha.nf)),
+          numeroCsv(linha.nf.pesoAtual),
           numeroCsv(linha.nf.pesoSaido),
           linha.nf.saidas.length,
           numeroCsv(linha.nf.totalCaixas),
@@ -1807,7 +1811,11 @@ function DataEntradaSection({
                     </div>
                     <div>
                       <span className="muted">Dias</span>
-                      <strong>{nf.diasArmazenados}</strong>
+                      <strong>
+                        {nf.dataUltimaSaida && nf.status === 'armazenada'
+                          ? `${nf.diasCobranca} (desde última saída)`
+                          : nf.diasArmazenados}
+                      </strong>
                     </div>
                     <div>
                       <span className="muted">Valor acumulado</span>
@@ -1823,7 +1831,7 @@ function DataEntradaSection({
                     </div>
                     <div>
                       <span className="muted">Peso atual</span>
-                      <strong>{formatPesoBruto(pesoAtualBrutoNf(nf))} kg</strong>
+                      <strong>{formatPesoBruto(nf.pesoAtual)} kg</strong>
                     </div>
                     <div>
                       <span className="muted">Itens</span>
