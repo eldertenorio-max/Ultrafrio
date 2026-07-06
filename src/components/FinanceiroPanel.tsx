@@ -1473,7 +1473,7 @@ function DataEntradaSection({
       'Período início',
       'Período fim',
       'Dias do período',
-      'Valor vigente',
+      'Valor diária',
       'Valor acumulado',
       'Valor a cobrar período',
       'Peso entrada kg',
@@ -1757,15 +1757,13 @@ function DataEntradaSection({
                       <span className="muted">Dias</span>
                       <strong>{nf.diasArmazenados}</strong>
                     </div>
-                    <div className="fin-entrada-grid-valores">
-                      <div>
-                        <span className="muted">Valor acumulado</span>
-                        <strong>{formatMoedaFinanceiro(valorVigente)}</strong>
-                      </div>
-                      <div>
-                        <span className="muted">Valor vigente</span>
-                        <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
-                      </div>
+                    <div>
+                      <span className="muted">Valor acumulado</span>
+                      <strong>{formatMoedaFinanceiro(valorVigente)}</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Valor diária</span>
+                      <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
                     </div>
                     <div>
                       <span className="muted">Peso entrada</span>
@@ -1824,7 +1822,7 @@ function DataEntradaSection({
                       <strong>{diasPeriodo}</strong>
                     </div>
                     <div>
-                      <span className="muted">Valor vigente</span>
+                      <span className="muted">Valor diária</span>
                       <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
                     </div>
                   </div>

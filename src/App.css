@@ -8061,7 +8061,7 @@ html.scroll-locked .sidebar.sidebar--wide {
   }
 
   .fin-entrada-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .fin-data-armazenagem-input {
@@ -8857,7 +8857,7 @@ html.scroll-locked .sidebar.sidebar--wide {
 
 .fin-entrada-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px 16px;
   align-content: start;
 }
@@ -8872,30 +8872,6 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .fin-entrada-grid strong {
-  font-size: 0.84rem;
-  display: flex;
-  align-items: center;
-  min-height: 28px;
-  line-height: 1.2;
-  color: var(--text);
-}
-
-.fin-entrada-grid-valores {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 50px;
-  justify-content: flex-start;
-}
-
-.fin-entrada-grid-valores > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.fin-entrada-grid-valores strong {
   font-size: 0.84rem;
   display: flex;
   align-items: center;
