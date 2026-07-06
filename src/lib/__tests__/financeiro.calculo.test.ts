@@ -178,14 +178,16 @@ describe('debitosSaidaPeriodo', () => {
   ]
 
   it('cobra custo de saída por registro dentro do período', () => {
-    const contrato = contratoBase({ cobrarSaida: true })
+    const contrato = contratoBase()
     const tabela = { ...tabelaBase(), custoSaida: 30 }
     expect(debitosSaidaPeriodo(saidas, '2026-07-01', '2026-07-06', contrato, tabela)).toBe(30)
     expect(saidasNoPeriodoCobranca(saidas, '2026-07-01', '2026-07-31')).toHaveLength(2)
   })
 
-  it('retorna zero sem cobrança de saída no contrato', () => {
-    expect(debitosSaidaPeriodo(saidas, '2026-07-01', '2026-07-31', contratoBase(), tabelaBase())).toBe(0)
+  it('retorna zero sem custo de saída na tabela', () => {
+    expect(
+      debitosSaidaPeriodo(saidas, '2026-07-01', '2026-07-31', contratoBase(), { ...tabelaBase(), custoSaida: 0 }),
+    ).toBe(0)
   })
 
   it('dataNoPeriodoCobranca respeita intervalo inclusivo', () => {

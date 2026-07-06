@@ -158,7 +158,7 @@ export function saidasNoPeriodoCobranca(
   return saidas.filter((s) => dataNoPeriodoCobranca(s.data, periodoInicio, periodoFim))
 }
 
-/** Débitos de saída no período (custo fixo por saída registrada no intervalo). */
+/** Débitos de saída no período (custo da tabela × cada saída registrada no intervalo). */
 export function debitosSaidaPeriodo(
   saidas: SaidaNfFinanceiro[],
   periodoInicio: string,
@@ -166,7 +166,7 @@ export function debitosSaidaPeriodo(
   contrato: ContratoCliente | null,
   tabela: TabelaCobranca | null,
 ): number {
-  if (!contrato?.cobrarSaida || !tabela || tabela.custoSaida <= 0) return 0
+  if (!contrato || !tabela || tabela.custoSaida <= 0) return 0
   const qtd = saidasNoPeriodoCobranca(saidas, periodoInicio, periodoFim).length
   return Math.round(qtd * tabela.custoSaida * 100) / 100
 }

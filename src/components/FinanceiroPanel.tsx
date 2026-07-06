@@ -1866,9 +1866,9 @@ function DataEntradaSection({
                       </div>
                       <span className="muted fin-periodo-cobranca-debitos-hint">
                         {qtdSaidasPeriodo} saída(s) no período
-                        {linha.tabela && linha.contrato?.cobrarSaida
+                        {linha.tabela && linha.tabela.custoSaida > 0
                           ? ` · ${formatMoedaFinanceiro(linha.tabela.custoSaida)} cada`
-                          : ''}
+                          : ' · sem custo de saída na tabela'}
                       </span>
                     </div>
                   )}
