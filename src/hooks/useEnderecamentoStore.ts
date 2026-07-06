@@ -126,7 +126,8 @@ function preserveUi(
     if (
       !inMerged &&
       prevNf &&
-      (prevNf.status === 'em_andamento' || prevNf.status === 'concluida')
+      (prevNf.status === 'concluida' ||
+        prevNf.items.some((it) => it.allocatedAddresses.length > 0))
     ) {
       notas = [prevNf, ...notas.filter((n) => n.id !== activeNfId)]
     } else if (!inMerged) {
@@ -151,7 +152,9 @@ function hasPendingLocalChanges(
 ): boolean {
   if (pendingSave || saveTimer) return true
   if (!lastPersisted) return false
-  return isDirtyComparedToBase(pickPersisted(stateRef), lastPersisted)
+  const localPick = pickPersisted(stateRef)
+  if (nfIdsRemovidosDesde(lastPersisted, localPick).size > 0) return true
+  return isDirtyComparedToBase(localPick, lastPersisted)
 }
 
 function sleep(ms: number): Promise<void> {
@@ -192,6 +195,7 @@ export function useEnderecamentoStore() {
     const next = preserveUi(base, data)
     if (persistedEquals(pickPersisted(base), data)) return base
     skipSave.current = true
+    stateRef.current = next
     setState(next)
     setTimeout(() => {
       skipSave.current = false
@@ -758,7 +762,16 @@ export function useEnderecamentoStore() {
   }, [persist])
 
   const updateState = useCallback((updater: AppState | ((prev: AppState) => AppState)) => {
-    setState((prev) => (typeof updater === 'function' ? updater(prev) : updater))
+    if (typeof updater === 'function') {
+      setState((prev) => {
+        const next = updater(prev)
+        stateRef.current = next
+        return next
+      })
+    } else {
+      stateRef.current = updater
+      setState(updater)
+    }
   }, [])
 
   const registrarEmitente = useCallback(async (nome: string) => {

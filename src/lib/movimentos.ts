@@ -477,6 +477,23 @@ export function limparMovimentosEntradaOrfaos(data: PersistedData): PersistedDat
   return changed ? { ...data, movimentos } : data
 }
 
+/**
+ * Cancelou entrada(s) sem endereços — pode remover todas as NFs do Supabase
+ * sem confundir com wipe acidental de estoque endereçado.
+ */
+export function podeApagarTodasNotasSemEstoque(
+  data: PersistedData,
+  previous: PersistedData | null,
+): boolean {
+  if (data.notas.length > 0) return false
+  if (contarEnderecosPersistidos(data) > 0) return false
+  if (!previous || previous.notas.length === 0) return false
+  const haviaEnderecos = previous.notas.some((nf) =>
+    nf.items.some((it) => it.allocatedAddresses.length > 0),
+  )
+  return !haviaEnderecos
+}
+
 /** Data efetiva da saída (informada pelo usuário ou data do registro). */
 export function dataEfetivaMovimentoSaida(mov: MovimentoRegistro): string {
   return mov.dataSaida ?? mov.createdAt

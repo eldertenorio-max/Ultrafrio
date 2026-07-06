@@ -1726,7 +1726,8 @@ export default function App() {
       notas: base.notas,
       movimentos: base.movimentos,
       notasCanceladas: base.notasCanceladas,
-      activeNfId: wasActive ? nextNf?.id ?? null : snapshot.activeNfId,
+      activeNfId:
+        snapshot.activeNfId === nfId ? (nextNf?.id ?? null) : snapshot.activeNfId,
       activeItemIndex: wasActive ? nextNf?.items[0]?.index ?? null : snapshot.activeItemIndex,
     }
     setState(nextState)

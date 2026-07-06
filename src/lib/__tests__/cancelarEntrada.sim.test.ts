@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { removerNfDoEstoque } from '../movimentos'
+import { podeApagarTodasNotasSemEstoque, removerNfDoEstoque } from '../movimentos'
 import {
   consolidarRemocoesLocais,
   mergePersistedData,
@@ -76,5 +76,38 @@ describe('Simulação: cancelar entrada', () => {
 
     const gravado = simularGravacaoCancelamento(base, local)
     expect(gravado.notas.map((n) => n.id)).toEqual(['nf-ok'])
+  })
+
+  it('permite apagar a única NF em andamento sem endereços no Supabase', () => {
+    const nf = nfEmAndamento('nf-entrada-1', '12345')
+    const base: PersistedData = {
+      notas: [nf],
+      movimentos: [],
+      notasCanceladas: [],
+      emitentes: [],
+    }
+    const local = removerNfDoEstoque(base, nf.id)
+    expect(podeApagarTodasNotasSemEstoque(local, base)).toBe(true)
+  })
+
+  it('bloqueia apagar estoque endereçado no Supabase', () => {
+    const nf = {
+      ...nfEmAndamento('nf-ok', '100'),
+      status: 'concluida' as const,
+      items: [
+        {
+          ...nfEmAndamento('nf-ok', '100').items[0],
+          allocatedAddresses: ['cam6-r1-p1-c1'],
+        },
+      ],
+    }
+    const base: PersistedData = {
+      notas: [nf],
+      movimentos: [],
+      notasCanceladas: [],
+      emitentes: [],
+    }
+    const local: PersistedData = { notas: [], movimentos: [], notasCanceladas: [], emitentes: [] }
+    expect(podeApagarTodasNotasSemEstoque(local, base)).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 import type { AppState, MovimentoRegistro, NotaFiscal, NotaFiscalCancelada } from '../../types'
 import { emitenteKey, normalizarEmitente } from '../emitentesRegistry'
-import { limparMovimentosEntradaOrfaos } from '../movimentos'
+import { limparMovimentosEntradaOrfaos, podeApagarTodasNotasSemEstoque } from '../movimentos'
 import { loadUiSession, saveUiSession } from '../uiSession'
 import { getSupabase, type CanceladaRow, type EmitenteRow, type EndRow, type ItemRow, type MovRow, type NfRow } from '../supabaseClient'
 import type { EnderecamentoRepository } from './types'
@@ -463,9 +463,21 @@ export const supabaseRepository: EnderecamentoRepository = {
     if (keepIds.length === 0) {
       const existingCount = await countRows('ultrafrio_notas_fiscais')
       if (existingCount > 0) {
-        throw new Error(
-          'Bloqueado: tentativa de apagar todo o estoque no Supabase. Recupere pelo backup antes de sincronizar.',
+        const cancelamentoSemEstoque = podeApagarTodasNotasSemEstoque(
+          { notas, movimentos, notasCanceladas, emitentes: [] },
+          previous,
         )
+        if (!cancelamentoSemEstoque) {
+          throw new Error(
+            'Bloqueado: tentativa de apagar todo o estoque no Supabase. Recupere pelo backup antes de sincronizar.',
+          )
+        }
+        const { data: existing } = await sb.from('ultrafrio_notas_fiscais').select('id')
+        const allIds = ((existing ?? []) as { id: string }[]).map((r) => r.id)
+        if (allIds.length) {
+          const { error } = await sb.from('ultrafrio_notas_fiscais').delete().in('id', allIds)
+          if (error) throw new Error(error.message)
+        }
       }
     } else {
       const { data: existing } = await sb.from('ultrafrio_notas_fiscais').select('id')
