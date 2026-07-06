@@ -9031,6 +9031,40 @@ html.scroll-locked .sidebar.sidebar--wide {
   font-size: 1rem;
 }
 
+.fin-periodo-cobranca-debitos {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.fin-periodo-cobranca-debitos-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fin-periodo-cobranca-debitos-linha span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+}
+
+.fin-periodo-cobranca-debitos-linha strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.fin-periodo-cobranca-debitos-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+}
+
 .fin-cobranca-detalhes {
   list-style: none;
   padding: 0;

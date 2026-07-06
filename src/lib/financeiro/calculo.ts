@@ -129,6 +129,48 @@ export function valorCobrancaPeriodo(diasPeriodo: number, valorDiaria: number): 
   return Math.round(diasPeriodo * valorDiaria * 100) / 100
 }
 
+function dataReferenciaIso(iso: string): string | null {
+  const dateOnly = iso.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (dateOnly) return dateOnly[1]
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Verifica se a data (ISO ou data-hora) está no intervalo inclusivo YYYY-MM-DD. */
+export function dataNoPeriodoCobranca(dataIso: string, periodoInicio: string, periodoFim: string): boolean {
+  const ref = dataReferenciaIso(dataIso)
+  if (!ref) return false
+  if (periodoInicio && ref < periodoInicio) return false
+  if (periodoFim && ref > periodoFim) return false
+  return true
+}
+
+export function saidasNoPeriodoCobranca(
+  saidas: SaidaNfFinanceiro[],
+  periodoInicio: string,
+  periodoFim: string,
+): SaidaNfFinanceiro[] {
+  if (!periodoInicio || !periodoFim) return []
+  return saidas.filter((s) => dataNoPeriodoCobranca(s.data, periodoInicio, periodoFim))
+}
+
+/** Débitos de saída no período (custo fixo por saída registrada no intervalo). */
+export function debitosSaidaPeriodo(
+  saidas: SaidaNfFinanceiro[],
+  periodoInicio: string,
+  periodoFim: string,
+  contrato: ContratoCliente | null,
+  tabela: TabelaCobranca | null,
+): number {
+  if (!contrato?.cobrarSaida || !tabela || tabela.custoSaida <= 0) return 0
+  const qtd = saidasNoPeriodoCobranca(saidas, periodoInicio, periodoFim).length
+  return Math.round(qtd * tabela.custoSaida * 100) / 100
+}
+
 function pesoBrutoArmazenagem(resumo: ResumoNfArmazenada): number {
   if (resumo.pesoBrutoRestante > 0) return resumo.pesoBrutoRestante
   if (resumo.pesoBruto > 0) return resumo.pesoBruto

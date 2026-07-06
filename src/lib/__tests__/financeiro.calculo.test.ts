@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   calcularCobrancaDetalhada,
+  dataNoPeriodoCobranca,
+  debitosSaidaPeriodo,
+  saidasNoPeriodoCobranca,
   valorAcumuladoArmazenagem,
   valorCobrancaPeriodo,
   valorDiariaPorKilo,
@@ -165,5 +168,28 @@ describe('calcularCobrancaDetalhada', () => {
 
     expect(cobranca.valorDiaria).toBe(0)
     expect(cobranca.valorVigente).toBe(0)
+  })
+})
+
+describe('debitosSaidaPeriodo', () => {
+  const saidas = [
+    { id: 's1', data: '2026-07-03T10:00:00.000Z', nfSaidaNumero: '100', pesoSaida: 1000, caixasSaida: 10, paletesSaida: 1 },
+    { id: 's2', data: '2026-07-15T10:00:00.000Z', nfSaidaNumero: '101', pesoSaida: 500, caixasSaida: 5, paletesSaida: 1 },
+  ]
+
+  it('cobra custo de saída por registro dentro do período', () => {
+    const contrato = contratoBase({ cobrarSaida: true })
+    const tabela = { ...tabelaBase(), custoSaida: 30 }
+    expect(debitosSaidaPeriodo(saidas, '2026-07-01', '2026-07-06', contrato, tabela)).toBe(30)
+    expect(saidasNoPeriodoCobranca(saidas, '2026-07-01', '2026-07-31')).toHaveLength(2)
+  })
+
+  it('retorna zero sem cobrança de saída no contrato', () => {
+    expect(debitosSaidaPeriodo(saidas, '2026-07-01', '2026-07-31', contratoBase(), tabelaBase())).toBe(0)
+  })
+
+  it('dataNoPeriodoCobranca respeita intervalo inclusivo', () => {
+    expect(dataNoPeriodoCobranca('2026-07-06T23:59:00.000Z', '2026-07-01', '2026-07-06')).toBe(true)
+    expect(dataNoPeriodoCobranca('2026-06-30', '2026-07-01', '2026-07-06')).toBe(false)
   })
 })

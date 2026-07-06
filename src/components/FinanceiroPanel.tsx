@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { formatValorNfe, formatPesoBruto, formatQuantidadeNfe } from '../lib/formatNfeItem'
 import {
   calcularCobrancaDetalhada,
+  debitosSaidaPeriodo,
   formatMoedaFinanceiro,
   formatarCnpj,
   formatarDataBr,
@@ -9,6 +10,7 @@ import {
   normalizarCnpj,
   resumirClienteFinanceiro,
   resumirNfArmazenada,
+  saidasNoPeriodoCobranca,
   valorCobrancaPeriodo,
 } from '../lib/financeiro/calculo'
 import { dataArmazenagemNf } from '../lib/dataArmazenagem'
@@ -33,12 +35,16 @@ type LinhaFinanceiroEntrada = {
   nf: ReturnType<typeof resumirNfArmazenada>
   nota: NotaFiscal | undefined
   cliente: ClienteFinanceiro | undefined
+  contrato: ContratoCliente | null
   tabela: TabelaCobranca | null
   valorDiaria: number
   valorVigente: number
   periodoInicio: string
   periodoFim: string
   diasPeriodo: number
+  valorArmazenagem: number
+  debitosSaida: number
+  qtdSaidasPeriodo: number
   valorPeriodo: number
   posicoes: number
 }
@@ -1353,17 +1359,25 @@ function DataEntradaSection({
         const periodoInicio = periodo?.inicio ?? inicioMesVigenteInputValue()
         const periodoFim = periodo?.fim ?? todayInputValue()
         const diasPeriodo = diasPeriodoCobranca(periodoInicio, periodoFim)
+        const valorArmazenagem = valorCobrancaPeriodo(diasPeriodo, valorDiaria)
+        const saidasPeriodo = saidasNoPeriodoCobranca(nf.saidas, periodoInicio, periodoFim)
+        const debitosSaida = debitosSaidaPeriodo(nf.saidas, periodoInicio, periodoFim, contrato, tabela)
+        const valorPeriodo = Math.round((valorArmazenagem + debitosSaida) * 100) / 100
         return {
           nf,
           nota,
           cliente,
           tabela,
+          contrato,
           valorDiaria,
           valorVigente,
           periodoInicio,
           periodoFim,
           diasPeriodo,
-          valorPeriodo: valorCobrancaPeriodo(diasPeriodo, valorDiaria),
+          valorArmazenagem,
+          debitosSaida,
+          qtdSaidasPeriodo: saidasPeriodo.length,
+          valorPeriodo,
           posicoes: totalPosicoesNota(nota),
         }
       }),
@@ -1376,6 +1390,8 @@ function DataEntradaSection({
         (acc, linha) => ({
           nfs: acc.nfs + 1,
           valorPeriodo: acc.valorPeriodo + linha.valorPeriodo,
+          valorArmazenagem: acc.valorArmazenagem + linha.valorArmazenagem,
+          debitosSaida: acc.debitosSaida + linha.debitosSaida,
           valorVigente: acc.valorVigente + linha.valorVigente,
           posicoes: acc.posicoes + linha.posicoes,
           peso: acc.peso + (linha.nf.pesoRestante > 0 ? linha.nf.pesoRestante : linha.nf.pesoEntrada),
@@ -1386,6 +1402,8 @@ function DataEntradaSection({
         {
           nfs: 0,
           valorPeriodo: 0,
+          valorArmazenagem: 0,
+          debitosSaida: 0,
           valorVigente: 0,
           posicoes: 0,
           peso: 0,
@@ -1476,7 +1494,9 @@ function DataEntradaSection({
       'Dias do período',
       'Valor diária',
       'Valor acumulado',
-      'Valor a cobrar período',
+      'Valor armazenagem período',
+      'Débitos saída período',
+      'Valor total a cobrar',
       'Peso entrada kg',
       'Peso bruto kg',
       'Peso saído kg',
@@ -1515,6 +1535,8 @@ function DataEntradaSection({
           linha.diasPeriodo,
           numeroCsv(linha.valorDiaria),
           numeroCsv(linha.valorVigente),
+          numeroCsv(linha.valorArmazenagem),
+          numeroCsv(linha.debitosSaida),
           numeroCsv(linha.valorPeriodo),
           numeroCsv(linha.nf.pesoEntrada),
           numeroCsv(linha.nf.pesoEntrada),
@@ -1699,7 +1721,19 @@ function DataEntradaSection({
 
           <ul className="fin-nf-lista">
             {linhasPaginaEntrada.map((linha) => {
-              const { nf, cliente: cli, valorDiaria, valorVigente, periodoInicio, periodoFim, diasPeriodo, valorPeriodo } = linha
+              const {
+                nf,
+                cliente: cli,
+                valorDiaria,
+                valorVigente,
+                periodoInicio,
+                periodoFim,
+                diasPeriodo,
+                valorArmazenagem,
+                debitosSaida,
+                qtdSaidasPeriodo,
+                valorPeriodo,
+              } = linha
               const updatePeriodo = (patch: Partial<{ inicio: string; fim: string }>) => {
                 setPeriodosCobranca((prev) => ({
                   ...prev,
@@ -1823,8 +1857,22 @@ function DataEntradaSection({
                   </div>
                   <div className="fin-periodo-cobranca-total">
                     <span>Valor a cobrar</span>
-                    <strong>{formatMoedaFinanceiro(valorPeriodo)}</strong>
+                    <strong>{formatMoedaFinanceiro(valorArmazenagem)}</strong>
                   </div>
+                  {(debitosSaida > 0 || qtdSaidasPeriodo > 0) && (
+                    <div className="fin-periodo-cobranca-debitos">
+                      <div className="fin-periodo-cobranca-debitos-linha">
+                        <span>Débitos de saída</span>
+                        <strong>{formatMoedaFinanceiro(debitosSaida)}</strong>
+                      </div>
+                      <span className="muted fin-periodo-cobranca-debitos-hint">
+                        {qtdSaidasPeriodo} saída(s) no período
+                        {linha.tabela && linha.contrato?.cobrarSaida
+                          ? ` · ${formatMoedaFinanceiro(linha.tabela.custoSaida)} cada`
+                          : ''}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {nf.saidas.length > 0 && (
                   <div className="fin-saidas-card">
