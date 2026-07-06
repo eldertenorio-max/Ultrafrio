@@ -196,7 +196,7 @@ function flagsContrato(contrato: ContratoCliente | null): string {
   if (!contrato) return 'Sem contrato ativo'
   const flags = [
     contrato.cobrarPosicaoPalete && 'Posição',
-    contrato.cobrarKilo && (contrato.kiloPorDia ? 'Kilo por dia' : 'Kilo por ciclo'),
+    contrato.cobrarKilo && 'Kilo',
     contrato.cobrarEntrada && 'Entrada',
     contrato.cobrarSaida && 'Saída',
   ].filter(Boolean)
@@ -513,7 +513,6 @@ function ContratoSection({
   const [cobKilo, setCobKilo] = useState(false)
   const [cobEntrada, setCobEntrada] = useState(false)
   const [cobSaida, setCobSaida] = useState(false)
-  const [kiloPorDia, setKiloPorDia] = useState(false)
   const [obs, setObs] = useState('')
   const podeSalvar = Boolean(cnpj.trim() && razao.trim() && tabelaId)
 
@@ -528,7 +527,6 @@ function ContratoSection({
     setCobKilo(false)
     setCobEntrada(false)
     setCobSaida(false)
-    setKiloPorDia(false)
     setObs('')
   }
 
@@ -543,7 +541,6 @@ function ContratoSection({
     setCobKilo(c.cobrarKilo)
     setCobEntrada(c.cobrarEntrada)
     setCobSaida(c.cobrarSaida)
-    setKiloPorDia(c.kiloPorDia)
     setObs(c.observacao ?? '')
   }
 
@@ -572,7 +569,7 @@ function ContratoSection({
       cobrarPalete: false,
       cobrarEntrada: cobEntrada,
       cobrarSaida: cobSaida,
-      kiloPorDia,
+      kiloPorDia: false,
       ativo: true,
       ...(obs.trim() ? { observacao: obs.trim() } : {}),
       criadoEm: editId
@@ -718,10 +715,6 @@ function ContratoSection({
               <input type="checkbox" checked={cobSaida} onChange={(e) => setCobSaida(e.target.checked)} />
               Saída
             </label>
-            <label className="fin-check fin-check--sub">
-              <input type="checkbox" checked={kiloPorDia} onChange={(e) => setKiloPorDia(e.target.checked)} disabled={!cobKilo} />
-              Kilo × dias armazenados
-            </label>
           </div>
         </fieldset>
 
@@ -750,7 +743,7 @@ function ContratoSection({
               const tab = data.tabelas.find((t) => t.id === c.tabelaId)
               const flags = [
                 c.cobrarPosicaoPalete && 'Posição',
-                c.cobrarKilo && (c.kiloPorDia ? 'Kilo×dia' : 'Kilo'),
+                c.cobrarKilo && 'Kilo',
                 c.cobrarEntrada && 'Entrada',
                 c.cobrarSaida && 'Saída',
               ].filter(Boolean)
