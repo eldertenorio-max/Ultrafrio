@@ -1,5 +1,5 @@
 import type { NfeItem, NotaFiscal } from '../types'
-import { isUnidadePeso, kgPorCaixaFromDescricao } from './nfeUnidades'
+import { isUnidadePeso, resolverQuantidadeComercialNfe } from './nfeUnidades'
 
 function textOf(el: Element | null, tag: string): string {
   if (!el) return ''
@@ -36,42 +36,13 @@ function parsePesoKgComercial(prod: Element): number | undefined {
 }
 
 function parseItemQuantidadeUnidade(prod: Element): { quantidade: number; unidade: string } {
-  const qCom = numOf(prod, 'qCom')
-  const uCom = textOf(prod, 'uCom') || 'UN'
-  const qTrib = numOf(prod, 'qTrib')
-  const uTrib = textOf(prod, 'uTrib')
-  const descricao = textOf(prod, 'xProd')
-
-  const comPeso = isUnidadePeso(uCom)
-  const tribPeso = isUnidadePeso(uTrib)
-
-  // NF Astraplus/Coval: uCom=KG com peso total, descrição traz "CX 20KG" → quantidade em caixas
-  if (comPeso && qCom > 0) {
-    const kgCx = kgPorCaixaFromDescricao(descricao)
-    if (kgCx != null) {
-      const caixas = qCom / kgCx
-      if (caixas >= 1 && Math.abs(caixas - Math.round(caixas)) < 0.02) {
-        return { quantidade: Math.round(caixas), unidade: 'CX' }
-      }
-    }
-  }
-
-  // uCom em peso, contagem comercial em uTrib (ex.: KG + CX)
-  if (comPeso && uTrib && !tribPeso && qTrib > 0) {
-    return { quantidade: qTrib, unidade: uTrib }
-  }
-
-  // uCom comercial, peso em uTrib (ex.: CX + KG)
-  if (!comPeso && tribPeso && qCom > 0) {
-    return { quantidade: qCom, unidade: uCom }
-  }
-
-  // uCom em peso sem uTrib útil, mas qTrib com valor comercial divergente
-  if (comPeso && qTrib > 0 && !tribPeso && qTrib !== qCom) {
-    return { quantidade: qTrib, unidade: uTrib || 'UN' }
-  }
-
-  return { quantidade: qCom, unidade: uCom }
+  return resolverQuantidadeComercialNfe({
+    qCom: numOf(prod, 'qCom'),
+    uCom: textOf(prod, 'uCom') || 'UN',
+    qTrib: numOf(prod, 'qTrib'),
+    uTrib: textOf(prod, 'uTrib'),
+    descricao: textOf(prod, 'xProd'),
+  })
 }
 
 function applyTransportVolumeToItems(items: NfeItem[], volumes: VolumeInfo[]): void {
