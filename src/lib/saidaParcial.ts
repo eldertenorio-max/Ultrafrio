@@ -500,6 +500,7 @@ export function aplicarSaidaParcial(
           allocatedAddresses: addresses,
           ...(it.valorTotal != null ? { valorTotal: 0 } : {}),
           ...(it.pesoBruto != null ? { pesoBruto: 0 } : {}),
+          ...(it.pesoLiquido != null ? { pesoLiquido: 0 } : {}),
         }
       }
 

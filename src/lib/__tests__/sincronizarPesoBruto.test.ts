@@ -106,4 +106,83 @@ describe('pesoBrutoReferenciaNf', () => {
     expect(resumo.diasCobranca).toBeLessThan(resumo.diasArmazenados)
     expect(resumo.pesoRestante).toBeCloseTo(13_448.66, 1)
   })
+
+  it('após duas saídas totais, peso atual zera', () => {
+    const nf = nfLegada()
+    sincronizarPesoBrutoNota(nf)
+    nf.items = nf.items.map((it) => ({
+      ...it,
+      quantidade: 0,
+      allocatedAddresses: [],
+      pesoBruto: 0,
+      pesoLiquido: 0,
+    }))
+
+    const movEntrada = movLiquido()
+    const saida1: MovimentoRegistro = {
+      id: 'mov-saida-1',
+      tipo: 'saida',
+      nfId: nf.id,
+      nfNumero: nf.numero,
+      emitente: nf.emitente,
+      createdAt: '2026-07-05T10:00:00.000Z',
+      dataSaida: '2026-07-05',
+      pesoLiquido: 13_448.66,
+      itens: [],
+    }
+    const saida2: MovimentoRegistro = {
+      id: 'mov-saida-2',
+      tipo: 'saida',
+      nfId: nf.id,
+      nfNumero: nf.numero,
+      emitente: nf.emitente,
+      createdAt: '2026-07-06T10:00:00.000Z',
+      dataSaida: '2026-07-06',
+      pesoLiquido: 13_448.66,
+      itens: [],
+    }
+
+    const resumo = resumirNfArmazenada(nf, [movEntrada, saida1, saida2])
+    expect(resumo.status).toBe('finalizada')
+    expect(resumo.pesoAtual).toBe(0)
+    expect(resumo.pesoBrutoRestante).toBe(0)
+    expect(resumo.pesoRestante).toBe(0)
+    expect(resumo.pesoSaido).toBeCloseTo(26_897.32, 1)
+    expect(resumo.pesoSaidoBruto).toBeCloseTo(27_794.92, 1)
+  })
+
+  it('duas saídas parciais somam peso saído e reduzem peso atual', () => {
+    const nf = nfLegada()
+    sincronizarPesoBrutoNota(nf)
+    nf.items = nf.items.map((it) => patchNfeItemQuantidade(it, it.quantidade / 2))
+
+    const saida1: MovimentoRegistro = {
+      id: 'mov-saida-1',
+      tipo: 'saida',
+      nfId: nf.id,
+      nfNumero: nf.numero,
+      emitente: nf.emitente,
+      createdAt: '2026-07-05T10:00:00.000Z',
+      dataSaida: '2026-07-05',
+      pesoLiquido: 6724.33,
+      itens: [],
+    }
+    const saida2: MovimentoRegistro = {
+      id: 'mov-saida-2',
+      tipo: 'saida',
+      nfId: nf.id,
+      nfNumero: nf.numero,
+      emitente: nf.emitente,
+      createdAt: '2026-07-06T10:00:00.000Z',
+      dataSaida: '2026-07-06',
+      pesoLiquido: 6724.33,
+      itens: [],
+    }
+
+    const agora = new Date(2026, 6, 6)
+    const resumo = resumirNfArmazenada(nf, [movLiquido(), saida1, saida2], agora)
+    expect(resumo.pesoSaido).toBeCloseTo(13_448.66, 0)
+    expect(resumo.pesoAtual).toBeCloseTo(13_897.46, 0)
+    expect(resumo.pesoAtual).toBeLessThan(resumo.pesoBruto)
+  })
 })
