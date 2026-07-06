@@ -160,6 +160,11 @@ function totalPosicoesNota(nf: NotaFiscal | undefined): number {
   return nf?.items.reduce((s, it) => s + it.allocatedAddresses.length, 0) ?? 0
 }
 
+function pesoAtualBrutoNf(nf: ReturnType<typeof resumirNfArmazenada>): number {
+  if (nf.status !== 'armazenada') return 0
+  return nf.pesoBrutoRestante > 0 ? nf.pesoBrutoRestante : nf.pesoBruto
+}
+
 function totalPosicoesMovimento(mov: MovimentoRegistro | undefined): number {
   return mov?.itens.reduce((s, it) => s + it.addressIds.length, 0) ?? 0
 }
@@ -1510,6 +1515,7 @@ function DataEntradaSection({
       'Valor total a cobrar',
       'Peso entrada kg',
       'Peso bruto kg',
+      'Peso atual kg',
       'Peso saído kg',
       'Qtd saídas',
       'Caixas NF',
@@ -1550,7 +1556,8 @@ function DataEntradaSection({
           numeroCsv(linha.debitosEntrada),
           numeroCsv(linha.valorPeriodo),
           numeroCsv(linha.nf.pesoEntrada),
-          numeroCsv(linha.nf.pesoEntrada),
+          numeroCsv(linha.nf.pesoBruto),
+          numeroCsv(pesoAtualBrutoNf(linha.nf)),
           numeroCsv(linha.nf.pesoSaido),
           linha.nf.saidas.length,
           numeroCsv(linha.nf.totalCaixas),
@@ -1812,7 +1819,11 @@ function DataEntradaSection({
                     </div>
                     <div>
                       <span className="muted">Peso bruto</span>
-                      <strong>{formatPesoBruto(nf.pesoBrutoRestante > 0 ? nf.pesoBrutoRestante : nf.pesoBruto)} kg</strong>
+                      <strong>{formatPesoBruto(nf.pesoBruto)} kg</strong>
+                    </div>
+                    <div>
+                      <span className="muted">Peso atual</span>
+                      <strong>{formatPesoBruto(pesoAtualBrutoNf(nf))} kg</strong>
                     </div>
                     <div>
                       <span className="muted">Itens</span>
