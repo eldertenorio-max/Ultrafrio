@@ -82,7 +82,7 @@ const SUBABAS: { id: SubAba; label: string }[] = [
   { id: 'tabela', label: 'Tabela de cobrança' },
   { id: 'contrato', label: 'Contrato' },
   { id: 'clientes', label: 'Clientes' },
-  { id: 'entrada', label: 'Data de entrada' },
+  { id: 'entrada', label: 'Movimentação' },
   { id: 'logica', label: 'Lógica de cobrança' },
 ]
 
@@ -1290,7 +1290,7 @@ function LogicaCobrancaSection({
   )
 }
 
-/* ─── Data de entrada ─── */
+/* ─── Movimentação ─── */
 
 function DataEntradaSection({
   data,
@@ -1768,7 +1768,7 @@ function DataEntradaSection({
                     </div>
                     <div>
                       <span className="muted">Peso bruto</span>
-                      <strong>{formatPesoBruto(nf.pesoBruto)} kg</strong>
+                      <strong>{formatPesoBruto(nf.pesoBrutoRestante > 0 ? nf.pesoBrutoRestante : nf.pesoBruto)} kg</strong>
                     </div>
                     <div>
                       <span className="muted">Itens</span>

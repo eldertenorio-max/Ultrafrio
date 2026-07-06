@@ -120,7 +120,7 @@ export function AppTopBar({
     const ok1 = window.confirm(
       'Zerar estoque e histórico na HOMOLOGAÇÃO?\n\n' +
         'Serão apagadas todas as NFs, endereços, movimentações e os dados de permanência ' +
-        '(Financeiro → Data de entrada).\n\n' +
+        '(Financeiro → Movimentação).\n\n' +
         `Mantém: ${PRESERVADO_ZERAR_HOMOLOG}.`,
     )
     if (!ok1) return

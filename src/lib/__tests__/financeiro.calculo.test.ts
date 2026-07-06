@@ -45,8 +45,9 @@ const resumoNf = (overrides: Partial<ResumoNfArmazenada> = {}): ResumoNfArmazena
   dataSaida: null,
   diasArmazenados: 1,
   pesoBruto: 27500,
+  pesoBrutoRestante: 27500,
   pesoLiquido: 23500,
-  pesoEntrada: 27500,
+  pesoEntrada: 23500,
   pesoRestante: 23500,
   pesoSaido: 0,
   saidas: [],
@@ -98,7 +99,14 @@ describe('calcularCobrancaDetalhada', () => {
     const diaria = valorDiariaPorKilo(pesoBruto, 0.18, 'mensal')
 
     const cobranca = calcularCobrancaDetalhada(
-      resumoNf({ diasArmazenados: dias, pesoEntrada: pesoBruto, pesoBruto }),
+      resumoNf({
+        diasArmazenados: dias,
+        pesoEntrada: 26_897.32,
+        pesoBruto,
+        pesoBrutoRestante: pesoBruto,
+        pesoLiquido: 26_897.32,
+        pesoRestante: 26_897.32,
+      }),
       contratoBase({ cobrarPalete: false, cobrarKilo: true, cobrarEntrada: false, kiloPorDia: true }),
       { ...tabelaBase(), custoPorKilo: 0.18 },
       { posicoes: 0, pesoBase: 26_897.32, paletes: 0 },
@@ -110,6 +118,30 @@ describe('calcularCobrancaDetalhada', () => {
     expect(cobranca.detalhes[0]?.valor).toBe(20_845)
     expect(cobranca.total).toBe(20_845)
     expect(valorCobrancaPeriodo(6, diaria)).toBe(1000.56)
+  })
+
+  it('kilo após saída parcial: diária sobre peso bruto restante (bruto − saída)', () => {
+    const pesoBrutoEntrada = 27_794.92
+    const pesoBrutoRestante = 13_897.46
+    const diaria = valorDiariaPorKilo(pesoBrutoRestante, 0.18, 'mensal')
+
+    const cobranca = calcularCobrancaDetalhada(
+      resumoNf({
+        pesoBruto: pesoBrutoEntrada,
+        pesoBrutoRestante,
+        pesoEntrada: 13_448.66,
+        pesoLiquido: 13_448.66,
+        pesoRestante: 13_448.66,
+        pesoSaido: 13_448.66,
+      }),
+      contratoBase({ cobrarPalete: false, cobrarKilo: true, cobrarEntrada: false, kiloPorDia: true }),
+      { ...tabelaBase(), custoPorKilo: 0.18 },
+      { posicoes: 0, pesoBase: 13_448.66, paletes: 0 },
+    )
+
+    expect(diaria).toBe(83.38)
+    expect(cobranca.valorDiaria).toBe(83.38)
+    expect(valorCobrancaPeriodo(6, diaria)).toBe(500.28)
   })
 
   it('cobra posição de palete quando habilitado no contrato', () => {

@@ -66,6 +66,7 @@ export function distribuirPesoBrutoNosItens(
     for (const item of items) {
       const liq = pesoLiquidoReferenciaItem(item)
       if (liq <= 0) continue
+      if (item.pesoLiquido == null) item.pesoLiquido = liq
       item.pesoBruto = totais.pesoBruto * (liq / pesoLiqItens)
     }
     return
