@@ -241,6 +241,7 @@ export default function App() {
     savingImportante,
     error,
     clearError,
+    zerarBancoHomologacao,
   } = useEnderecamentoStore()
   const financeiro = useFinanceiro(state.notas)
   const { theme, toggleTheme, setTheme } = useTheme()
@@ -355,6 +356,20 @@ export default function App() {
   const [mapFocusScrollToken, setMapFocusScrollToken] = useState(0)
   const [mapPulseAddressId, setMapPulseAddressId] = useState<AddressId | null>(null)
   const [buscaEncontrada, setBuscaEncontrada] = useState<BuscaEncontradaAviso | null>(null)
+  const [zerandoBancoHomolog, setZerandoBancoHomolog] = useState(false)
+
+  const handleZerarBancoHomolog = useCallback(async () => {
+    setZerandoBancoHomolog(true)
+    try {
+      await zerarBancoHomologacao()
+      financeiro.zerarHomolog()
+      window.location.reload()
+    } catch {
+      /* erro exibido na barra */
+    } finally {
+      setZerandoBancoHomolog(false)
+    }
+  }, [zerarBancoHomologacao, financeiro])
 
   useEffect(() => {
     stateRef.current = state
@@ -3487,6 +3502,8 @@ export default function App() {
         contaUsuarioAtivoId={contaUsuarioAtivoId}
         onSelectContaUsuario={handleSelectContaUsuario}
         onOpenContaSection={handleOpenContaSection}
+        onZerarBancoHomolog={handleZerarBancoHomolog}
+        zerandoBancoHomolog={zerandoBancoHomolog}
       />
       <div className="app-workspace">
       <AppSidebar

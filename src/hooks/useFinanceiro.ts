@@ -141,6 +141,12 @@ export function useFinanceiro(notas: NotaFiscal[]) {
     [updateData],
   )
 
+  const zerarHomolog = useCallback(() => {
+    dataRef.current = financeiroVazio
+    setData(financeiroVazio)
+    ignoreLoadUntil.current = Date.now() + IGNORE_LOAD_AFTER_SAVE_MS
+  }, [])
+
   return {
     data,
     loading,
@@ -150,5 +156,6 @@ export function useFinanceiro(notas: NotaFiscal[]) {
     saveNow,
     registrarClienteFromNf,
     reload: loadFromRemote,
+    zerarHomolog,
   }
 }

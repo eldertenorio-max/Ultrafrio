@@ -564,7 +564,8 @@
 }
 
 .app-topbar .theme-toggle,
-.app-topbar-refresh {
+.app-topbar-refresh,
+.app-topbar-zerar-homolog {
   width: 36px;
   height: 36px;
   min-width: 36px;
@@ -574,6 +575,39 @@
   border: 1px solid var(--btn-surface-border);
   background: var(--btn-surface-bg);
   color: var(--btn-surface-fg);
+}
+
+.app-topbar-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-topbar-zerar-homolog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #b42318;
+  border-color: color-mix(in srgb, #b42318 35%, var(--btn-surface-border));
+  background: color-mix(in srgb, #b42318 8%, var(--btn-surface-bg));
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.app-topbar-zerar-homolog:hover:not(:disabled) {
+  background: color-mix(in srgb, #b42318 14%, var(--btn-surface-bg));
+  border-color: color-mix(in srgb, #b42318 55%, var(--btn-surface-border));
+}
+
+.app-topbar-zerar-homolog:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.app-topbar-zerar-homolog svg {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 
 .app-topbar-refresh {

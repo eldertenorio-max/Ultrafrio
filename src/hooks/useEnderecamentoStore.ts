@@ -11,6 +11,7 @@ import {
 import { ensureSupabaseConfig } from '../lib/supabaseConfig'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { subscribeEnderecamentoChanges } from '../lib/supabaseRealtime'
+import { podeZerarBancoHomologacao, zerarBancoHomologacaoSupabase } from '../lib/homologZerarBanco'
 import { normalizePersistedData, prepareLoadedDataWithRepair } from '../lib/persistence'
 import {
   persistedRichness,
@@ -882,6 +883,46 @@ export function useEnderecamentoStore() {
     [aplicarBackupRecuperado],
   )
 
+  const zerarBancoHomologacao = useCallback(async () => {
+    if (!podeZerarBancoHomologacao()) {
+      throw new Error('Zerar banco só está disponível em homologação.')
+    }
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    pendingSaveRef.current = null
+    savingRef.current = true
+    setSaving(true)
+    skipSave.current = true
+    try {
+      if (repoRef.current.mode === 'supabase') {
+        await zerarBancoHomologacaoSupabase()
+      } else {
+        await repoRef.current.saveData({
+          notas: [],
+          movimentos: [],
+          notasCanceladas: [],
+        })
+      }
+      clearLocalPersistedData()
+      const vazio: AppState = { ...emptyState }
+      lastPersistedRef.current = pickPersisted(vazio)
+      stateRef.current = vazio
+      setState(vazio)
+      ignoreRemoteUntil.current = Date.now() + 60_000
+      setError(null)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Falha ao zerar banco de homologação.'
+      setError(msg)
+      throw e
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+      skipSave.current = false
+    }
+  }, [])
+
   return {
     state,
     setState: updateState,
@@ -889,6 +930,7 @@ export function useEnderecamentoStore() {
     registrarEmitente,
     recuperarDoNavegador,
     importarBackupArquivo,
+    zerarBancoHomologacao,
     loading,
     saving,
     savingImportante,

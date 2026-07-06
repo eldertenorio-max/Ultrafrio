@@ -8,6 +8,7 @@ import { LayoutLegend, type LayoutLegendProps } from './LayoutLegend'
 import { AccountMenuPopover } from './AccountMenuPopover'
 import { BRAND_PRODUCT_NAME, BRAND_PRODUCT_VARIANT, LOGO_DOCA_LIVRE_SRC } from '../lib/brandAssets'
 import { isHomologacao } from '../lib/appAmbiente'
+import { isSupabaseConfigured } from '../lib/supabaseClient'
 import type { ContaUsuario } from '../lib/contaSessao'
 import { corAvatarUsuario, iniciaisUsuario } from '../lib/contaSessao'
 
@@ -22,6 +23,8 @@ type Props = {
   contaUsuarioAtivoId: string
   onSelectContaUsuario: (id: string) => void
   onOpenContaSection: (section: SidebarSectionId, focus?: 'conta' | 'comandos') => void
+  onZerarBancoHomolog?: () => void | Promise<void>
+  zerandoBancoHomolog?: boolean
 }
 
 function formatClock(now: Date): { time: string; date: string } {
@@ -52,6 +55,8 @@ export function AppTopBar({
   contaUsuarioAtivoId,
   onSelectContaUsuario,
   onOpenContaSection,
+  onZerarBancoHomolog,
+  zerandoBancoHomolog = false,
 }: Props) {
   const [clock, setClock] = useState(() => formatClock(new Date()))
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -109,6 +114,24 @@ export function AppTopBar({
     window.location.reload()
   }
 
+  function handleZerarBancoHomolog() {
+    if (!onZerarBancoHomolog || zerandoBancoHomolog) return
+    const ok1 = window.confirm(
+      'Zerar todo o estoque e histórico na HOMOLOGAÇÃO?\n\n' +
+        'Serão apagadas todas as NFs, endereços, movimentações e clientes financeiros. ' +
+        'Esta ação não pode ser desfeita.',
+    )
+    if (!ok1) return
+    const ok2 = window.confirm(
+      'Confirme novamente: apagar TODOS os dados operacionais do banco de homologação?',
+    )
+    if (!ok2) return
+    void onZerarBancoHomolog()
+  }
+
+  const mostrarZerarHomolog =
+    isHomologacao() && isSupabaseConfigured() && typeof onZerarBancoHomolog === 'function'
+
   return (
     <header className="app-topbar" aria-label="Barra principal">
       <div className="app-topbar-left">
@@ -145,15 +168,29 @@ export function AppTopBar({
           orientation="horizontal"
         />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-        <button
-          type="button"
-          className="app-topbar-refresh"
-          onClick={handleRefreshPage}
-          title="Atualizar página"
-          aria-label="Atualizar página"
-        >
-          <RefreshIcon />
-        </button>
+        <div className="app-topbar-toolbar-actions">
+          {mostrarZerarHomolog && (
+            <button
+              type="button"
+              className="app-topbar-zerar-homolog"
+              onClick={handleZerarBancoHomolog}
+              disabled={zerandoBancoHomolog}
+              title="Zerar banco de homologação"
+              aria-label="Zerar banco de homologação"
+            >
+              <TrashIcon />
+            </button>
+          )}
+          <button
+            type="button"
+            className="app-topbar-refresh"
+            onClick={handleRefreshPage}
+            title="Atualizar página"
+            aria-label="Atualizar página"
+          >
+            <RefreshIcon />
+          </button>
+        </div>
 
         <div className="app-topbar-meta" aria-label="Data e hora">
           <span className="app-topbar-meta-time">{clock.time}</span>
@@ -220,6 +257,20 @@ function RefreshIcon() {
       />
       <path
         d="M19 11a7 7 0 1 0-2.05 4.95"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18" aria-hidden>
+      <path
+        d="M4 7h16M9 7V5h6v2M10 11v6M14 11v6M6 7l1 14h10l1-14"
         stroke="currentColor"
         strokeWidth="1.75"
         strokeLinecap="round"
