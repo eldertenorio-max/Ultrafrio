@@ -482,11 +482,11 @@ export function limparMovimentosEntradaOrfaos(data: PersistedData): PersistedDat
  * sem confundir com wipe acidental de estoque endereçado.
  */
 export function podeApagarTodasNotasSemEstoque(
-  data: PersistedData,
-  previous: PersistedData | null,
+  data: Pick<PersistedData, 'notas' | 'movimentos' | 'notasCanceladas'>,
+  previous: Pick<PersistedData, 'notas'> | null,
 ): boolean {
   if (data.notas.length > 0) return false
-  if (contarEnderecosPersistidos(data) > 0) return false
+  if (contarEnderecosPersistidos({ ...data, emitentes: [] }) > 0) return false
   if (!previous || previous.notas.length === 0) return false
   const haviaEnderecos = previous.notas.some((nf) =>
     nf.items.some((it) => it.allocatedAddresses.length > 0),

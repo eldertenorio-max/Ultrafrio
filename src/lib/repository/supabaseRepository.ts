@@ -464,7 +464,7 @@ export const supabaseRepository: EnderecamentoRepository = {
       const existingCount = await countRows('ultrafrio_notas_fiscais')
       if (existingCount > 0) {
         const cancelamentoSemEstoque = podeApagarTodasNotasSemEstoque(
-          { notas, movimentos, notasCanceladas, emitentes: [] },
+          { notas, movimentos, notasCanceladas },
           previous,
         )
         if (!cancelamentoSemEstoque) {
