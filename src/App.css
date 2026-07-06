@@ -8750,7 +8750,7 @@ html.scroll-locked .sidebar.sidebar--wide {
 }
 
 .fin-logica-cobranca-head span {
-  color: var(--accent, #f5c518);
+  color: var(--text-primary);
   font-weight: 800;
 }
 
