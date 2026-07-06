@@ -230,8 +230,9 @@ export function useEnderecamentoStore() {
         const base = lastPersistedRef.current
         const reduziuEnderecos =
           contarEnderecosPersistidos(localPick) < contarEnderecosPersistidos(base)
-        if (reduziuEnderecos) {
-          // Saída / liberação de posições — grava exatamente o estado local (sem merge anti-regressão).
+        const removeuNotas = nfIdsRemovidosDesde(base, localPick).size > 0
+        if (reduziuEnderecos || removeuNotas) {
+          // Saída / cancelamento de entrada — grava exatamente o estado local (sem merge anti-regressão).
           dataToSave = localPick
         } else {
           dataToSave = mergePersistedData(base, localPick, base)

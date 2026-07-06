@@ -629,13 +629,13 @@ export function removerNfDoEstoque(
           }
         : m,
     )
-  } else if (nf && motivo) {
+  } else if (nf) {
     movimentos = [
       {
         ...criarMovimentoEntrada(nf),
         excluido: true,
         excluidoEm,
-        motivoRemocaoEstoque: motivo,
+        ...(motivo ? { motivoRemocaoEstoque: motivo } : {}),
       },
       ...movimentos,
     ]

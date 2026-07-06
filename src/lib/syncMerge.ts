@@ -131,6 +131,8 @@ function mergeSingleNotaFiscal(
 
   if (entityJson(b) !== entityJson(l)) {
     if (l !== undefined) return withDataArmazenagem(l, dataArmazenagem)
+    // NF removida localmente (ex.: cancelar entrada) — não reintroduzir da base.
+    if (b !== undefined) return undefined
   }
 
   if (entityJson(b) !== entityJson(r)) {
@@ -370,9 +372,15 @@ export function consolidarRemocoesLocais(
   const removidas = nfIdsRemovidosDesde(base, local)
   if (removidas.size === 0) return candidate
 
-  /** Rascunho vazio não significa remoção intencional de todas as NFs. */
+  /**
+   * Rascunho vazio sem sinal de exclusão não significa remoção intencional.
+   * Cancelar a única NF deixa local.notas vazio, mas o movimento de entrada fica excluído.
+   */
   if (local.notas.length === 0 && base.notas.length > 0) {
-    return candidate
+    const exclusaoIntencional = [...removidas].some((nfId) =>
+      local.movimentos.some((m) => m.tipo === 'entrada' && m.nfId === nfId && m.excluido),
+    )
+    if (!exclusaoIntencional) return candidate
   }
 
   const localMovById = new Map(local.movimentos.map((m) => [m.id, m]))
