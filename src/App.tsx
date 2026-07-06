@@ -520,9 +520,23 @@ export default function App() {
     const t = setTimeout(() => {
       setMapPulseAddressId(null)
       setMapFocusStage(false)
+      setMapFocusAddressId(null)
     }, 3500)
     return () => clearTimeout(t)
   }, [mapPulseAddressId, mapFocusStage, mapFocusScrollToken])
+
+  const mapaDestaquesAtivos =
+    openSection === 'entrada' ||
+    openSection === 'editar' ||
+    openSection === 'saida' ||
+    openSection === 'consulta'
+
+  useEffect(() => {
+    if (mapaDestaquesAtivos) return
+    setMapFocusAddressId(null)
+    setMapPulseAddressId(null)
+    setMapFocusStage(false)
+  }, [mapaDestaquesAtivos])
 
   const emAndamentoIds = useMemo(
     () => state.notas.filter((n) => n.status === 'em_andamento').map((n) => n.id),
@@ -727,16 +741,20 @@ export default function App() {
           ? new Set([saidaPaleteAtivo])
           : pendingSelection
 
-  const panelPendingSelection = editAdicionarPosicoesAlvo != null
-    ? editNovasPosicoes
-    : editMode
-      ? editPendingSelection
-      : saidaPendingSelection
+  const panelPendingSelection = !mapaDestaquesAtivos
+    ? new Set<AddressId>()
+    : editAdicionarPosicoesAlvo != null
+      ? editNovasPosicoes
+      : editMode
+        ? editPendingSelection
+        : saidaPendingSelection
   const panelAllocateMode =
-    allocateMode ||
-    editMode ||
-    nfEmEdicao ||
-    (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
+    (openSection === 'entrada' && allocateMode) ||
+    (openSection === 'editar' && (editMode || nfEmEdicao)) ||
+    (openSection === 'saida' &&
+      saidaModoPalete &&
+      (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida)) ||
+    (openSection === 'consulta' && consultaAguardandoEndereco)
   const panelActiveNfNumero = nfEmEdicao ? nfEditar?.numero ?? null : activeNf?.numero ?? null
 
   const activeAllocateItem = allocateMode ? activeEntradaItem : null
@@ -3717,42 +3735,57 @@ export default function App() {
           occupancy={displayOccupancy}
           pendingSelection={panelPendingSelection}
           activeNfNumero={panelActiveNfNumero}
-          activeNfId={nfEditar?.id ?? activeNf?.id ?? null}
+          activeNfId={
+            mapaDestaquesAtivos ? (nfEditar?.id ?? activeNf?.id ?? null) : null
+          }
           allocateMode={panelAllocateMode}
-          editMode={editMode || (nfEditar != null && !editMarcandoStage)}
-          editItemAtivo={editMode}
-          editMoveOrigens={nfEditar ? editMoveOrigens : undefined}
-          editMoveDestinos={nfEditar ? editMoveDestinos : undefined}
-          editMarcandoStage={nfEditar ? editMarcandoStage : false}
-          editItemIndex={nfEditar ? editItemIndex : null}
+          editMode={
+            openSection === 'editar' && (editMode || (nfEditar != null && !editMarcandoStage))
+          }
+          editItemAtivo={openSection === 'editar' && editMode}
+          editMoveOrigens={openSection === 'editar' && nfEditar ? editMoveOrigens : undefined}
+          editMoveDestinos={openSection === 'editar' && nfEditar ? editMoveDestinos : undefined}
+          editMarcandoStage={openSection === 'editar' && nfEditar ? editMarcandoStage : false}
+          editItemIndex={openSection === 'editar' && nfEditar ? editItemIndex : null}
           editItemNoStage={(() => {
             if (nfEditar == null || editItemIndex == null) return false
             const it = nfEditar.items.find((i) => i.index === editItemIndex)
             return it != null && itemNoStage(it)
           })()}
           editAdicionandoPosicoes={editAdicionarPosicoesAlvo != null}
-          editAddresses={editMapAddresses}
-          consultaAddresses={consultaAddresses.size > 0 ? consultaAddresses : undefined}
+          editAddresses={openSection === 'editar' ? editMapAddresses : undefined}
+          consultaAddresses={
+            openSection === 'consulta' && consultaAddresses.size > 0
+              ? consultaAddresses
+              : undefined
+          }
           notas={state.notas}
           movimentos={state.movimentos}
-          stageHighlighted={consultaStageHighlighted || mapFocusStage}
+          stageHighlighted={
+            (openSection === 'consulta' && consultaStageHighlighted) || mapFocusStage
+          }
           onStageOpen={() => setStageModalOpen(true)}
           saidaAddresses={
-            nfEditar ? undefined : saidaAddresses.size > 0 ? saidaAddresses : undefined
+            openSection === 'saida' && !nfEditar && saidaAddresses.size > 0
+              ? saidaAddresses
+              : undefined
           }
           saidaItemDestaqueAddresses={
-            nfEditar || saidaItemDestaqueAddresses.size === 0
-              ? undefined
-              : saidaItemDestaqueAddresses
+            openSection === 'saida' && !nfEditar && saidaItemDestaqueAddresses.size > 0
+              ? saidaItemDestaqueAddresses
+              : undefined
           }
-          saidaFlaggedAddresses={editMode ? undefined : saidaFlaggedAddresses}
+          saidaFlaggedAddresses={
+            openSection === 'saida' && !editMode ? saidaFlaggedAddresses : undefined
+          }
           paintMode={
-            editAdicionarPosicoesAlvo != null ||
-            (editMode && editMarcandoStage) ||
-            (editMode && !editMarcandoStage) ||
-            allocateMode ||
-            consultaAguardandoEndereco ||
-            (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida))
+            mapaDestaquesAtivos &&
+            (editAdicionarPosicoesAlvo != null ||
+              (editMode && editMarcandoStage) ||
+              (editMode && !editMarcandoStage) ||
+              allocateMode ||
+              consultaAguardandoEndereco ||
+              (saidaModoPalete && (saidaQtdPaletesAlvo != null || saidaSelecaoConcluida)))
           }
           onCellClick={handleCellClick}
           onCellPaint={handleCellPaint}
@@ -3762,10 +3795,12 @@ export default function App() {
           editStagePending={editStagePending}
           stageDropEnabled={editStagePending.size > 0}
           onStageDrop={() => void handleAplicarStageDrop()}
-          focusAddressId={vozOrigemAddress ?? mapFocusAddressId}
-          focusStage={!vozOrigemAddress && mapFocusStage}
-          focusScrollToken={mapFocusScrollToken}
-          pulseAddressId={mapPulseAddressId}
+          focusAddressId={
+            mapaDestaquesAtivos ? (vozOrigemAddress ?? mapFocusAddressId) : null
+          }
+          focusStage={mapaDestaquesAtivos && !vozOrigemAddress && mapFocusStage}
+          focusScrollToken={mapaDestaquesAtivos ? mapFocusScrollToken : 0}
+          pulseAddressId={mapaDestaquesAtivos ? mapPulseAddressId : null}
         />
       </main>
       </div>
