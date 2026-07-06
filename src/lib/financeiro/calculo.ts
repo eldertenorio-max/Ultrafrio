@@ -284,10 +284,6 @@ function pesoBrutoRestanteNf(
   return pesoBrutoEntrada > 0 ? pesoBrutoEntrada : fromItems
 }
 
-function pesoEntradaNf(nf: NotaFiscal, movimentos: MovimentoRegistro[]): number {
-  return pesoLiquidoReferenciaNf(nf, movimentos)
-}
-
 export function listarSaidasNf(nfId: string, movimentos: MovimentoRegistro[]): SaidaNfFinanceiro[] {
   return movimentos
     .filter((m) => m.tipo === 'saida' && m.nfId === nfId && !m.excluido)

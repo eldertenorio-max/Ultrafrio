@@ -1732,7 +1732,6 @@ function DataEntradaSection({
                 valorArmazenagem,
                 debitosSaida,
                 qtdSaidasPeriodo,
-                valorPeriodo,
               } = linha
               const updatePeriodo = (patch: Partial<{ inicio: string; fim: string }>) => {
                 setPeriodosCobranca((prev) => ({
