@@ -5979,6 +5979,85 @@ html.scroll-locked .sidebar.sidebar--wide {
   padding-top: 4px;
 }
 
+.saida-entrada-resumo {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-inset, var(--bg-elevated));
+  border: 1px solid var(--border);
+}
+
+.saida-entrada-resumo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 6px;
+}
+
+.saida-entrada-resumo-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted, var(--muted));
+}
+
+.saida-entrada-resumo-data {
+  font-size: 0.76rem;
+}
+
+.saida-entrada-resumo-produto {
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.saida-entrada-resumo-meta {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+}
+
+.saida-entrada-resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 8px;
+}
+
+.saida-entrada-resumo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.saida-entrada-resumo-card span {
+  font-size: 0.7rem;
+  color: var(--text-muted, var(--muted));
+  line-height: 1.2;
+}
+
+.saida-entrada-resumo-card strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.saida-entrada-resumo-card--destaque {
+  border-color: color-mix(in srgb, var(--cell-saida, #2e7d32) 35%, transparent);
+  background: color-mix(in srgb, var(--cell-saida, #2e7d32) 8%, var(--bg-elevated));
+}
+
+.saida-entrada-resumo-card--destaque strong {
+  color: var(--cell-saida, #2e7d32);
+}
+
 .saida-item-acoes {
   display: flex;
     flex-wrap: wrap;

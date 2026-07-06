@@ -14,6 +14,7 @@ import { NfResumoGrid } from './NfResumoGrid'
 import { NfLocalizacaoBadge } from './NfLocalizacaoBadge'
 import { SaidaItensTable } from './SaidaItensTable'
 import { SaidaResumoTotal } from './SaidaResumoTotal'
+import { SaidaItemEntradaResumo } from './SaidaItemEntradaResumo'
 
 export type SaidaModoBusca = 'numero' | 'xml'
 
@@ -464,6 +465,13 @@ export function SaidaPanel({
                 const unidadeStage = itemStage ? unidadeEstoqueItem(itemStage) : ''
                 return (
                   <div className="item-actions saida-stage-form">
+                    {itemStage && (
+                      <SaidaItemEntradaResumo
+                        nf={nfBusca}
+                        item={itemStage}
+                        stageConfirmados={stageConfirmados}
+                      />
+                    )}
                     <label className="nf-itens-campo">
                       <span>Quantidade de saída</span>
                       <input

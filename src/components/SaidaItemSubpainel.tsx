@@ -15,6 +15,7 @@ import {
 import { formatAddressLabel } from '../layout/camaras'
 import { unidadeEstoqueItem } from '../lib/nfeUnidades'
 import { formatPesoBruto, formatQuantidadeNfe, formatValorNfe } from '../lib/formatNfeItem'
+import { SaidaItemEntradaResumo } from './SaidaItemEntradaResumo'
 
 type Props = {
   nf: NotaFiscal
@@ -108,6 +109,12 @@ export function SaidaItemSubpainel({
 
   return (
     <div className="saida-item-subpainel" onClick={stopRowActivate}>
+      <SaidaItemEntradaResumo
+        nf={nf}
+        item={item}
+        limitesPorItem={limitesPorItem}
+        paletesConfirmados={paletesConfirmados}
+      />
       <div className="saida-item-calculo-grid">
         {isActive && !emSelecaoMapa && !emConfirmacaoCaixas && (
           <label className="saida-item-campo">
