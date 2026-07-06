@@ -1699,7 +1699,7 @@ function DataEntradaSection({
 
           <ul className="fin-nf-lista">
             {linhasPaginaEntrada.map((linha) => {
-              const { nf, cliente: cli, valorDiaria, valorVigente, periodoInicio, periodoFim, diasPeriodo, valorPeriodo } = linha
+              const { nf, nota, cliente: cli, valorDiaria, valorVigente, periodoInicio, periodoFim, diasPeriodo, valorPeriodo } = linha
               const updatePeriodo = (patch: Partial<{ inicio: string; fim: string }>) => {
                 setPeriodosCobranca((prev) => ({
                   ...prev,
