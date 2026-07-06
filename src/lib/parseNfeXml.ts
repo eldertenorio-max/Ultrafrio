@@ -1,5 +1,5 @@
 import type { NfeItem, NotaFiscal } from '../types'
-import { isUnidadePeso, resolverQuantidadeComercialNfe } from './nfeUnidades'
+import { isUnidadePeso, normalizarQuantidadeItensNf, resolverQuantidadeComercialNfe } from './nfeUnidades'
 
 function textOf(el: Element | null, tag: string): string {
   if (!el) return ''
@@ -137,7 +137,8 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
   const volumes = parseVolumesFromTransport(transp)
 
   const detNodes = Array.from(inf.getElementsByTagName('det'))
-  const items: NfeItem[] = detNodes.map((det, index) => {
+  const items: NfeItem[] = normalizarQuantidadeItensNf(
+    detNodes.map((det, index) => {
     const prod = det.getElementsByTagName('prod')[0]
     const { quantidade, unidade } = parseItemQuantidadeUnidade(prod)
     const valorUnitario = numOf(prod, 'vUnCom')
@@ -154,7 +155,8 @@ export function parseNfeXml(xmlText: string): NotaFiscal {
       ...(valorUnitario > 0 ? { valorUnitario } : {}),
       ...(valorTotal > 0 ? { valorTotal } : {}),
     }
-  })
+  }),
+  )
 
   applyTransportVolumeToItems(items, volumes)
 

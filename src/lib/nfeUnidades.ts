@@ -115,6 +115,50 @@ function caixasFromPesoKg(item: NfeItem): number | null {
   return Math.round(caixas)
 }
 
+function itemQuantidadeAindaEhPeso(item: NfeItem): boolean {
+  if (!isUnidadePeso(item.unidade)) return false
+  const peso = item.pesoBruto ?? item.pesoLiquido
+  if (peso == null || peso <= 0) return false
+  return Math.abs(item.quantidade - peso) / peso <= 0.001
+}
+
+/**
+ * Quando um item da NF já foi convertido para caixas (ex. CX20KG) e outro ainda
+ * está com quantidade = peso em KG (ex. CX VAR), usa a mesma contagem de caixas.
+ */
+export function aplicarQuantidadeComercialIrmaos(items: NfeItem[]): void {
+  const caixasResolvidas = new Set<number>()
+  for (const item of items) {
+    if (isUnidadePeso(item.unidade)) continue
+    const n = Math.round(item.quantidade)
+    if (n >= 1 && Math.abs(item.quantidade - n) < 0.02) {
+      caixasResolvidas.add(n)
+    }
+  }
+  if (caixasResolvidas.size !== 1) return
+
+  const caixasRef = [...caixasResolvidas][0]
+  for (const item of items) {
+    if (!itemQuantidadeAindaEhPeso(item)) continue
+    if (!descricaoIndicaCaixas(item.descricao)) continue
+    if (caixasFromPesoKg(item) != null) continue
+
+    const peso = item.pesoBruto ?? item.pesoLiquido ?? item.quantidade
+    const kgPorCaixa = peso / caixasRef
+    if (kgPorCaixa < 8 || kgPorCaixa > 45) continue
+
+    item.quantidade = caixasRef
+    item.unidade = 'CX'
+  }
+}
+
+/** Normaliza quantidade comercial de todos os itens de uma NF. */
+export function normalizarQuantidadeItensNf(items: NfeItem[]): NfeItem[] {
+  const next = items.map((it) => corrigirQuantidadeItemSePeso(it))
+  aplicarQuantidadeComercialIrmaos(next)
+  return next
+}
+
 /** Quantidade comercial para estoque/saída (caixas quando a NF traz peso em KG). */
 export function quantidadeEstoqueItem(item: NfeItem): number {
   if (!isUnidadePeso(item.unidade)) return item.quantidade
