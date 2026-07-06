@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { LOGO_DOCA_LIVRE_SRC } from '../lib/brandAssets'
+import {
+  BRAND_FULL_TITLE,
+  BRAND_PRODUCT_NAME,
+  BRAND_PRODUCT_VARIANT,
+  LOGO_DOCA_LIVRE_SRC,
+} from '../lib/brandAssets'
 import { isHomologacao } from '../lib/appAmbiente'
 import './IntroSplash.css'
 
@@ -55,7 +60,13 @@ export function IntroSplash({ loading, onFinish }: Props) {
     <div className={`intro-splash ${exiting ? 'intro-splash--exit' : ''}`} aria-busy="true">
       <div className="intro-glow" aria-hidden />
       <div className="intro-content">
-        <img src={LOGO_DOCA_LIVRE_SRC} alt="Doca Livre" className="intro-logo" />
+        <div className="intro-brand" aria-label={BRAND_FULL_TITLE}>
+          <img src={LOGO_DOCA_LIVRE_SRC} alt="" className="intro-logo" />
+          <p className="intro-product-name" aria-hidden>
+            <span className="intro-product-wms">{BRAND_PRODUCT_NAME}</span>
+            <span className="intro-product-light">{BRAND_PRODUCT_VARIANT}</span>
+          </p>
+        </div>
         {isHomologacao() && <p className="intro-ambiente intro-ambiente--homolog">Homologação</p>}
         <div className="intro-progress-wrap">
           <div className="intro-progress-track">

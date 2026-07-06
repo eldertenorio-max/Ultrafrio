@@ -1473,8 +1473,8 @@ function DataEntradaSection({
       'Período início',
       'Período fim',
       'Dias do período',
-      'Valor diária',
       'Valor vigente',
+      'Valor acumulado',
       'Valor a cobrar período',
       'Peso entrada kg',
       'Peso a cobrar kg',
@@ -1586,7 +1586,7 @@ function DataEntradaSection({
               <strong>{formatMoedaFinanceiro(resumoGeral.valorPeriodo)}</strong>
             </div>
             <div className="fin-entrada-resumo-card">
-              <span>Valor vigente</span>
+              <span>Valor acumulado</span>
               <strong>{formatMoedaFinanceiro(resumoGeral.valorVigente)}</strong>
             </div>
             <div className="fin-entrada-resumo-card">
@@ -1757,9 +1757,15 @@ function DataEntradaSection({
                       <span className="muted">Dias</span>
                       <strong>{nf.diasArmazenados}</strong>
                     </div>
-                    <div>
-                      <span className="muted">Valor diária</span>
-                      <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
+                    <div className="fin-entrada-grid-valores">
+                      <div>
+                        <span className="muted">Valor acumulado</span>
+                        <strong>{formatMoedaFinanceiro(valorVigente)}</strong>
+                      </div>
+                      <div>
+                        <span className="muted">Valor vigente</span>
+                        <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
+                      </div>
                     </div>
                     <div>
                       <span className="muted">Peso entrada</span>
@@ -1787,10 +1793,6 @@ function DataEntradaSection({
                       <span className="muted">Valor merc.</span>
                       <strong>{formatValorNfe(nf.valorMercadoria)}</strong>
                     </div>
-                  </div>
-                  <div className="fin-valor-cobrar-card">
-                    <span>Valor vigente</span>
-                    <strong>{formatMoedaFinanceiro(valorVigente)}</strong>
                   </div>
                 </div>
                 <div className="fin-periodo-cobranca-card">
@@ -1822,7 +1824,7 @@ function DataEntradaSection({
                       <strong>{diasPeriodo}</strong>
                     </div>
                     <div>
-                      <span className="muted">Valor diária</span>
+                      <span className="muted">Valor vigente</span>
                       <strong>{formatMoedaFinanceiro(valorDiaria)}</strong>
                     </div>
                   </div>
