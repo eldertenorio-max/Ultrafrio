@@ -252,6 +252,26 @@ export function useEnderecamentoStore() {
         )
       }
 
+      const remoteRaw = await repo.loadData()
+      const remoteNorm = normalizePersistedData(
+        prepareLoadedDataWithRepair(remoteRaw).data,
+      )
+      if (
+        resetRemotoDetectado(
+          remoteNorm,
+          pickPersisted(next),
+          lastPersistedRef.current ?? pickPersisted(next),
+        )
+      ) {
+        clearLocalPersistedData()
+        lastPersistedRef.current = remoteNorm
+        applyPersistedToState(remoteNorm, next)
+        setError(
+          'O banco foi resetado. Estoque local descartado — feche outras abas e use Ctrl+Shift+R.',
+        )
+        return remoteNorm
+      }
+
       await repo.saveData(
         {
           notas: dataToSave.notas,
@@ -438,17 +458,6 @@ export function useEnderecamentoStore() {
       remoteReloadQueuedRef.current = true
       return
     }
-    if (
-      hasPendingLocalChanges(
-        stateRef.current,
-        lastPersistedRef.current,
-        pendingSaveRef.current,
-        saveTimer.current,
-      )
-    ) {
-      return
-    }
-
     skipSave.current = true
     try {
       const remote = await repoRef.current.loadData()
@@ -469,6 +478,17 @@ export function useEnderecamentoStore() {
         setError(
           'O banco foi resetado. Estoque local descartado — feche outras abas e use Ctrl+Shift+R se ainda aparecer dados antigos.',
         )
+        return
+      }
+
+      if (
+        hasPendingLocalChanges(
+          stateRef.current,
+          lastPersistedRef.current,
+          pendingSaveRef.current,
+          saveTimer.current,
+        )
+      ) {
         return
       }
 
