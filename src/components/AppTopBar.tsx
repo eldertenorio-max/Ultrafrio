@@ -9,6 +9,7 @@ import { AccountMenuPopover } from './AccountMenuPopover'
 import { BRAND_PRODUCT_NAME, BRAND_PRODUCT_VARIANT, LOGO_DOCA_LIVRE_SRC } from '../lib/brandAssets'
 import { isHomologacao } from '../lib/appAmbiente'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
+import { PRESERVADO_ZERAR_HOMOLOG } from '../lib/homologZerarBanco'
 import type { ContaUsuario } from '../lib/contaSessao'
 import { corAvatarUsuario, iniciaisUsuario } from '../lib/contaSessao'
 
@@ -120,7 +121,7 @@ export function AppTopBar({
       'Zerar estoque e histórico na HOMOLOGAÇÃO?\n\n' +
         'Serão apagadas todas as NFs, endereços, movimentações e os dados de permanência ' +
         '(Financeiro → Data de entrada).\n\n' +
-        'Mantém: clientes cadastrados, tabelas de frete e contratos financeiros.',
+        `Mantém: ${PRESERVADO_ZERAR_HOMOLOG}.`,
     )
     if (!ok1) return
     const ok2 = window.confirm(
@@ -176,8 +177,8 @@ export function AppTopBar({
               className="app-topbar-zerar-homolog"
               onClick={handleZerarBancoHomolog}
               disabled={zerandoBancoHomolog}
-              title="Zerar banco de homologação"
-              aria-label="Zerar banco de homologação"
+              title="Zerar estoque (mantém lógica de cobrança)"
+              aria-label="Zerar estoque de homologação, mantendo lógica de cobrança"
             >
               <TrashIcon />
             </button>

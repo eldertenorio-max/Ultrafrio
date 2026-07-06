@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import * as ambiente from '../appAmbiente'
-import { podeZerarBancoHomologacao, TABELAS_PRESERVAR_HOMOLOG, TABELAS_ZERAR_HOMOLOG } from '../homologZerarBanco'
+import { podeZerarBancoHomologacao, PRESERVADO_ZERAR_HOMOLOG, TABELAS_PRESERVAR_HOMOLOG, TABELAS_ZERAR_HOMOLOG } from '../homologZerarBanco'
 
 describe('podeZerarBancoHomologacao', () => {
   afterEach(() => {
@@ -25,10 +25,11 @@ describe('podeZerarBancoHomologacao', () => {
     expect(podeZerarBancoHomologacao()).toBe(false)
   })
 
-  it('não apaga cadastro financeiro (clientes, tabelas, contratos)', () => {
+  it('não apaga cadastro financeiro nem lógica de cobrança', () => {
     const zeradas = new Set(TABELAS_ZERAR_HOMOLOG.map((t) => t.table))
     for (const preservada of TABELAS_PRESERVAR_HOMOLOG) {
       expect(zeradas.has(preservada)).toBe(false)
     }
+    expect(PRESERVADO_ZERAR_HOMOLOG).toMatch(/lógica de cobrança/i)
   })
 })

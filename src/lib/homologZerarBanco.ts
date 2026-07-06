@@ -15,6 +15,10 @@ export const TABELAS_ZERAR_HOMOLOG: { table: string; filterCol: string }[] = [
   { table: 'ultrafrio_notas_fiscais', filterCol: 'id' },
 ]
 
+/** Texto exibido na confirmação do botão zerar homolog. */
+export const PRESERVADO_ZERAR_HOMOLOG =
+  'lógica de cobrança (tabelas de frete, contratos e clientes cadastrados)'
+
 /** Cadastro financeiro e remetentes — não apagar no reset de homolog. */
 export const TABELAS_PRESERVAR_HOMOLOG = [
   'ultrafrio_fin_tabelas',
