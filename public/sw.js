@@ -2,7 +2,7 @@
 // Objetivo principal: tornar o app instalável (PWA) no Chrome/Android.
 // Estratégia: network-first para navegação (HTML), sem cachear dados do Supabase.
 
-const CACHE = 'ultrafrio-shell-v12'
+const CACHE = 'ultrafrio-shell-v13'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (event) => {

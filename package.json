@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/write-supabase-config.mjs && node scripts/generate-icons.mjs && tsc -b && vite build",
+    "build:render": "node scripts/verify-render-build.mjs",
     "build:web": "node scripts/write-supabase-config.mjs && vite build",
     "lint": "eslint .",
     "test": "vitest run",
