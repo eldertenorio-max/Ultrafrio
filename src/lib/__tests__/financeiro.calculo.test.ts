@@ -197,16 +197,46 @@ describe('calcularCobrancaDetalhada', () => {
 })
 
 describe('diasPeriodoCobrancaArmazenagem', () => {
-  it('após saída parcial, período conta só dias desde a última saída', () => {
+  it('após saída parcial no 1º dia do período, conta o período inteiro com estoque', () => {
     expect(
       diasPeriodoCobrancaArmazenagem(
         '2026-07-01',
         '2026-07-06',
         '2026-03-03',
         '2026-07-01',
+        null,
         'armazenada',
+        13_897.46,
       ),
     ).toBe(6)
+  })
+
+  it('finalizada: período limitado até a data de saída', () => {
+    expect(
+      diasPeriodoCobrancaArmazenagem(
+        '2026-07-01',
+        '2026-07-06',
+        '2026-05-01',
+        '2026-07-01',
+        '2026-07-01',
+        'finalizada',
+        0,
+      ),
+    ).toBe(1)
+  })
+
+  it('armazenada sem peso: 0 dias no período', () => {
+    expect(
+      diasPeriodoCobrancaArmazenagem(
+        '2026-07-01',
+        '2026-07-06',
+        '2026-05-06',
+        '2026-07-06',
+        null,
+        'armazenada',
+        0,
+      ),
+    ).toBe(0)
   })
 
   it('sem saída, período respeita data de entrada', () => {
@@ -216,7 +246,9 @@ describe('diasPeriodoCobrancaArmazenagem', () => {
         '2026-07-06',
         '2026-07-05',
         null,
+        null,
         'armazenada',
+        24_474,
       ),
     ).toBe(2)
   })

@@ -156,30 +156,43 @@ export function diasEntreDatasInclusive(inicio: string, fim: string): number {
 
 /**
  * Dias do período de cobrança por kilo.
- * Com saída parcial: conta a partir da última saída (ou entrada/período, o que for mais recente).
+ * - Armazenada com estoque: desde a última saída (se houver) até o fim do período.
+ * - Finalizada: do início efetivo até a data de saída (não cobra após sair).
+ * - Sem peso atual (estoque zerado): 0 dias.
  */
 export function diasPeriodoCobrancaArmazenagem(
   periodoInicio: string,
   periodoFim: string,
   dataEntrada: string,
   dataUltimaSaida: string | null,
+  dataSaidaFinal: string | null,
   status: 'armazenada' | 'finalizada',
+  pesoAtual: number,
 ): number {
   if (!periodoInicio || !periodoFim) return 0
+  if (pesoAtual <= 1e-6 && status === 'armazenada') return 0
 
   let inicioEfetivo = periodoInicio
+  let fimEfetivo = periodoFim
+
   const refEntrada = dataReferenciaIso(dataEntrada)
   if (refEntrada && refEntrada > inicioEfetivo) inicioEfetivo = refEntrada
 
-  if (status === 'armazenada' && dataUltimaSaida) {
+  if (status === 'finalizada') {
+    const refSaida = dataSaidaFinal ? dataReferenciaIso(dataSaidaFinal) : null
+    if (refSaida) {
+      if (refSaida < inicioEfetivo) return 0
+      if (refSaida < fimEfetivo) fimEfetivo = refSaida
+    }
+  } else if (dataUltimaSaida) {
     const refSaida = dataReferenciaIso(dataUltimaSaida)
     if (refSaida && refSaida > inicioEfetivo) inicioEfetivo = refSaida
   }
 
-  const refFim = dataReferenciaIso(periodoFim)
+  const refFim = dataReferenciaIso(fimEfetivo)
   if (refFim && inicioEfetivo > refFim) return 0
 
-  return diasEntreDatasInclusive(inicioEfetivo, periodoFim)
+  return diasEntreDatasInclusive(inicioEfetivo, fimEfetivo)
 }
 
 function dataUltimaSaidaRegistrada(saidas: SaidaNfFinanceiro[]): string | null {
@@ -246,7 +259,9 @@ export function debitosEntradaPeriodo(
 }
 
 function pesoBrutoArmazenagem(resumo: ResumoNfArmazenada): number {
-  if (resumo.pesoBrutoRestante > 0) return resumo.pesoBrutoRestante
+  if (resumo.status === 'armazenada') {
+    return resumo.pesoAtual > 0 ? resumo.pesoAtual : 0
+  }
   if (resumo.pesoBruto > 0) return resumo.pesoBruto
   return 0
 }

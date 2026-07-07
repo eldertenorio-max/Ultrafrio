@@ -1366,10 +1366,15 @@ function DataEntradaSection({
               periodoFim,
               nf.dataEntrada,
               nf.dataUltimaSaida,
+              nf.dataSaida,
               nf.status,
+              nf.pesoAtual,
             )
           : diasPeriodoCobranca(periodoInicio, periodoFim)
-        const valorArmazenagem = valorCobrancaPeriodo(diasPeriodo, valorDiaria)
+        const valorArmazenagem =
+          nf.pesoAtual <= 0 && nf.status === 'armazenada'
+            ? 0
+            : valorCobrancaPeriodo(diasPeriodo, valorDiaria)
         const saidasPeriodo = saidasNoPeriodoCobranca(nf.saidas, periodoInicio, periodoFim)
         const entradaNoPeriodo = debitosEntradaPeriodo(
           nf.dataEntrada,
