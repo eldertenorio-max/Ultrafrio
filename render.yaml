@@ -1,10 +1,10 @@
 # Blueprint Render — Homologação + Produção (2 branches, mesmo repo)
 #
+# Portal único (produção): https://wms.docalivre.com.br/
 # Homologação: branch homolog → https://ultrafrio-homologacao.onrender.com (auto deploy)
-# Produção:    branch main     → https://wms.docalivre.com.br (manual deploy)
+# Produção:    branch main     → https://wms.docalivre.com.br (auto deploy)
 #
-# Mesmo Supabase nos dois (public/supabase-config.json + VITE_SUPABASE_* idênticas).
-# VITE_WMS_PRO_URL: portal SSO verifica token neste Pro (prod ↔ prod, homolog ↔ homolog).
+# VITE_WMS_PRO_URL: login/SSO chama o Pro (prod ↔ prod, homolog ↔ homolog).
 services:
   - type: web
     name: ultrafrio-homologacao
@@ -27,7 +27,7 @@ services:
     name: ultrafrio-producao
     runtime: static
     branch: main
-    autoDeployTrigger: off
+    autoDeployTrigger: commit
     buildCommand: npm ci --no-audit --no-fund && node scripts/write-supabase-config.mjs && npm run build
     staticPublishPath: ./dist
     envVars:

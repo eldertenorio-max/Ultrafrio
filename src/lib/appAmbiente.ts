@@ -42,5 +42,5 @@ export function labelAmbiente(): string | null {
 }
 
 export function tituloApp(): string {
-  return isHomologacao() ? 'Doca Livre WMS Plus — Homologação' : 'Doca Livre WMS Plus'
+  return isHomologacao() ? 'Doca Livre Sistemas — Homologação' : 'Doca Livre Sistemas'
 }

@@ -4,12 +4,12 @@
   align-items: center;
   justify-content: center;
   padding: 32px 20px;
-  background: var(--bg);
+  background: #eef1f4;
   animation: system-selector-in 0.55s ease-out both;
 }
 
 .system-selector__inner {
-  width: min(920px, 100%);
+  width: min(960px, 100%);
   display: flex;
   flex-direction: column;
   gap: 24px;
