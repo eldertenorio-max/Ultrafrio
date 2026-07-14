@@ -2,8 +2,10 @@
 #
 # Portal único (produção): https://wms.docalivre.com.br/
 # Homologação: branch homolog → https://ultrafrio-homologacao.onrender.com (auto deploy)
-# Produção:    branch main     → https://wms.docalivre.com.br (auto deploy)
-#
+# Produção:    branch main → https://wms.docalivre.com.br
+# Importante: se Auto Deploy estiver OFF no serviço ultrafrio-producao,
+# rode Manual Deploy + Clear build cache no Render após push em main.
+
 # VITE_WMS_PRO_URL: login/SSO chama o Pro (prod ↔ prod, homolog ↔ homolog).
 services:
   - type: web

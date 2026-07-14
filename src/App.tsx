@@ -7,7 +7,6 @@ import { VoiceAssistantHUD } from './components/VoiceAssistantHUD'
 import type { SidebarSectionId } from './components/CollapsibleSidebarSection'
 import { DetailModal } from './components/DetailModal'
 import { ManualNfModal, type ManualNfModalResult } from './components/ManualNfModal'
-import CompanySplash from './components/CompanySplash'
 import { PortalBackButton } from './components/PortalBackButton'
 import SystemSelectorScreen from './pages/SystemSelectorScreen'
 import SystemEntryScreen from './pages/SystemEntryScreen'
@@ -289,13 +288,15 @@ export default function App() {
   const initialSsoToken = typeof window !== 'undefined' ? readPortalSsoTokenFromLocation() : null
   const initialHub = typeof window !== 'undefined' ? loadHubSession() : null
   const enteredViaSso = Boolean(initialSsoToken)
-  // Portal público: login → hub (sem splash de marketing na frente)
-  const [companyIntroDone, setCompanyIntroDone] = useState(true)
+  // Sem splash: entrada pública = login → hub (3 sistemas).
   const [portalUsuario, setPortalUsuario] = useState(() => initialHub?.usuario || '')
+  // Só entra no hub/plus com sessão do portal (ou SSO). Marcador sozinho NÃO pula o login.
   const [hubReady, setHubReady] = useState(() => Boolean(initialHub) && !enteredViaSso)
-  const [selectedSystemId, setSelectedSystemId] = useState<SystemId | null>(() =>
-    enteredViaSso || hasPortalEntryMarker() ? 'plus' : null,
-  )
+  const [selectedSystemId, setSelectedSystemId] = useState<SystemId | null>(() => {
+    if (enteredViaSso) return 'plus'
+    if (initialHub && hasPortalEntryMarker()) return 'plus'
+    return null
+  })
   const [ssoBootstrapping, setSsoBootstrapping] = useState(() => enteredViaSso)
   const [ssoError, setSsoError] = useState<string | null>(null)
   const [hubErro, setHubErro] = useState<string | null>(null)
@@ -3621,7 +3622,6 @@ export default function App() {
         setSsoError(result.erro)
         setSsoBootstrapping(false)
         setSelectedSystemId(null)
-        setCompanyIntroDone(true)
         return
       }
       const usuario = result.usuario.trim()
@@ -3637,7 +3637,6 @@ export default function App() {
       )
       setContaUsuarioAtivoId(id)
       setSelectedSystemId('plus')
-      setCompanyIntroDone(true)
       setSsoBootstrapping(false)
     })
     return () => {
@@ -3645,8 +3644,16 @@ export default function App() {
     }
   }, [])
 
-  if (!companyIntroDone) {
-    return <CompanySplash loading={loading} onComplete={() => setCompanyIntroDone(true)} />
+  // Entrada obrigatória: login do portal (nunca o seletor antigo de 4 cards sem auth).
+  if (!hubReady && !selectedSystemId && !ssoBootstrapping) {
+    return (
+      <PortalLoginScreen
+        onSuccess={(usuario) => {
+          setPortalUsuario(usuario)
+          setHubReady(true)
+        }}
+      />
+    )
   }
 
   if (ssoBootstrapping) {
@@ -3668,22 +3675,12 @@ export default function App() {
             setSsoError(null)
             setHubReady(false)
             setSelectedSystemId(null)
+            clearPortalEntryMarker()
           }}
         >
           Ir ao login
         </button>
       </div>
-    )
-  }
-
-  if (!hubReady && !selectedSystemId) {
-    return (
-      <PortalLoginScreen
-        onSuccess={(usuario) => {
-          setPortalUsuario(usuario)
-          setHubReady(true)
-        }}
-      />
     )
   }
 
