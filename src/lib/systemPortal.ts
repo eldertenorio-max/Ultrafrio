@@ -5,7 +5,6 @@ export type SystemOption = {
   variant: string
   productName?: string
   logoSrc: string
-  /** Exibe só a imagem da logo (sem badge WMS) */
   logoOnly?: boolean
   /** null = permanece neste app (WMS Plus) */
   url: string | null
@@ -24,7 +23,8 @@ function envUrl(key: string): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
-export function getSystemOptions(): SystemOption[] {
+/** Hub pós-login do portal único (só Light / Plus / Pro). */
+export function getHubSystemOptions(): SystemOption[] {
   return [
     {
       id: 'light',
@@ -47,14 +47,11 @@ export function getSystemOptions(): SystemOption[] {
       logoSrc: '/systems/logo-wms-pro.png',
       url: envUrl('VITE_WMS_PRO_URL') ?? PRODUCTION_URLS.pro,
     },
-    {
-      id: 'original',
-      variant: 'Original',
-      logoSrc: '/systems/logo-original.png',
-      logoOnly: true,
-      url: envUrl('VITE_WMS_ORIGINAL_URL') ?? PRODUCTION_URLS.original,
-    },
   ]
+}
+
+export function getSystemOptions(): SystemOption[] {
+  return getHubSystemOptions()
 }
 
 export function getSystemById(id: SystemId): SystemOption | undefined {

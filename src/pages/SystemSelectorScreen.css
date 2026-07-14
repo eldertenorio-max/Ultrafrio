@@ -40,10 +40,35 @@
   color: #5c6670;
 }
 
+.system-selector__sair {
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.system-selector__erro {
+  margin: 0 auto;
+  max-width: 420px;
+  color: #b91c1c;
+  text-align: center;
+}
+
 .system-selector__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .system-selector__grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .system-selector__card {

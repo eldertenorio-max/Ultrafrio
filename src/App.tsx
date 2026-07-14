@@ -11,6 +11,7 @@ import CompanySplash from './components/CompanySplash'
 import { PortalBackButton } from './components/PortalBackButton'
 import SystemSelectorScreen from './pages/SystemSelectorScreen'
 import SystemEntryScreen from './pages/SystemEntryScreen'
+import PortalLoginScreen from './pages/PortalLoginScreen'
 import { getSystemById, type SystemId } from './lib/systemPortal'
 import {
   clearPortalSsoTokenFromUrl,
@@ -18,13 +19,16 @@ import {
   verifyPortalSsoToken,
 } from './lib/portalSso'
 import {
-  allowsDirectAccessWithoutPortal,
   clearPortalEntryMarker,
-  goToProPortal,
+  goToPublicPortal,
   hasPortalEntryMarker,
   markPortalEntry,
-  redirectDirectAccessToProPortal,
 } from './lib/portalGate'
+import {
+  clearHubSession,
+  issueSystemSsoUrl,
+  loadHubSession,
+} from './lib/portalApi'
 import { LayoutPanel } from './components/LayoutPanel'
 import { StageModal } from './components/StageModal'
 import { EntradaDestinoModal } from './components/EntradaDestinoModal'
@@ -283,17 +287,18 @@ export default function App() {
   const conversationStateRef = useRef(createConversationState())
   const openSectionRef = useRef<SidebarSectionId | null>(null)
   const initialSsoToken = typeof window !== 'undefined' ? readPortalSsoTokenFromLocation() : null
-  const skippedDirectRedirect =
-    typeof window !== 'undefined'
-      ? !redirectDirectAccessToProPortal({ hasSsoToken: Boolean(initialSsoToken) })
-      : true
-  const enteredViaPortal = Boolean(initialSsoToken) || hasPortalEntryMarker()
-  const [companyIntroDone, setCompanyIntroDone] = useState(() => enteredViaPortal)
+  const initialHub = typeof window !== 'undefined' ? loadHubSession() : null
+  const enteredViaSso = Boolean(initialSsoToken)
+  const [companyIntroDone, setCompanyIntroDone] = useState(() => enteredViaSso || Boolean(initialHub))
+  const [portalUsuario, setPortalUsuario] = useState(() => initialHub?.usuario || '')
+  const [hubReady, setHubReady] = useState(() => Boolean(initialHub) && !enteredViaSso)
   const [selectedSystemId, setSelectedSystemId] = useState<SystemId | null>(() =>
-    enteredViaPortal ? 'plus' : null,
+    enteredViaSso || hasPortalEntryMarker() ? 'plus' : null,
   )
-  const [ssoBootstrapping, setSsoBootstrapping] = useState(() => Boolean(initialSsoToken))
+  const [ssoBootstrapping, setSsoBootstrapping] = useState(() => enteredViaSso)
   const [ssoError, setSsoError] = useState<string | null>(null)
+  const [hubErro, setHubErro] = useState<string | null>(null)
+  const [hubBusy, setHubBusy] = useState(false)
   const [pendingSelection, setPendingSelection] = useState<Set<AddressId>>(new Set())
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [detailAddress, setDetailAddress] = useState<AddressId | null>(null)
@@ -3544,25 +3549,66 @@ export default function App() {
   const detailNota = detailOcc ? state.notas.find((n) => n.id === detailOcc.nfId) : null
 
   function handleSystemSelect(id: SystemId) {
-    setSelectedSystemId(id)
+    void (async () => {
+      setHubErro(null)
+      if (id === 'plus') {
+        markPortalEntry()
+        setSelectedSystemId('plus')
+        return
+      }
+      const hub = loadHubSession()
+      if (!hub?.hubToken) {
+        setHubReady(false)
+        setHubErro('Faça login novamente.')
+        return
+      }
+      setHubBusy(true)
+      const target = id === 'light' || id === 'pro' ? id : 'light'
+      const result = await issueSystemSsoUrl(target, hub.hubToken)
+      setHubBusy(false)
+      if (!result.ok) {
+        setHubErro(result.erro)
+        return
+      }
+      window.location.assign(result.url)
+    })()
   }
 
   function handleBackToSystemSelector() {
     clearPortalEntryMarker()
-    goToProPortal()
+    setSelectedSystemId(null)
+    setHubReady(true)
+  }
+
+  function handlePortalSair() {
+    clearHubSession()
+    clearPortalEntryMarker()
+    setPortalUsuario('')
+    setHubReady(false)
+    setSelectedSystemId(null)
+    goToPublicPortal(true)
   }
 
   useEffect(() => {
-    if (!skippedDirectRedirect) return
-    const token = readPortalSsoTokenFromLocation()
-    if (!token) {
-      if (hasPortalEntryMarker()) {
-        setSelectedSystemId('plus')
-        setCompanyIntroDone(true)
-        setSsoBootstrapping(false)
-      }
-      return
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('sair') !== '1') return
+      clearHubSession()
+      clearPortalEntryMarker()
+      setPortalUsuario('')
+      setHubReady(false)
+      setSelectedSystemId(null)
+      params.delete('sair')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
+      window.history.replaceState({}, document.title, next || '/')
+    } catch {
+      /* ignore */
     }
+  }, [])
+
+  useEffect(() => {
+    const token = readPortalSsoTokenFromLocation()
+    if (!token) return
     let alive = true
     setSsoBootstrapping(true)
     setSsoError(null)
@@ -3580,6 +3626,7 @@ export default function App() {
       const usuario = result.usuario.trim()
       const id = `sso:${usuario.toLowerCase()}`
       markPortalEntry()
+      setPortalUsuario(usuario)
       setContaUsuarios(
         registrarAcessoUsuario({
           id,
@@ -3595,15 +3642,7 @@ export default function App() {
     return () => {
       alive = false
     }
-  }, [skippedDirectRedirect])
-
-  if (!skippedDirectRedirect) {
-    return (
-      <div style={{ padding: 48, textAlign: 'center' }}>
-        Redirecionando ao portal Doca Livre…
-      </div>
-    )
-  }
+  }, [])
 
   if (!companyIntroDone) {
     return <CompanySplash loading={loading} onComplete={() => setCompanyIntroDone(true)} />
@@ -3622,26 +3661,44 @@ export default function App() {
       <div style={{ padding: 32, maxWidth: 480, margin: '48px auto' }}>
         <h2 style={{ marginTop: 0 }}>SSO não concluído</h2>
         <p>{ssoError}</p>
-        <button type="button" onClick={() => goToProPortal()}>
-          Ir ao portal Doca Livre
+        <button
+          type="button"
+          onClick={() => {
+            setSsoError(null)
+            setHubReady(false)
+            setSelectedSystemId(null)
+          }}
+        >
+          Ir ao login
         </button>
       </div>
     )
   }
 
-  if (!selectedSystemId) {
-    if (!allowsDirectAccessWithoutPortal()) {
-      goToProPortal()
-      return (
-        <div style={{ padding: 48, textAlign: 'center' }}>
-          Redirecionando ao portal Doca Livre…
-        </div>
-      )
-    }
-    return <SystemSelectorScreen onSelect={handleSystemSelect} />
+  if (!hubReady && !selectedSystemId) {
+    return (
+      <PortalLoginScreen
+        onSuccess={(usuario) => {
+          setPortalUsuario(usuario)
+          setHubReady(true)
+        }}
+      />
+    )
   }
 
-  const selectedSystem = getSystemById(selectedSystemId)
+  if (hubReady && !selectedSystemId) {
+    return (
+      <SystemSelectorScreen
+        usuario={portalUsuario}
+        onSelect={handleSystemSelect}
+        onSair={handlePortalSair}
+        erro={hubErro}
+        busy={hubBusy}
+      />
+    )
+  }
+
+  const selectedSystem = getSystemById(selectedSystemId!)
   if (selectedSystem?.url) {
     return (
       <SystemEntryScreen
