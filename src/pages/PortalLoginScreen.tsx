@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { LOGO_DOCA_LIVRE_SRC } from '../lib/brandAssets'
 import './PortalLoginScreen.css'
 
