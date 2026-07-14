@@ -29,7 +29,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
   const [identificador, setIdentificador] = useState('')
   const [codigo, setCodigo] = useState('')
   const [verifyToken, setVerifyToken] = useState('')
-  const [debugCodigo, setDebugCodigo] = useState<string | null>(null)
 
   const [erro, setErro] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
@@ -45,7 +44,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
     setStep('form')
     setCodigo('')
     setVerifyToken('')
-    setDebugCodigo(null)
     setSenha('')
     setConfirmarSenha('')
     setErro(null)
@@ -78,7 +76,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
         setErro(result.erro)
         return
       }
-      setDebugCodigo(result.debug_codigo || null)
       setInfo(result.mensagem || 'Código enviado para o e-mail. Cole-o abaixo.')
       setStep('codigo')
     } finally {
@@ -100,7 +97,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
       setInfo(result.mensagem || 'E-mail confirmado. Defina usuário e senha.')
       setStep('dados')
       setCodigo('')
-      setDebugCodigo(null)
     } finally {
       setLoading(false)
     }
@@ -146,7 +142,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
         setErro(result.erro)
         return
       }
-      setDebugCodigo(result.debug_codigo || null)
       const mask = result.email_mascarado ? ` (${result.email_mascarado})` : ''
       setInfo((result.mensagem || 'Código enviado.') + mask)
       setStep('codigo')
@@ -170,7 +165,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
       setInfo(result.mensagem || 'Código confirmado. Defina a nova senha.')
       setStep('dados')
       setCodigo('')
-      setDebugCodigo(null)
     } finally {
       setLoading(false)
     }
@@ -324,9 +318,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
               Enviamos um código para <strong>{email}</strong>. Abra o e-mail, copie o código e cole
               abaixo.
             </p>
-            {debugCodigo ? (
-              <p className="portal-login__debug">Código (debug): {debugCodigo}</p>
-            ) : null}
             <label className="portal-login__label" htmlFor="portal-otp">
               Código
             </label>
@@ -359,7 +350,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
                 onClick={() => {
                   setStep('form')
                   setCodigo('')
-                  setDebugCodigo(null)
                 }}
               >
                 Reenviar / outro e-mail
@@ -464,9 +454,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
             <p className="portal-login__hint">
               Digite o código que chegou no e-mail da conta <strong>{identificador}</strong>.
             </p>
-            {debugCodigo ? (
-              <p className="portal-login__debug">Código (debug): {debugCodigo}</p>
-            ) : null}
             <label className="portal-login__label" htmlFor="portal-senha-otp">
               Código
             </label>
@@ -498,7 +485,6 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
                 onClick={() => {
                   setStep('form')
                   setCodigo('')
-                  setDebugCodigo(null)
                 }}
               >
                 Reenviar / outro usuário
