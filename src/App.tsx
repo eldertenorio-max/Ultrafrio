@@ -17,6 +17,14 @@ import {
   readPortalSsoTokenFromLocation,
   verifyPortalSsoToken,
 } from './lib/portalSso'
+import {
+  allowsDirectAccessWithoutPortal,
+  clearPortalEntryMarker,
+  goToProPortal,
+  hasPortalEntryMarker,
+  markPortalEntry,
+  redirectDirectAccessToProPortal,
+} from './lib/portalGate'
 import { LayoutPanel } from './components/LayoutPanel'
 import { StageModal } from './components/StageModal'
 import { EntradaDestinoModal } from './components/EntradaDestinoModal'
@@ -274,11 +282,17 @@ export default function App() {
   >([])
   const conversationStateRef = useRef(createConversationState())
   const openSectionRef = useRef<SidebarSectionId | null>(null)
-  const [companyIntroDone, setCompanyIntroDone] = useState(() => Boolean(readPortalSsoTokenFromLocation()))
+  const initialSsoToken = typeof window !== 'undefined' ? readPortalSsoTokenFromLocation() : null
+  const skippedDirectRedirect =
+    typeof window !== 'undefined'
+      ? !redirectDirectAccessToProPortal({ hasSsoToken: Boolean(initialSsoToken) })
+      : true
+  const enteredViaPortal = Boolean(initialSsoToken) || hasPortalEntryMarker()
+  const [companyIntroDone, setCompanyIntroDone] = useState(() => enteredViaPortal)
   const [selectedSystemId, setSelectedSystemId] = useState<SystemId | null>(() =>
-    readPortalSsoTokenFromLocation() ? 'plus' : null,
+    enteredViaPortal ? 'plus' : null,
   )
-  const [ssoBootstrapping, setSsoBootstrapping] = useState(() => Boolean(readPortalSsoTokenFromLocation()))
+  const [ssoBootstrapping, setSsoBootstrapping] = useState(() => Boolean(initialSsoToken))
   const [ssoError, setSsoError] = useState<string | null>(null)
   const [pendingSelection, setPendingSelection] = useState<Set<AddressId>>(new Set())
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -3534,12 +3548,21 @@ export default function App() {
   }
 
   function handleBackToSystemSelector() {
-    setSelectedSystemId(null)
+    clearPortalEntryMarker()
+    goToProPortal()
   }
 
   useEffect(() => {
+    if (!skippedDirectRedirect) return
     const token = readPortalSsoTokenFromLocation()
-    if (!token) return
+    if (!token) {
+      if (hasPortalEntryMarker()) {
+        setSelectedSystemId('plus')
+        setCompanyIntroDone(true)
+        setSsoBootstrapping(false)
+      }
+      return
+    }
     let alive = true
     setSsoBootstrapping(true)
     setSsoError(null)
@@ -3547,6 +3570,7 @@ export default function App() {
       if (!alive) return
       clearPortalSsoTokenFromUrl()
       if (!result.ok) {
+        clearPortalEntryMarker()
         setSsoError(result.erro)
         setSsoBootstrapping(false)
         setSelectedSystemId(null)
@@ -3555,6 +3579,7 @@ export default function App() {
       }
       const usuario = result.usuario.trim()
       const id = `sso:${usuario.toLowerCase()}`
+      markPortalEntry()
       setContaUsuarios(
         registrarAcessoUsuario({
           id,
@@ -3570,7 +3595,15 @@ export default function App() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [skippedDirectRedirect])
+
+  if (!skippedDirectRedirect) {
+    return (
+      <div style={{ padding: 48, textAlign: 'center' }}>
+        Redirecionando ao portal Doca Livre…
+      </div>
+    )
+  }
 
   if (!companyIntroDone) {
     return <CompanySplash loading={loading} onComplete={() => setCompanyIntroDone(true)} />
@@ -3589,20 +3622,22 @@ export default function App() {
       <div style={{ padding: 32, maxWidth: 480, margin: '48px auto' }}>
         <h2 style={{ marginTop: 0 }}>SSO não concluído</h2>
         <p>{ssoError}</p>
-        <button
-          type="button"
-          onClick={() => {
-            setSsoError(null)
-            setSelectedSystemId(null)
-          }}
-        >
-          Ir para seleção de sistemas
+        <button type="button" onClick={() => goToProPortal()}>
+          Ir ao portal Doca Livre
         </button>
       </div>
     )
   }
 
   if (!selectedSystemId) {
+    if (!allowsDirectAccessWithoutPortal()) {
+      goToProPortal()
+      return (
+        <div style={{ padding: 48, textAlign: 'center' }}>
+          Redirecionando ao portal Doca Livre…
+        </div>
+      )
+    }
     return <SystemSelectorScreen onSelect={handleSystemSelect} />
   }
 
