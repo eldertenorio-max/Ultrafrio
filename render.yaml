@@ -4,6 +4,7 @@
 # Produção:    branch main     → https://wms.docalivre.com.br (manual deploy)
 #
 # Mesmo Supabase nos dois (public/supabase-config.json + VITE_SUPABASE_* idênticas).
+# VITE_WMS_PRO_URL: portal SSO verifica token neste Pro (prod ↔ prod, homolog ↔ homolog).
 services:
   - type: web
     name: ultrafrio-homologacao
@@ -19,6 +20,8 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+      - key: VITE_WMS_PRO_URL
+        value: https://doca-livre-wms-pro-homologacao.onrender.com/
 
   - type: web
     name: ultrafrio-producao
@@ -34,3 +37,5 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+      - key: VITE_WMS_PRO_URL
+        value: https://doca-livre-wms-pro.onrender.com/
