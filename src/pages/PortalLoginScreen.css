@@ -121,15 +121,6 @@
   line-height: 1.4;
 }
 
-.portal-login__debug {
-  margin: 0 0 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: #fff7ed;
-  color: #9a3412;
-  font-size: 0.85rem;
-}
-
 .portal-login__input--otp {
   letter-spacing: 0.35em;
   font-size: 1.25rem;
