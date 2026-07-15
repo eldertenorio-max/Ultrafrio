@@ -18,9 +18,16 @@ async function portalPost<T extends { ok?: boolean; erro?: string }>(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    const data = (await res.json().catch(() => ({}))) as T
+    const data = (await res.json().catch(() => ({}))) as T & {
+      smtp_motivo?: string
+    }
     if (!res.ok || !data.ok) {
-      return { ok: false, erro: data.erro || 'Não foi possível concluir a operação.' }
+      const base = data.erro || 'Não foi possível concluir a operação.'
+      const detail = (data.smtp_motivo || '').trim()
+      return {
+        ok: false,
+        erro: detail && !base.includes(detail) ? `${base} (${detail})` : base,
+      }
     }
     return data
   } catch {
