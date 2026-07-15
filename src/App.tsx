@@ -289,14 +289,14 @@ export default function App() {
   const initialSsoToken = typeof window !== 'undefined' ? readPortalSsoTokenFromLocation() : null
   const initialHub = typeof window !== 'undefined' ? loadHubSession() : null
   const enteredViaSso = Boolean(initialSsoToken)
-  // Entrada pública: intro → login → hub Light/Plus/Pro (exceto SSO ou já dentro do Plus).
+  // Entrada pública: intro → login → hub. Com hub_token válido (voltar dos sistemas) abre o hub.
   const [portalUsuario, setPortalUsuario] = useState(() => initialHub?.usuario || '')
   const alreadyInsidePlus = Boolean(initialHub && hasPortalEntryMarker())
+  const resumeHub = Boolean(initialHub) && !enteredViaSso && !alreadyInsidePlus
   const [companyIntroDone, setCompanyIntroDone] = useState(
-    () => enteredViaSso || alreadyInsidePlus,
+    () => enteredViaSso || alreadyInsidePlus || resumeHub,
   )
-  // Hub só depois do login nesta visita — token antigo no storage não pula a tela de login.
-  const [hubReady, setHubReady] = useState(false)
+  const [hubReady, setHubReady] = useState(() => resumeHub)
   const [selectedSystemId, setSelectedSystemId] = useState<SystemId | null>(() => {
     if (enteredViaSso) return 'plus'
     if (alreadyInsidePlus) return 'plus'
@@ -3720,7 +3720,7 @@ export default function App() {
     <div
       className={`app-shell${sidebarMode === 'fullscreen' ? ' app-shell--menu-fullscreen' : ''}`}
     >
-      <PortalBackButton onClick={handleBackToSystemSelector} />
+      <PortalBackButton onClick={handleBackToSystemSelector} label="Sistemas" />
       <PwaInstallBanner />
       <AmbienteBanner />
       {savingImportante && (
