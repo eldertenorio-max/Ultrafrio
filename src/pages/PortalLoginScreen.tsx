@@ -499,7 +499,10 @@ export default function PortalLoginScreen({ onSuccess }: Props) {
         {mode === 'senha' && step === 'codigo' ? (
           <form className="portal-login__form" onSubmit={handleSenhaVerificar}>
             <p className="portal-login__hint">
-              Digite o código que chegou no e-mail da conta <strong>{identificador}</strong>.
+              Digite o código do e-mail com assunto{' '}
+              <strong>Doca Livre — código para trocar a senha</strong> enviado para{' '}
+              <strong>{identificador}</strong>. O e-mail de cadastro (“confirmação de e-mail”)
+              não serve para trocar senha.
             </p>
             <label className="portal-login__label" htmlFor="portal-senha-otp">
               Código
