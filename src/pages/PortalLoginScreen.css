@@ -71,7 +71,7 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
-  padding-right: 78px;
+  padding-right: 48px;
 }
 
 .portal-login__password-toggle {
@@ -83,23 +83,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-width: 64px;
+  width: 36px;
   height: 32px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #f8fafc;
   color: #0f172a;
   cursor: pointer;
-  padding: 0 8px;
+  padding: 0;
   font: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
   line-height: 1;
 }
 
-.portal-login__password-toggle-text {
-  user-select: none;
+.portal-login__password-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .portal-login__password-toggle:hover {
