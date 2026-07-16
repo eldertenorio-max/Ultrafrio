@@ -1,2 +1,2 @@
 # Deploy stamp - forcar rebuild no Render (producao + homolog).
-DEPLOY_STAMP=2026-07-15-22-30-suba-sempre-tudo
+DEPLOY_STAMP=2026-07-15-22-48-botao-sistemas

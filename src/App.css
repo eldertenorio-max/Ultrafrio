@@ -116,20 +116,21 @@
   gap: 4px;
   margin-left: 4px;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #f0d000;
   border-radius: 10px;
-  background: #f8fafc;
+  background: #fffbea;
   color: #0f172a;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .app-topbar-back-systems:hover {
-  background: #e2e8f0;
-  border-color: #94a3b8;
+  background: #fff3a8;
+  border-color: #e6c200;
 }
 
 .app-topbar-menu-icon {
