@@ -3623,8 +3623,8 @@ export default function App() {
 
   function handleBackToSystemSelector() {
     clearPortalEntryMarker()
-    setSelectedSystemId(null)
-    setHubReady(true)
+    // Navegação completa: evita estado React preso no app Plus.
+    window.location.assign('/?hub=1')
   }
 
   function handlePortalSair() {

@@ -33,5 +33,5 @@ export function goToPublicPortal(sair = false): void {
     window.location.assign('/?sair=1')
     return
   }
-  window.location.assign('/')
+  window.location.assign('/?hub=1')
 }

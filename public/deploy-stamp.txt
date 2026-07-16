@@ -1,3 +1,2 @@
-# Deploy stamp — força rebuild no Render quando Auto-Deploy falha em pegar commits.
-# 2026-07-15T22:10:00-03:00 hub-sistemas + light-url + topbar-sistemas
-DEPLOY_STAMP=2026-07-15-hub-sistemas
+# Deploy stamp — atualize este arquivo para forçar rebuild no Render.
+DEPLOY_STAMP=2026-07-15-22-20-hub-back-hard-nav
