@@ -1,3 +1,4 @@
+import { PortalBackButton } from '../components/PortalBackButton'
 import { SystemProductMark } from '../components/SystemProductMark'
 import { getHubSystemOptions, type SystemId } from '../lib/systemPortal'
 import './SystemSelectorScreen.css'
@@ -6,15 +7,27 @@ type Props = {
   onSelect: (id: SystemId) => void
   usuario?: string
   onSair?: () => void
+  /** Volta ao login do portal (tela anterior ao hub). */
+  onVoltar?: () => void
   erro?: string | null
   busy?: boolean
 }
 
-export default function SystemSelectorScreen({ onSelect, usuario, onSair, erro, busy }: Props) {
+export default function SystemSelectorScreen({
+  onSelect,
+  usuario,
+  onSair,
+  onVoltar,
+  erro,
+  busy,
+}: Props) {
   const systems = getHubSystemOptions()
 
   return (
     <div className="system-selector" role="main">
+      {onVoltar ? (
+        <PortalBackButton onClick={onVoltar} label="Voltar" />
+      ) : null}
       <div className="system-selector__inner">
         <header className="system-selector__header">
           <h1 className="system-selector__title">Escolha o sistema</h1>

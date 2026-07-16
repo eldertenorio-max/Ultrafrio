@@ -3636,6 +3636,24 @@ export default function App() {
     goToPublicPortal(true)
   }
 
+  /** Na página dos sistemas: volta ao login do portal (mantém fluxo intro → login → hub). */
+  function handleVoltarDoHub() {
+    clearPortalEntryMarker()
+    setSelectedSystemId(null)
+    setHubReady(false)
+    setHubErro(null)
+    setCompanyIntroDone(true)
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('hub')
+      url.searchParams.delete('sistemas')
+      url.searchParams.delete('sso_erro')
+      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}` || '/')
+    } catch {
+      /* ignore */
+    }
+  }
+
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search)
@@ -3769,6 +3787,7 @@ export default function App() {
         usuario={portalUsuario}
         onSelect={handleSystemSelect}
         onSair={handlePortalSair}
+        onVoltar={handleVoltarDoHub}
         erro={hubErro}
         busy={hubBusy}
       />

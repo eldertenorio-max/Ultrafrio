@@ -1,2 +1,2 @@
 # Deploy stamp - forcar rebuild no Render (producao + homolog).
-DEPLOY_STAMP=2026-07-15-22-53-suba
+DEPLOY_STAMP=2026-07-16-12-58-voltar-hub

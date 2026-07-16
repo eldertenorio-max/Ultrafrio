@@ -1,9 +1,10 @@
 .system-selector {
+  position: relative;
   min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 20px;
+  padding: 72px 20px 32px;
   background: #eef1f4;
   animation: system-selector-in 0.55s ease-out both;
 }
