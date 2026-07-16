@@ -3573,9 +3573,8 @@ export default function App() {
       }
       const hub = loadHubSession()
       if (!hub?.hubToken) {
-        setHubReady(false)
-        setSelectedSystemId(null)
-        setHubErro('Faça login novamente.')
+        // Não derruba o hub para a tela de login sem avisar — sessão some do storage.
+        setHubErro('Sessão do portal expirada. Clique em Sair e faça login de novo.')
         return
       }
       setHubBusy(true)
