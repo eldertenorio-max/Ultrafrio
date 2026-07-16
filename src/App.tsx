@@ -289,15 +289,29 @@ export default function App() {
   const initialSsoToken = typeof window !== 'undefined' ? readPortalSsoTokenFromLocation() : null
   const initialHub = typeof window !== 'undefined' ? loadHubSession() : null
   const enteredViaSso = Boolean(initialSsoToken)
+  // Volta do Light/Pro: ?hub=1 força a tela dos 3 sistemas (não reabre o app Plus).
+  const forceSystemsHub = (() => {
+    try {
+      const p = new URLSearchParams(window.location.search)
+      return p.get('hub') === '1' || p.get('sistemas') === '1'
+    } catch {
+      return false
+    }
+  })()
+  if (forceSystemsHub) {
+    clearPortalEntryMarker()
+  }
   // Entrada pública: intro → login → hub. Com hub_token válido (voltar dos sistemas) abre o hub.
   const [portalUsuario, setPortalUsuario] = useState(() => initialHub?.usuario || '')
-  const alreadyInsidePlus = Boolean(initialHub && hasPortalEntryMarker())
-  const resumeHub = Boolean(initialHub) && !enteredViaSso && !alreadyInsidePlus
+  const alreadyInsidePlus = Boolean(initialHub && hasPortalEntryMarker()) && !forceSystemsHub
+  const resumeHub =
+    Boolean(initialHub) && !enteredViaSso && (!alreadyInsidePlus || forceSystemsHub)
   const [companyIntroDone, setCompanyIntroDone] = useState(
-    () => enteredViaSso || alreadyInsidePlus || resumeHub,
+    () => enteredViaSso || alreadyInsidePlus || resumeHub || forceSystemsHub,
   )
-  const [hubReady, setHubReady] = useState(() => resumeHub)
+  const [hubReady, setHubReady] = useState(() => resumeHub || (forceSystemsHub && Boolean(initialHub)))
   const [selectedSystemId, setSelectedSystemId] = useState<SystemId | null>(() => {
+    if (forceSystemsHub) return null
     if (enteredViaSso) return 'plus'
     if (alreadyInsidePlus) return 'plus'
     return null
@@ -3617,9 +3631,29 @@ export default function App() {
         params.delete('sair')
         dirty = true
       }
+      if (params.get('hub') === '1' || params.get('sistemas') === '1') {
+        clearPortalEntryMarker()
+        const hub = loadHubSession()
+        if (hub?.usuario) setPortalUsuario(hub.usuario)
+        setSelectedSystemId(null)
+        setHubReady(Boolean(hub?.hubToken))
+        setCompanyIntroDone(true)
+        params.delete('hub')
+        params.delete('sistemas')
+        dirty = true
+      }
       if (params.has('sso_erro')) {
         const raw = params.get('sso_erro') || ''
         if (raw) setHubErro(decodeURIComponent(raw))
+        // Erro de SSO: garante hub dos 3 sistemas se houver sessão.
+        clearPortalEntryMarker()
+        const hub = loadHubSession()
+        if (hub?.usuario) {
+          setPortalUsuario(hub.usuario)
+          setSelectedSystemId(null)
+          setHubReady(true)
+          setCompanyIntroDone(true)
+        }
         params.delete('sso_erro')
         dirty = true
       }
