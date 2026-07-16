@@ -24,6 +24,8 @@ services:
         sync: false
       - key: VITE_WMS_PRO_URL
         value: https://doca-livre-wms-pro-homologacao.onrender.com/
+      - key: VITE_WMS_LIGHT_URL
+        value: https://doca-livre-wms-light-homolog.onrender.com/
 
   - type: web
     name: ultrafrio-producao
@@ -41,3 +43,5 @@ services:
         sync: false
       - key: VITE_WMS_PRO_URL
         value: https://doca-livre-wms-pro.onrender.com/
+      - key: VITE_WMS_LIGHT_URL
+        value: https://doca-livre-wms-light.onrender.com/

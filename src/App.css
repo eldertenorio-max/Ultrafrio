@@ -110,6 +110,28 @@
   background: transparent;
 }
 
+.app-topbar-back-systems {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app-topbar-back-systems:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
 .app-topbar-menu-icon {
   display: block;
   width: 18px;

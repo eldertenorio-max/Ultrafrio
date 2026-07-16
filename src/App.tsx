@@ -3585,19 +3585,37 @@ export default function App() {
         setSelectedSystemId('plus')
         return
       }
+      if (id !== 'light' && id !== 'pro') {
+        setHubErro('Sistema inválido.')
+        return
+      }
       const hub = loadHubSession()
       if (!hub?.hubToken) {
-        // Não derruba o hub para a tela de login sem avisar — sessão some do storage.
         setHubErro('Sessão do portal expirada. Clique em Sair e faça login de novo.')
         return
       }
       setHubBusy(true)
-      const target = id === 'light' || id === 'pro' ? id : 'light'
-      const result = await issueSystemSsoUrl(target, hub.hubToken)
+      const result = await issueSystemSsoUrl(id, hub.hubToken)
       setHubBusy(false)
       if (!result.ok) {
-        setHubErro(result.erro)
+        setHubErro(result.erro || `Não foi possível abrir o WMS ${id === 'light' ? 'Light' : 'Pro'}.`)
         return
+      }
+      // Garante que Light/Pro não caiam de volta no domínio do Plus.
+      const expectedHost =
+        id === 'light'
+          ? 'doca-livre-wms-light'
+          : 'doca-livre-wms-pro'
+      try {
+        const host = new URL(result.url).hostname.toLowerCase()
+        if (!host.includes(expectedHost) && !host.includes(id)) {
+          setHubErro(
+            `URL SSO inesperada para ${id}: ${host}. Verifique SYSTEM_URL_${id.toUpperCase()} no Pro.`,
+          )
+          return
+        }
+      } catch {
+        /* segue com o redirect */
       }
       window.location.assign(result.url)
     })()
@@ -3789,6 +3807,7 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         persistError={error}
+        onBackToSystems={handleBackToSystemSelector}
         mapLegend={{
           allocateMode: panelAllocateMode,
           editMode: editMode || (nfEditar != null && !editMarcandoStage),

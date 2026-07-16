@@ -26,6 +26,8 @@ type Props = {
   onOpenContaSection: (section: SidebarSectionId, focus?: 'conta' | 'comandos') => void
   onZerarBancoHomolog?: () => void | Promise<void>
   zerandoBancoHomolog?: boolean
+  /** Volta ao hub Light / Plus / Pro */
+  onBackToSystems?: () => void
 }
 
 function formatClock(now: Date): { time: string; date: string } {
@@ -58,6 +60,7 @@ export function AppTopBar({
   onOpenContaSection,
   onZerarBancoHomolog,
   zerandoBancoHomolog = false,
+  onBackToSystems,
 }: Props) {
   const [clock, setClock] = useState(() => formatClock(new Date()))
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -147,6 +150,18 @@ export function AppTopBar({
         >
           <span className="app-topbar-menu-icon" aria-hidden />
         </button>
+
+        {onBackToSystems ? (
+          <button
+            type="button"
+            className="app-topbar-back-systems"
+            onClick={onBackToSystems}
+            title="Voltar aos sistemas Light, Plus e Pro"
+            aria-label="Voltar aos sistemas"
+          >
+            <span aria-hidden>←</span> Sistemas
+          </button>
+        ) : null}
 
         <div className="app-topbar-brand-row">
           <div className="app-topbar-brand">
