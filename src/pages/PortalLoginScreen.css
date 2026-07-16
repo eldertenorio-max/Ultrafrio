@@ -63,36 +63,49 @@
 
 .portal-login__password-wrap {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: block;
+  width: 100%;
 }
 
 .portal-login__input--password {
+  display: block;
   width: 100%;
-  padding-right: 46px;
+  box-sizing: border-box;
+  padding-right: 78px;
 }
 
 .portal-login__password-toggle {
   position: absolute;
-  right: 8px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 0;
+  gap: 4px;
+  min-width: 64px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: transparent;
-  color: #64748b;
+  background: #f8fafc;
+  color: #0f172a;
   cursor: pointer;
-  padding: 0;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.portal-login__password-toggle-text {
+  user-select: none;
 }
 
 .portal-login__password-toggle:hover {
   color: #0f172a;
-  background: #f1f5f9;
+  background: #e2e8f0;
+  border-color: #94a3b8;
 }
 
 .portal-login__erro {

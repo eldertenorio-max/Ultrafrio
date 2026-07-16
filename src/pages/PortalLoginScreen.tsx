@@ -28,9 +28,9 @@ function PasswordField({ id, className, ...rest }: PasswordFieldProps) {
     <div className="portal-login__password-wrap">
       <input
         id={id}
-        type={visible ? 'text' : 'password'}
         className={`portal-login__input portal-login__input--password${className ? ` ${className}` : ''}`}
         {...rest}
+        type={visible ? 'text' : 'password'}
       />
       <button
         type="button"
@@ -39,25 +39,22 @@ function PasswordField({ id, className, ...rest }: PasswordFieldProps) {
         aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}
         title={visible ? 'Ocultar senha' : 'Mostrar senha'}
       >
-        {visible ? (
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          {visible ? (
+            <>
+              <path
+                fill="currentColor"
+                d="M2.1 3.5 3.5 2.1 21.9 20.5 20.5 21.9l-3.1-3.1A11.5 11.5 0 0 1 12 19.5C6.5 19.5 1.9 16 0 12c.7-1.5 1.8-2.9 3.1-4.1L2.1 3.5zm6.2 6.2 1.5 1.5a2.5 2.5 0 0 0 3.1 3.1l1.5 1.5A4.5 4.5 0 0 1 8.3 9.7zM12 6.5c5.5 0 10.1 3.5 12 7.5-.6 1.3-1.5 2.5-2.6 3.5l-1.5-1.5c.7-.7 1.3-1.5 1.7-2.4A10 10 0 0 0 12 8.5c-.7 0-1.3.1-1.9.2L8.5 7A11 11 0 0 1 12 6.5z"
+              />
+            </>
+          ) : (
             <path
               fill="currentColor"
-              d="M12 6a9.8 9.8 0 0 1 8.9 5.5A9.8 9.8 0 0 1 12 17a9.8 9.8 0 0 1-8.9-5.5A9.8 9.8 0 0 1 12 6m0-2C7 4 2.7 7.1 1 12c1.7 4.9 6 8 11 8s9.3-3.1 11-8c-1.7-4.9-6-8-11-8zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0-2a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 7z"
+              d="M12 5C6.5 5 1.9 8.5 0 12.5 1.9 16.5 6.5 20 12 20s10.1-3.5 12-7.5C22.1 8.5 17.5 5 12 5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"
             />
-            <path
-              fill="currentColor"
-              d="M3.3 2.9 2 4.2l18.5 18.5 1.3-1.3L3.3 2.9z"
-            />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path
-              fill="currentColor"
-              d="M12 6a9.8 9.8 0 0 1 8.9 5.5A9.8 9.8 0 0 1 12 17a9.8 9.8 0 0 1-8.9-5.5A9.8 9.8 0 0 1 12 6m0-2C7 4 2.7 7.1 1 12c1.7 4.9 6 8 11 8s9.3-3.1 11-8c-1.7-4.9-6-8-11-8zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0-2a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 7z"
-            />
-          </svg>
-        )}
+          )}
+        </svg>
+        <span className="portal-login__password-toggle-text">{visible ? 'Ocultar' : 'Ver'}</span>
       </button>
     </div>
   )
