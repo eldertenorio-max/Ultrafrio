@@ -100,6 +100,12 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (!okMsg) return
+    const t = window.setTimeout(() => setOkMsg(null), 4000)
+    return () => window.clearTimeout(t)
+  }, [okMsg])
+
   const usuariosEditaveis = useMemo(
     () => (data?.usuarios || []).filter((u) => !isHiddenConfigUser(u)),
     [data],
@@ -137,7 +143,7 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
       setErro(res.erro)
       return
     }
-    setOkMsg('Permissões salvas.')
+    setOkMsg('Permissões salvas com sucesso.')
     void load()
   }
 
@@ -252,7 +258,6 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
         </div>
 
         {erro ? <p className="portal-config__erro">{erro}</p> : null}
-        {okMsg ? <p className="portal-config__msg">{okMsg}</p> : null}
 
         {!data ? (
           <p className="portal-config__erro">Não foi possível carregar os dados.</p>
@@ -495,6 +500,13 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
                   </div>
 
                   <div className="portal-config__save-bar">
+                    {okMsg ? (
+                      <p className="portal-config__msg portal-config__msg--ok" role="status">
+                        {okMsg}
+                      </p>
+                    ) : (
+                      <span className="portal-config__save-spacer" aria-hidden />
+                    )}
                     <button
                       type="button"
                       className="portal-config__btn portal-config__btn--primary portal-config__btn--save"
