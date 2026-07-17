@@ -52,6 +52,7 @@ function countSistemasLiberados(
 
 export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Props) {
   const [tab, setTab] = useState<'hierarquia' | 'permissoes'>('hierarquia')
+  const [hierSistema, setHierSistema] = useState<SistemaId>('plus')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -257,7 +258,35 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
           <p className="portal-config__erro">Não foi possível carregar os dados.</p>
         ) : tab === 'hierarquia' ? (
           <section className="portal-config__panel portal-config__panel--full">
-            <PortalHierarchyTree arvore={data.arvore || []} onChanged={() => void load()} />
+            <div className="portal-config__hier-tabs" role="tablist" aria-label="Sistema da hierarquia">
+              {([
+                ['light', 'WMS Light'],
+                ['plus', 'WMS Plus'],
+                ['pro', 'WMS Pro'],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  className={`portal-config__hier-tab portal-config__hier-tab--${id}${hierSistema === id ? ' portal-config__hier-tab--active' : ''}`}
+                  aria-selected={hierSistema === id}
+                  onClick={() => setHierSistema(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <PortalHierarchyTree
+              sistema={hierSistema}
+              sistemaLabel={
+                hierSistema === 'light' ? 'WMS Light' : hierSistema === 'pro' ? 'WMS Pro' : 'WMS Plus'
+              }
+              arvore={
+                data.arvores?.[hierSistema] ||
+                (hierSistema === 'plus' ? data.arvore || [] : [])
+              }
+              onChanged={() => void load()}
+            />
           </section>
         ) : (
           <div className="portal-config__body portal-config__body--perms">

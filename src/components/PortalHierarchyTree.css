@@ -22,6 +22,18 @@
   color: #0f172a;
 }
 
+.ph-tree__sis {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ph-tree__sis--light { color: #0369a1; }
+.ph-tree__sis--plus { color: #854d0e; }
+.ph-tree__sis--pro { color: #4338ca; }
+
 .ph-tree__legend {
   display: flex;
   flex-wrap: wrap;

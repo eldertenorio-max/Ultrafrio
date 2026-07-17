@@ -68,6 +68,7 @@ export type OrgNo = {
   cnpj?: string | null
   codigo?: string | null
   ordem?: number
+  sistema?: SistemaId | string
   label_tipo?: string
   usuarios_count?: number
   children?: OrgNo[]
@@ -82,7 +83,9 @@ export type PortalConfigOverview = {
   sistemas: SistemaId[]
   modulos: Record<SistemaId, { id: string; label: string }[]>
   arvore?: OrgNo[]
+  arvores?: Partial<Record<SistemaId, OrgNo[]>>
   tipos_org?: { id: string; label: string }[]
+  sistemas_org?: { id: string; label: string }[]
 }
 
 async function authFetch<T extends { ok?: boolean; erro?: string }>(
@@ -174,6 +177,7 @@ export async function savePortalOrgNo(input: {
   nome: string
   cnpj?: string
   codigo?: string
+  sistema?: SistemaId | string
 }): Promise<{ ok: true; no?: OrgNo; id?: string } | { ok: false; erro: string }> {
   return authFetch('api/portal/config/org', {
     method: 'POST',

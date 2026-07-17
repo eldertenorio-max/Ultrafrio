@@ -4,11 +4,14 @@ import {
   nextOrgChildType,
   savePortalOrgNo,
   type OrgNo,
+  type SistemaId,
 } from '../lib/portalConfigApi'
 import './PortalHierarchyTree.css'
 
 type Props = {
   arvore: OrgNo[]
+  sistema: SistemaId
+  sistemaLabel?: string
   onChanged: () => void
 }
 
@@ -27,13 +30,11 @@ const LEGENDA = [
 
 function NodeRow({
   no,
-  depth,
   onAdd,
   onEdit,
   onDelete,
 }: {
   no: OrgNo
-  depth: number
   onAdd: (parent: OrgNo) => void
   onEdit: (no: OrgNo) => void
   onDelete: (no: OrgNo) => void
@@ -44,7 +45,7 @@ function NodeRow({
   const tipo = String(no.tipo || '')
 
   return (
-    <div className="ph-node" style={{ marginLeft: depth === 0 ? 0 : 0 }}>
+    <div className="ph-node">
       <div className={`ph-node__row ph-node__row--${tipo}`}>
         {children.length > 0 ? (
           <button type="button" className="ph-node__toggle" onClick={() => setOpen((v) => !v)} aria-label="Expandir">
@@ -83,14 +84,7 @@ function NodeRow({
       {open && children.length > 0 ? (
         <div className="ph-node__children">
           {children.map((child) => (
-            <NodeRow
-              key={child.id}
-              no={child}
-              depth={depth + 1}
-              onAdd={onAdd}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
+            <NodeRow key={child.id} no={child} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </div>
       ) : null}
@@ -98,7 +92,7 @@ function NodeRow({
   )
 }
 
-export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
+export default function PortalHierarchyTree({ arvore, sistema, sistemaLabel, onChanged }: Props) {
   const [modal, setModal] = useState<ModalState>(null)
   const [nome, setNome] = useState('')
   const [cnpj, setCnpj] = useState('')
@@ -108,6 +102,7 @@ export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
   const [okMsg, setOkMsg] = useState<string | null>(null)
 
   const rootTitle = useMemo(() => arvore[0]?.nome || 'Hierarquia organizacional', [arvore])
+  const labelSis = sistemaLabel || `WMS ${sistema}`
 
   function openCreate(parent: OrgNo | null) {
     const tipo = nextOrgChildType(parent?.tipo || null)
@@ -141,6 +136,7 @@ export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
         nome,
         cnpj,
         codigo,
+        sistema,
       })
       setSaving(false)
       if (!res.ok) {
@@ -157,6 +153,7 @@ export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
       nome,
       cnpj,
       codigo,
+      sistema,
     })
     setSaving(false)
     if (!res.ok) {
@@ -182,9 +179,12 @@ export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
   }
 
   return (
-    <div className="ph-tree">
+    <div className={`ph-tree ph-tree--${sistema}`}>
       <div className="ph-tree__top">
-        <h2 className="ph-tree__title">{rootTitle} — Operador Logístico</h2>
+        <div>
+          <p className={`ph-tree__sis ph-tree__sis--${sistema}`}>{labelSis}</p>
+          <h2 className="ph-tree__title">{rootTitle} — Operador Logístico</h2>
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {arvore[0] ? (
             <button type="button" className="ph-tree__btn" onClick={() => openEdit(arvore[0])}>
@@ -213,13 +213,12 @@ export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
       {okMsg ? <p className="ph-tree__ok">{okMsg}</p> : null}
 
       {arvore.length === 0 ? (
-        <p>Nenhuma empresa cadastrada. Clique em “Adicionar Empresa”.</p>
+        <p>Nenhuma empresa neste sistema. Clique em “Adicionar Empresa”.</p>
       ) : (
         arvore.map((no) => (
           <NodeRow
             key={no.id}
             no={no}
-            depth={0}
             onAdd={openCreate}
             onEdit={openEdit}
             onDelete={(n) => void handleDelete(n)}
@@ -233,7 +232,8 @@ export default function PortalHierarchyTree({ arvore, onChanged }: Props) {
             <h3>{modal.mode === 'create' ? 'Adicionar empresa' : 'Editar empresa'}</h3>
             {modal.mode === 'create' ? (
               <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>
-                Tipo: <strong>{LEGENDA.find((l) => l.tipo === modal.tipo)?.label || modal.tipo}</strong>
+                {labelSis} · Tipo:{' '}
+                <strong>{LEGENDA.find((l) => l.tipo === modal.tipo)?.label || modal.tipo}</strong>
                 {modal.parent ? ` · sob ${modal.parent.nome}` : ' · raiz'}
               </p>
             ) : null}
