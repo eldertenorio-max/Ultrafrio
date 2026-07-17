@@ -14,7 +14,10 @@ import './PortalLoginScreen.css'
 export type PortalLoginSuccess = {
   usuario: string
   isSuperuser?: boolean
-  permissoes?: Record<string, { pode_acessar?: boolean; modulos?: string[] | null }> | null
+  permissoes?: Record<
+    string,
+    { pode_acessar?: boolean; modulos?: string[] | Record<string, string> | null }
+  > | null
 }
 
 type Props = {

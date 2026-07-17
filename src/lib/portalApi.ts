@@ -79,7 +79,10 @@ export async function portalLogin(
       usuario: string
       hubToken: string
       isSuperuser?: boolean
-      permissoes?: Record<string, { pode_acessar?: boolean; modulos?: string[] | null }> | null
+      permissoes?: Record<
+        string,
+        { pode_acessar?: boolean; modulos?: string[] | Record<string, string> | null }
+      > | null
     }
   | { ok: false; erro: string }
 > {
@@ -94,7 +97,10 @@ export async function portalLogin(
       usuario?: string
       hub_token?: string
       is_superuser?: boolean
-      permissoes?: Record<string, { pode_acessar?: boolean; modulos?: string[] | null }> | null
+      permissoes?: Record<
+        string,
+        { pode_acessar?: boolean; modulos?: string[] | Record<string, string> | null }
+      > | null
       erro?: string
     }
     if (!res.ok || !data.ok || !data.hub_token || !data.usuario) {

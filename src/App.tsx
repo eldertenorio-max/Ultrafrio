@@ -3685,7 +3685,13 @@ export default function App() {
   }
 
   function applyPortalPermissoes(
-    permissoes: Record<string, { pode_acessar?: boolean; modulos?: string[] | null }> | null | undefined,
+    permissoes:
+      | Record<
+          string,
+          { pode_acessar?: boolean; modulos?: string[] | Record<string, string> | null }
+        >
+      | null
+      | undefined,
   ) {
     if (!permissoes) {
       setAllowedSystemIds(null)
