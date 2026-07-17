@@ -2,11 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import PortalHierarchyTree from '../components/PortalHierarchyTree'
 import {
   fetchPortalConfigOverview,
+  isLocalSuperUser,
   savePortalPermissoes,
   type PortalConfigOverview,
+  type PortalUsuarioRow,
   type SistemaId,
   type SistemaPermissao,
 } from '../lib/portalConfigApi'
+
+function isHiddenConfigUser(u: PortalUsuarioRow): boolean {
+  // Super Usuários (Diego/Elder) não entram na lista — gerenciam os demais.
+  return Boolean(u.is_superuser) || isLocalSuperUser(u.usuario) || isLocalSuperUser(u.email || '')
+}
 import './PortalConfigScreen.css'
 
 type Props = {
@@ -40,16 +47,25 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
       return
     }
     setData(res)
-    setSelected((prev) => prev || res.usuarios[0]?.usuario || '')
+    const editaveis = res.usuarios.filter((u) => !isHiddenConfigUser(u))
+    setSelected((prev) => {
+      if (prev && editaveis.some((u) => u.usuario === prev)) return prev
+      return editaveis[0]?.usuario || ''
+    })
   }, [])
 
   useEffect(() => {
     void load()
   }, [load])
 
+  const usuariosEditaveis = useMemo(
+    () => (data?.usuarios || []).filter((u) => !isHiddenConfigUser(u)),
+    [data],
+  )
+
   const selectedUser = useMemo(
-    () => data?.usuarios.find((u) => u.usuario === selected) || null,
-    [data, selected],
+    () => usuariosEditaveis.find((u) => u.usuario === selected) || null,
+    [usuariosEditaveis, selected],
   )
 
   const perms = useMemo(() => {
@@ -163,29 +179,35 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
         ) : (
           <div className="portal-config__body">
             <aside className="portal-config__list" aria-label="Usuários">
-              {data.usuarios.map((u) => (
-                <button
-                  key={u.usuario}
-                  type="button"
-                  className={`portal-config__user${selected === u.usuario ? ' portal-config__user--active' : ''}`}
-                  onClick={() => {
-                    setSelected(u.usuario)
-                    setOkMsg(null)
-                    setErro(null)
-                  }}
-                >
-                  <span className="portal-config__user-name">{u.usuario}</span>
-                  <span className="portal-config__user-meta">
-                    {u.is_superuser ? 'Super Usuário' : u.nivel || 'Sem nível'}
-                    {u.email ? ` · ${u.email}` : ''}
-                  </span>
-                </button>
-              ))}
+              {usuariosEditaveis.length === 0 ? (
+                <p className="portal-config__sub" style={{ padding: 10, margin: 0 }}>
+                  Nenhum usuário para configurar ainda.
+                </p>
+              ) : (
+                usuariosEditaveis.map((u) => (
+                  <button
+                    key={u.usuario}
+                    type="button"
+                    className={`portal-config__user${selected === u.usuario ? ' portal-config__user--active' : ''}`}
+                    onClick={() => {
+                      setSelected(u.usuario)
+                      setOkMsg(null)
+                      setErro(null)
+                    }}
+                  >
+                    <span className="portal-config__user-name">{u.usuario}</span>
+                    <span className="portal-config__user-meta">
+                      {u.nivel || 'Sem nível'}
+                      {u.email ? ` · ${u.email}` : ''}
+                    </span>
+                  </button>
+                ))
+              )}
             </aside>
 
             <section className="portal-config__panel">
               {!selectedUser ? (
-                <p>Selecione um usuário.</p>
+                <p>{usuariosEditaveis.length === 0 ? 'Cadastre outros usuários no portal para definir permissões.' : 'Selecione um usuário.'}</p>
               ) : (
                 <>
                   <h2>Permissões — {selectedUser.usuario}</h2>
