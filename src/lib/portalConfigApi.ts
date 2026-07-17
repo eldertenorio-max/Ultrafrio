@@ -58,15 +58,30 @@ async function authFetch<T extends { ok?: boolean; erro?: string }>(
   const hub = loadHubSession()
   if (!hub?.hubToken) return { ok: false, erro: 'Sessão do portal expirada. Faça login de novo.' }
   const url = `${getProApiBase()}${path.replace(/^\//, '')}`
+  // Envia hub_token no body + Authorization (alguns proxies cortam o header).
+  let body = init?.body
+  if (typeof body === 'string') {
+    try {
+      const parsed = JSON.parse(body || '{}') as Record<string, unknown>
+      if (parsed && typeof parsed === 'object' && !parsed.hub_token) {
+        body = JSON.stringify({ ...parsed, hub_token: hub.hubToken })
+      }
+    } catch {
+      body = JSON.stringify({ hub_token: hub.hubToken })
+    }
+  } else if (body == null) {
+    body = JSON.stringify({ hub_token: hub.hubToken })
+  }
   try {
     const res = await fetch(url, {
       ...init,
+      method: init?.method || 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${hub.hubToken}`,
         ...(init?.headers || {}),
       },
-      body: init?.body,
+      body,
     })
     const data = (await res.json().catch(() => ({}))) as T
     if (!res.ok || !data.ok) {
@@ -157,12 +172,25 @@ export function nextOrgChildType(tipoPai: string | null | undefined): OrgTipo | 
 export function isLocalSuperUser(usuario: string): boolean {
   const u = (usuario || '').trim().toLowerCase()
   if (!u) return false
-  const locals = ['diego', 'elder', 'diego.isidoro', 'elder.tenorio', 'eldertenorio', 'diegoisidoro']
-  if (locals.includes(u)) return true
-  const local = u.split('@')[0] || ''
+  const ascii = u
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  const locals = [
+    'diego',
+    'elder',
+    'diego.isidoro',
+    'elder.tenorio',
+    'eldertenorio',
+    'diegoisidoro',
+    'diego isidoro',
+    'elder tenorio',
+  ]
+  if (locals.includes(u) || locals.includes(ascii)) return true
+  const local = (ascii.split('@')[0] || '').trim()
   if (locals.includes(local)) return true
-  // Prefixo: diego.*, elder.*, diego@..., elder@...
-  if (locals.some((s) => u === s || u.startsWith(`${s}.`) || u.startsWith(`${s}@`))) return true
+  if (locals.some((s) => ascii === s || ascii.startsWith(`${s}.`) || ascii.startsWith(`${s}@`))) {
+    return true
+  }
   if (local.startsWith('diego') || local.startsWith('elder')) return true
   return false
 }

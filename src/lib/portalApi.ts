@@ -4,9 +4,7 @@ const HUB_TOKEN_KEY = 'doca_hub_token_v1'
 const HUB_USER_KEY = 'doca_hub_user_v1'
 
 export function getProApiBase(): string {
-  const fromEnv = (import.meta.env.VITE_WMS_PRO_URL as string | undefined)?.trim()
-  if (fromEnv) return fromEnv.replace(/\/?$/, '/')
-  // Homolog Plus → Pro homolog; produção → Pro produção.
+  // Portal API: sempre o Pro do mesmo ambiente do Plus (evita token de um e API do outro).
   try {
     const h = (typeof window !== 'undefined' ? window.location.hostname : '').toLowerCase()
     if (h.includes('homolog') || h.includes('homologacao')) {
@@ -15,6 +13,8 @@ export function getProApiBase(): string {
   } catch {
     /* ignore */
   }
+  const fromEnv = (import.meta.env.VITE_WMS_PRO_URL as string | undefined)?.trim()
+  if (fromEnv) return fromEnv.replace(/\/?$/, '/')
   return 'https://doca-livre-wms-pro.onrender.com/'
 }
 

@@ -1,2 +1,2 @@
 # Deploy stamp - forcar rebuild no Render (producao + homolog).
-DEPLOY_STAMP=2026-07-17-10-40-perms-ui
+DEPLOY_STAMP=2026-07-17-11-15-fix-nao-autorizado
