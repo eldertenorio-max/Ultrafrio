@@ -69,7 +69,6 @@ export default function PortalConfigScreen({ usuario, onContinuar, onSair }: Pro
       setErro(res.erro)
       return
     }
-    setData(res)
     // Normaliza mapas de módulos (legado lista → editar).
     const matrizNorm: PortalConfigOverview['matriz'] = {}
     for (const [user, sisMap] of Object.entries(res.matriz || {})) {
